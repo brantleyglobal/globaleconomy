@@ -1,0 +1,4 @@
+npm create vite@latest . --template react-ts
+
+need vite for block explorer....
+-start server npn run dev
