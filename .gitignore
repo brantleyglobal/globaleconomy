@@ -72,6 +72,7 @@ hardhat/sync/
 nextjs/node_modules
 nextjs/.pnp
 nextjs/.pnp.js
+nextjs/wrangler.toml
 
 
 # testing
