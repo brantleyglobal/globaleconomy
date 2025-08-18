@@ -9,7 +9,7 @@ async function main() {
   const encryptedKey = process.env.DEPLOYER_PRIVATE_KEY_ENCRYPTED;
 
   if (!encryptedKey) {
-    console.log("🚫️ You don't have a deployer account. Run `yarn generate` or `yarn account:import` first");
+    console.log("You don't have a deployer account. Run `yarn generate` or `yarn account:import` first");
     return;
   }
 
@@ -19,7 +19,7 @@ async function main() {
     wallet = (await Wallet.fromEncryptedJson(encryptedKey, pass)) as Wallet;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
-    console.log("❌ Failed to decrypt private key. Wrong password?");
+    console.log("Failed to decrypt private key. Wrong password?");
     return;
   }
 
@@ -36,7 +36,7 @@ async function main() {
       const provider = new ethers.JsonRpcProvider(network.url);
       await provider._detectNetwork();
       const balance = await provider.getBalance(address);
-      console.log("--", networkName, "-- 📡");
+      console.log("--", networkName, "--");
       console.log("   balance:", +ethers.formatEther(balance));
       console.log("   nonce:", +(await provider.getTransactionCount(address)));
       // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -1,8 +1,11 @@
+##hardhat
+
 # dependencies
 node_modules
 
 # env files
 .env
+.env.vault
 
 # coverage
 coverage
@@ -28,3 +31,11 @@ deployments/localhost
 
 # other
 temp
+
+.secret
+keystore/deployments
+
+artifact/
+cache/
+test
+

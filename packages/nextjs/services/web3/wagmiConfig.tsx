@@ -1,20 +1,13 @@
+// services/web3/wagmiConfig.ts
 import { wagmiConnectors } from "./wagmiConnectors";
 import { Chain, createClient, fallback, http } from "viem";
 import { hardhat, mainnet } from "viem/chains";
 import { createConfig } from "wagmi";
-import scaffoldConfig, {
-  DEFAULT_ALCHEMY_API_KEY,
-  ScaffoldConfig,
-} from "~~/scaffold.config";
-import { getAlchemyHttpUrl } from "~~/utils/globalDEX";
-import { gbdollar } from "~~/utils/globalDEX/customChains";
+import scaffoldConfig, { ScaffoldConfig } from "~~/scaffold.config";
+import { GLOBALCHAIN } from "~~/utils/globalEco/customChains";
 
-// Create a mutable array from your config's target networks
+/** 1) Build your mergedChains exactly as you have it… */
 const networks: Chain[] = [...scaffoldConfig.targetNetworks];
-
-/**
- * Strip unsupported fields from chain objects to satisfy Viem's strict typing
- */
 const cleanChain = (chain: Chain): Chain => ({
   id: chain.id,
   name: chain.name,
@@ -22,42 +15,31 @@ const cleanChain = (chain: Chain): Chain => ({
   rpcUrls: chain.rpcUrls,
   blockExplorers: chain.blockExplorers,
 });
-
-/**
- * Merge required chains into the config-defined ones, ensuring no duplicates
- */
 const mergedChains = [
   ...networks,
   ...(networks.some(c => c.id === mainnet.id) ? [] : [mainnet]),
-  ...(networks.some(c => c.id === gbdollar.id) ? [] : [gbdollar]),
+  ...(networks.some(c => c.id === GLOBALCHAIN.id) ? [] : [GLOBALCHAIN]),
 ].map(cleanChain);
 
-// TypeScript requires a tuple: at least [Chain, ...Chain[]]
-if (mergedChains.length === 0) {
-  throw new Error("No chains defined for wagmiConfig.");
+if (!mergedChains.length) {
+  throw new Error("No chains defined.");
 }
 
-export const enabledChains = mergedChains as [Chain, ...Chain[]];
+export const chains = mergedChains as unknown as readonly [Chain, ...Chain[]];
 
+/** 2) Create and export your wagmi config */
 export const wagmiConfig = createConfig({
-  chains: enabledChains,
-  connectors: wagmiConnectors,
   ssr: true,
+  chains,
+  connectors: wagmiConnectors,
   client({ chain }) {
-    let rpcFallbacks = [http()];
-
-    const rpcOverrideUrl = (scaffoldConfig.rpcOverrides as ScaffoldConfig["rpcOverrides"])?.[chain.id];
-    if (rpcOverrideUrl) {
-      rpcFallbacks = [http(rpcOverrideUrl), http()];
-    } else {
-      const alchemyHttpUrl = getAlchemyHttpUrl(chain.id);
-      if (alchemyHttpUrl) {
-        const isUsingDefaultKey = scaffoldConfig.alchemyApiKey === DEFAULT_ALCHEMY_API_KEY;
-        rpcFallbacks = isUsingDefaultKey
-          ? [http(), http(alchemyHttpUrl)]
-          : [http(alchemyHttpUrl), http()];
-      }
-    }
+    const rpcOverrideUrl =
+      (scaffoldConfig.rpcOverrides as ScaffoldConfig["rpcOverrides"])?.[
+        chain.id
+      ];
+    const rpcFallbacks = rpcOverrideUrl
+      ? [http(rpcOverrideUrl), http()]
+      : [http()];
 
     return createClient({
       chain,

@@ -1,7 +1,14 @@
 {
   "compilerOptions": {
     "target": "es2020",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "es2020",
+      "esnext.asynciterable",
+      "esnext.bigint",
+      "esnext.promise"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -23,6 +30,6 @@
       }
     ]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "../../../sync/test-sql-connect.ts", "../../../sync/test.ts"],
   "exclude": ["node_modules"]
 }

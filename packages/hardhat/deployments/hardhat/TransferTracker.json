@@ -1,0 +1,422 @@
+{
+  "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "transferId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum TransferTracker.Status",
+          "name": "status",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "txhash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "TransferRecorded",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "allTransfers",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "enum TransferTracker.Status",
+          "name": "status",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "txhash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getAllTransfersCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "index",
+          "type": "uint256"
+        }
+      ],
+      "name": "getTransfer",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "enum TransferTracker.Status",
+          "name": "status",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "txhash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "getTransfersInvolvingUser",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "recipient",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum TransferTracker.Status",
+              "name": "status",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "txhash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct TransferTracker.Transfer[]",
+          "name": "",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_recipient",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "enum TransferTracker.Status",
+          "name": "_status",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_txhash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "recordTransfer",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x40bf6731ade158bb39da594e45101cde11ab787521c12d26115334b3bd98831f",
+  "receipt": {
+    "to": null,
+    "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "contractAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "transactionIndex": 0,
+    "gasUsed": "570175",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0xa65ed0f5dfd52591a3dcb5d5181fa916b9301de85cf7d431504ed620efb68593",
+    "transactionHash": "0x40bf6731ade158bb39da594e45101cde11ab787521c12d26115334b3bd98831f",
+    "logs": [],
+    "blockNumber": 1,
+    "cumulativeGasUsed": "570175",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "2be0afe2b1598df4f87f1bb1e4986902",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.20+commit.a1b79de6\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"transferId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"enum TransferTracker.Status\",\"name\":\"status\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"txhash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"name\":\"TransferRecorded\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"allTransfers\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"enum TransferTracker.Status\",\"name\":\"status\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"txhash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllTransfersCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getTransfer\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"enum TransferTracker.Status\",\"name\":\"status\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"txhash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"}],\"name\":\"getTransfersInvolvingUser\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"enum TransferTracker.Status\",\"name\":\"status\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"txhash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"internalType\":\"struct TransferTracker.Transfer[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_recipient\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"enum TransferTracker.Status\",\"name\":\"_status\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"_txhash\",\"type\":\"bytes32\"}],\"name\":\"recordTransfer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/transferTracker.sol\":\"TransferTracker\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"contracts/transferTracker.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.8.0;\\n\\ncontract TransferTracker {\\n    enum Status { Pending, Completed, Failed }\\n\\n    struct Transfer {\\n        address sender;\\n        address recipient;\\n        address token;\\n        uint128 amount;\\n        Status status;\\n        bytes32 txhash;\\n        uint64 timestamp;\\n    }\\n\\n    // Store all transfers globally\\n    Transfer[] public allTransfers;\\n\\n    // Mapping from user address to their transfer indices\\n    mapping(address => uint256[]) private userTransferIndices;\\n\\n    event TransferRecorded(\\n        address indexed user,\\n        uint256 indexed transferId,\\n        address indexed sender,\\n        address recipient,\\n        address token,\\n        uint128 amount,\\n        Status status,\\n        bytes32 txhash,\\n        uint64 timestamp\\n    );\\n\\n    function recordTransfer(\\n        address _recipient,\\n        address _token,\\n        uint256 _amount,\\n        Status _status,\\n        bytes32 _txhash\\n    ) external {\\n        Transfer memory newTransfer = Transfer({\\n            sender: msg.sender,\\n            recipient: _recipient,\\n            token: _token,\\n            amount: _amount,\\n            status: _status,\\n            txhash: _txhash,\\n            timestamp: block.timestamp\\n        });\\n\\n        allTransfers.push(newTransfer);\\n        uint256 index = allTransfers.length - 1;\\n        // Save index for involved users\\n        userTransferIndices[msg.sender].push(index);\\n        userTransferIndices[_recipient].push(index);\\n\\n        emit TransferRecorded(\\n            msg.sender,\\n            index,\\n            msg.sender,\\n            _recipient,\\n            _token,\\n            _amount,\\n            _status,\\n            _txhash,\\n            block.timestamp\\n        );\\n    }\\n\\n    function getAllTransfersCount() external view returns (uint256) {\\n        return allTransfers.length;\\n    }\\n\\n    function getTransfer(uint256 index) external view returns (\\n        address sender,\\n        address recipient,\\n        address token,\\n        uint128 amount,\\n        Status status,\\n        bytes32 txhash,\\n        uint64 timestamp\\n    ) {\\n        require(index < allTransfers.length, \\\"Index out of bounds\\\");\\n        Transfer memory t = allTransfers[index];\\n        return (t.sender, t.recipient, t.token, t.amount, t.status, t.txhash, t.timestamp);\\n    }\\n\\n    function getTransfersInvolvingUser(address user) external view returns (Transfer[] memory) {\\n        uint256 total = userTransferIndices[user].length;\\n        Transfer[] memory involvedTransfers = new Transfer[](total);\\n        for (uint256 i = 0; i < total; i++) {\\n            involvedTransfers[i] = allTransfers[userTransferIndices[user][i]];\\n        }\\n        return involvedTransfers;\\n    }\\n}\",\"keccak256\":\"0x5359a4a142f4b7af8839ef514d6554c4730065e978009b4c4df3bff217ebd18e\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b50610959806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80636d55b42b1461005c578063976c56e91461008557806399333512146100ab578063c16fe907146100c0578063ed296e87146100d3575b600080fd5b61006f61006a3660046106be565b6100e4565b60405161007c9190610718565b60405180910390f35b6100986100933660046107b2565b6102ab565b60405161007c97969594939291906107cb565b6100be6100b9366004610814565b61030d565b005b6100986100ce3660046107b2565b61055c565b60005460405190815260200161007c565b6001600160a01b0381166000908152600160205260408120546060918167ffffffffffffffff8111156101195761011961086f565b60405190808252806020026020018201604052801561018057816020015b6040805160e08101825260008082526020808301829052928201819052606082018190526080820181905260a0820181905260c082015282526000199092019101816101375790505b50905060005b828110156102a3576001600160a01b03851660009081526001602052604081208054839081106101b8576101b8610885565b9060005260206000200154815481106101d3576101d3610885565b60009182526020918290206040805160e081018252600790930290910180546001600160a01b03908116845260018201548116948401949094526002808201549094169183019190915260038101546060830152600481015491929091608084019160ff9091169081111561024a5761024a6106e0565b600281111561025b5761025b6106e0565b81526020016005820154815260200160068201548152505082828151811061028557610285610885565b6020026020010181905250808061029b906108b1565b915050610186565b509392505050565b600081815481106102bb57600080fd5b600091825260209091206007909102018054600182015460028301546003840154600485015460058601546006909601546001600160a01b039586169750938516959490921693909260ff9092169187565b60006040518060e00160405280336001600160a01b03168152602001876001600160a01b03168152602001866001600160a01b0316815260200185815260200184600281111561035f5761035f6106e0565b8152602080820185905242604092830152600080546001808201835591805284517f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563600790920291820180546001600160a01b03199081166001600160a01b03938416178255948701517f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e564840180548716918416919091179055948601517f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e5658301805490951691161790925560608401517f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e56683015560808401517f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e56790920180549495508594909160ff199091169083600281111561049f5761049f6106e0565b021790555060a0820151600582015560c090910151600690910155600080546104ca906001906108ca565b33600081815260016020818152604080842080548085018255908552828520018690556001600160a01b038d1684528084208054938401815584529220018390555191925090829082907fb1bb9e6cdb6ae4df629abae7e65c73dce5a92056399165a2d764428cdea09e6d9061054b908c908c908c908c908c9042906108e3565b60405180910390a450505050505050565b6000806000806000806000808054905088106105b45760405162461bcd60e51b8152602060048201526013602482015272496e646578206f7574206f6620626f756e647360681b604482015260640160405180910390fd5b60008089815481106105c8576105c8610885565b60009182526020918290206040805160e081018252600790930290910180546001600160a01b03908116845260018201548116948401949094526002808201549094169183019190915260038101546060830152600481015491929091608084019160ff9091169081111561063f5761063f6106e0565b6002811115610650576106506106e0565b81526005820154602080830191909152600690920154604091820152825191830151908301516060840151608085015160a086015160c090960151949f939e50919c509a509850919650945092505050565b80356001600160a01b03811681146106b957600080fd5b919050565b6000602082840312156106d057600080fd5b6106d9826106a2565b9392505050565b634e487b7160e01b600052602160045260246000fd5b6003811061071457634e487b7160e01b600052602160045260246000fd5b9052565b602080825282518282018190526000919060409081850190868401855b828110156107a557815180516001600160a01b039081168652878201518116888701528682015116868601526060808201519086015260808082015161077d828801826106f6565b505060a0818101519086015260c0908101519085015260e09093019290850190600101610735565b5091979650505050505050565b6000602082840312156107c457600080fd5b5035919050565b6001600160a01b0388811682528781166020830152861660408201526060810185905260e081016107ff60808301866106f6565b60a082019390935260c0015295945050505050565b600080600080600060a0868803121561082c57600080fd5b610835866106a2565b9450610843602087016106a2565b93506040860135925060608601356003811061085e57600080fd5b949793965091946080013592915050565b634e487b7160e01b600052604160045260246000fd5b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052601160045260246000fd5b6000600182016108c3576108c361089b565b5060010190565b818103818111156108dd576108dd61089b565b92915050565b6001600160a01b038781168252861660208201526040810185905260c0810161090f60608301866106f6565b608082019390935260a0015294935050505056fea2646970667358221220637b307e83346fd68663f2b8de6cf9946cab9c6a449ee5560d8435e7319b4a5164736f6c63430008140033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100575760003560e01c80636d55b42b1461005c578063976c56e91461008557806399333512146100ab578063c16fe907146100c0578063ed296e87146100d3575b600080fd5b61006f61006a3660046106be565b6100e4565b60405161007c9190610718565b60405180910390f35b6100986100933660046107b2565b6102ab565b60405161007c97969594939291906107cb565b6100be6100b9366004610814565b61030d565b005b6100986100ce3660046107b2565b61055c565b60005460405190815260200161007c565b6001600160a01b0381166000908152600160205260408120546060918167ffffffffffffffff8111156101195761011961086f565b60405190808252806020026020018201604052801561018057816020015b6040805160e08101825260008082526020808301829052928201819052606082018190526080820181905260a0820181905260c082015282526000199092019101816101375790505b50905060005b828110156102a3576001600160a01b03851660009081526001602052604081208054839081106101b8576101b8610885565b9060005260206000200154815481106101d3576101d3610885565b60009182526020918290206040805160e081018252600790930290910180546001600160a01b03908116845260018201548116948401949094526002808201549094169183019190915260038101546060830152600481015491929091608084019160ff9091169081111561024a5761024a6106e0565b600281111561025b5761025b6106e0565b81526020016005820154815260200160068201548152505082828151811061028557610285610885565b6020026020010181905250808061029b906108b1565b915050610186565b509392505050565b600081815481106102bb57600080fd5b600091825260209091206007909102018054600182015460028301546003840154600485015460058601546006909601546001600160a01b039586169750938516959490921693909260ff9092169187565b60006040518060e00160405280336001600160a01b03168152602001876001600160a01b03168152602001866001600160a01b0316815260200185815260200184600281111561035f5761035f6106e0565b8152602080820185905242604092830152600080546001808201835591805284517f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563600790920291820180546001600160a01b03199081166001600160a01b03938416178255948701517f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e564840180548716918416919091179055948601517f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e5658301805490951691161790925560608401517f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e56683015560808401517f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e56790920180549495508594909160ff199091169083600281111561049f5761049f6106e0565b021790555060a0820151600582015560c090910151600690910155600080546104ca906001906108ca565b33600081815260016020818152604080842080548085018255908552828520018690556001600160a01b038d1684528084208054938401815584529220018390555191925090829082907fb1bb9e6cdb6ae4df629abae7e65c73dce5a92056399165a2d764428cdea09e6d9061054b908c908c908c908c908c9042906108e3565b60405180910390a450505050505050565b6000806000806000806000808054905088106105b45760405162461bcd60e51b8152602060048201526013602482015272496e646578206f7574206f6620626f756e647360681b604482015260640160405180910390fd5b60008089815481106105c8576105c8610885565b60009182526020918290206040805160e081018252600790930290910180546001600160a01b03908116845260018201548116948401949094526002808201549094169183019190915260038101546060830152600481015491929091608084019160ff9091169081111561063f5761063f6106e0565b6002811115610650576106506106e0565b81526005820154602080830191909152600690920154604091820152825191830151908301516060840151608085015160a086015160c090960151949f939e50919c509a509850919650945092505050565b80356001600160a01b03811681146106b957600080fd5b919050565b6000602082840312156106d057600080fd5b6106d9826106a2565b9392505050565b634e487b7160e01b600052602160045260246000fd5b6003811061071457634e487b7160e01b600052602160045260246000fd5b9052565b602080825282518282018190526000919060409081850190868401855b828110156107a557815180516001600160a01b039081168652878201518116888701528682015116868601526060808201519086015260808082015161077d828801826106f6565b505060a0818101519086015260c0908101519085015260e09093019290850190600101610735565b5091979650505050505050565b6000602082840312156107c457600080fd5b5035919050565b6001600160a01b0388811682528781166020830152861660408201526060810185905260e081016107ff60808301866106f6565b60a082019390935260c0015295945050505050565b600080600080600060a0868803121561082c57600080fd5b610835866106a2565b9450610843602087016106a2565b93506040860135925060608601356003811061085e57600080fd5b949793965091946080013592915050565b634e487b7160e01b600052604160045260246000fd5b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052601160045260246000fd5b6000600182016108c3576108c361089b565b5060010190565b818103818111156108dd576108dd61089b565b92915050565b6001600160a01b038781168252861660208201526040810185905260c0810161090f60608301866106f6565b608082019390935260a0015294935050505056fea2646970667358221220637b307e83346fd68663f2b8de6cf9946cab9c6a449ee5560d8435e7319b4a5164736f6c63430008140033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 4241,
+        "contract": "contracts/transferTracker.sol:TransferTracker",
+        "label": "allTransfers",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_array(t_struct(Transfer)4237_storage)dyn_storage"
+      },
+      {
+        "astId": 4246,
+        "contract": "contracts/transferTracker.sol:TransferTracker",
+        "label": "userTransferIndices",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_mapping(t_address,t_array(t_uint256)dyn_storage)"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_array(t_struct(Transfer)4237_storage)dyn_storage": {
+        "base": "t_struct(Transfer)4237_storage",
+        "encoding": "dynamic_array",
+        "label": "struct TransferTracker.Transfer[]",
+        "numberOfBytes": "32"
+      },
+      "t_array(t_uint256)dyn_storage": {
+        "base": "t_uint256",
+        "encoding": "dynamic_array",
+        "label": "uint256[]",
+        "numberOfBytes": "32"
+      },
+      "t_bytes32": {
+        "encoding": "inplace",
+        "label": "bytes32",
+        "numberOfBytes": "32"
+      },
+      "t_enum(Status)4221": {
+        "encoding": "inplace",
+        "label": "enum TransferTracker.Status",
+        "numberOfBytes": "1"
+      },
+      "t_mapping(t_address,t_array(t_uint256)dyn_storage)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => uint256[])",
+        "numberOfBytes": "32",
+        "value": "t_array(t_uint256)dyn_storage"
+      },
+      "t_struct(Transfer)4237_storage": {
+        "encoding": "inplace",
+        "label": "struct TransferTracker.Transfer",
+        "members": [
+          {
+            "astId": 4223,
+            "contract": "contracts/transferTracker.sol:TransferTracker",
+            "label": "sender",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_address"
+          },
+          {
+            "astId": 4225,
+            "contract": "contracts/transferTracker.sol:TransferTracker",
+            "label": "recipient",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_address"
+          },
+          {
+            "astId": 4227,
+            "contract": "contracts/transferTracker.sol:TransferTracker",
+            "label": "token",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_address"
+          },
+          {
+            "astId": 4229,
+            "contract": "contracts/transferTracker.sol:TransferTracker",
+            "label": "amount",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 4232,
+            "contract": "contracts/transferTracker.sol:TransferTracker",
+            "label": "status",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_enum(Status)4221"
+          },
+          {
+            "astId": 4234,
+            "contract": "contracts/transferTracker.sol:TransferTracker",
+            "label": "txhash",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_bytes32"
+          },
+          {
+            "astId": 4236,
+            "contract": "contracts/transferTracker.sol:TransferTracker",
+            "label": "timestamp",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "224"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}

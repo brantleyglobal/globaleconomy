@@ -1,25 +1,21 @@
-# 🏗 globalDEX 2
+# 🏗 Global Economy
 
 <h4 align="center">
-  <a href="https://docs.globalDEX.io">Documentation</a> |
-  <a href="https://globalDEX.io">Website</a>
+  <a href="https://brantley-global.com/whitepaper">Documentation</a> |
+  <a href="https://brantley-global.com">Website</a>
 </h4>
 
-🧪 An open-source, up-to-date toolkit for building decentralized applications (dapps) on the Global-Dollar blockchain. It's designed to make it easier for developers to create and deploy smart contracts and build user interfaces that interact with those contracts.
+An open-source, up-to-date toolkit for building decentralized applications (dapps) on the Global-Dominion blockchain. It's designed to make it easier for developers to create and deploy smart contracts and build user interfaces that interact with those contracts.
 
-⚙️ Built using NextJS, RainbowKit, Foundry/Hardhat, Wagmi, Viem, and Typescript.
+Built using NextJS, RainbowKit, Foundry/Hardhat, Wagmi, Viem, and Typescript.
 
-- ✅ **Contract Hot Reload**: Your frontend auto-adapts to your smart contract as you edit it.
-- 🪝 **[Custom hooks](https://docs.globalDEX.io/hooks/)**: Collection of React hooks wrapper around [wagmi](https://wagmi.sh/) to simplify interactions with smart contracts with typescript autocompletion.
-- 🧱 [**Components**](https://docs.globalDEX.io/components/): Collection of common web3 components to quickly build your frontend.
-- 🔥 **Burner Wallet & Local Faucet**: Quickly test your application with a burner wallet and local faucet.
-- 🔐 **Integration with Wallet Providers**: Connect to different wallet providers and interact with the Global-Dollar network.
-
-![Debug Contracts tab](https://github.com/globalDEX/globalDEX-2/assets/55535804/b237af0c-5027-4849-a5c1-2e31495cccb1)
+- **Contract Hot Reload**: Frontend auto-adapts to your smart contract as you edit it.interactions with smart contracts with typescript autocompletion.
+- **Burner Wallet & Local Faucet**: Quickly test your application with a burner wallet and local faucet.
+- **Integration with Wallet Providers**: Connect to different wallet providers and interact with the Global-Dominion network.
 
 ## Requirements
 
-Before you begin, you need to install the following tools:
+Install the following tools:
 
 - [Node (>= v20.18.3)](https://nodejs.org/en/download/)
 - Yarn ([v1](https://classic.yarnpkg.com/en/docs/install/) or [v2+](https://yarnpkg.com/getting-started/install))
@@ -27,18 +23,19 @@ Before you begin, you need to install the following tools:
 
 ## Quickstart
 
-To get started with globalDEX 2, follow the steps below:
+To get started with Global Economy, follow the steps below:
 
-1. Install the latest version of globalDEX 2
+1. Install the latest version of Global Economy
 
 ```
-npx create-gbd@latest
+navigate to packages/nextjs  && run
+yarn install
+
+navigate to packages/hardhat  && run
+yarn install
 ```
 
 This command will install all the necessary packages and dependencies, so it might take a while.
-
-> [!NOTE]
-> You can also initialize your project with one of our extensions to add specific features or starter-kits. Learn more in our [extensions documentation](https://docs.globalDEX.io/extensions/).
 
 2. Run a local network in the first terminal:
 
@@ -46,7 +43,7 @@ This command will install all the necessary packages and dependencies, so it mig
 yarn chain
 ```
 
-This command starts a local Global-Dollar network that runs on your local machine and can be used for testing and development. Learn how to [customize your network configuration](https://docs.globalDEX.io/quick-start/environment#1-initialize-a-local-blockchain).
+This command starts a local Global-Dominion network that runs on your local machine and can be used for testing and development. Learn how to [customize your network configuration](https://docs.globalDEX.io/quick-start/environment#1-initialize-a-local-blockchain).
 
 3. On a second terminal, deploy the test contract:
 
@@ -54,7 +51,7 @@ This command starts a local Global-Dollar network that runs on your local machin
 yarn deploy
 ```
 
-This command deploys a test smart contract to the local network. You can find more information about how to customize your contract and deployment script in our [documentation](https://docs.globalDEX.io/quick-start/environment#2-deploy-your-smart-contract).
+This command deploys a test smart contract to the local network. Be sure hardhat config is configured correctly for local depployment. You can find more information about how to customize your contract and deployment script in [documentation](https://docs.globalDEX.io/quick-start/environment#2-deploy-your-smart-contract).
 
 4. On a third terminal, start your NextJS app:
 
@@ -77,12 +74,53 @@ Visit the [What's next section of our docs](https://docs.globalDEX.io/quick-star
 
 ## Documentation
 
-Visit our [docs](https://docs.globalDEX.io) to learn all the technical details and guides of globalDEX 2.
+To know more about products and platform, check out our [website](https://brantley-global.com).
 
-To know more about its features, check out our [website](https://globalDEX.io).
+## Entrypoint Address
 
-## Contributing to globalDEX 2
+EntryPoint Address: 0xCd442314e8D6B8B9E2C5883c019098DE7be32313
 
-We welcome contributions to globalDEX 2!
+## Hardhat
 
-Please see [CONTRIBUTING.MD](https://github.com/globalDEX/globalDEX-2/blob/main/CONTRIBUTING.md) for more information and guidelines for contributing to globalDEX 2.
+****remove .openzepplin directory to avoid address conflict during redeployments &&& run
+npx hardhat clean
+
+npx hardhat compile
+npx hardhat run scripts/deploy.ts --network GLOBALCHAIN
+
+## Nextjs
+
+yarn build 
+
+*****Cloudflare deploy only*****
+npx wrangler pages deploy ./out --project-name globaleco
+
+## Git
+
+git remote set-url origin https://github.com/brantleyglobal/globaleconomy.git
+git push -u origin main
+
+## Test
+
+curl -X POST http://rpc.brantley-global:8545 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc":"2.0",
+    "method":"eth_blockNumber",
+    "params":[],
+    "id":1
+  }'
+
+## CF DB
+
+npx wrangler d1 create global-db ***For future DBs
+
+****local
+npx wrangler d1 execute global-db --file=schema.sql
+****deploy to Cloudflare
+npx wrangler d1 execute global-db --file=schema.sql --remote
+
+## CF WORK
+
+wrangler deploy --env production
+

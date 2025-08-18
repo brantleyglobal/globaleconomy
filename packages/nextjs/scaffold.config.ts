@@ -1,5 +1,6 @@
 import * as chains from "viem/chains";
-import { gbdollar } from "./utils/globalDEX/customChains";
+import { GLOBALCHAIN } from "./utils/globalEco/customChains";
+
   
 
 
@@ -16,7 +17,7 @@ export const DEFAULT_ALCHEMY_API_KEY = "oKxs-03sij-U_N0iOlrSsZFr29-IqbuF";
 
 const scaffoldConfig = {
   // The networks on which your DApp is live
-  targetNetworks: [ gbdollar ],
+  targetNetworks: [ GLOBALCHAIN ],
   //targetNetworks: [chains.hardhat],
 
   // The interval at which your front-end polls the RPC servers for new data
@@ -32,9 +33,10 @@ const scaffoldConfig = {
   // If you want to use a different RPC for a specific network, you can add it here.
   // The key is the chain ID, and the value is the HTTP RPC URL
   rpcOverrides: {
-    // Example:
-    // [chains.mainnet.id]: "https://mainnet.buidlguidl.com",
+    [GLOBALCHAIN.id as number]: "https://rpc.brantley-global.com",
   },
+
+
 
   // This is ours WalletConnect's default project ID.
   // You can get your own at https://cloud.walletconnect.com

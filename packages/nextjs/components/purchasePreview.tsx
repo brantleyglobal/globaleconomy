@@ -13,7 +13,7 @@ type PurchaseSummaryProps = {
   estimatedDeadline: string; // human-readable or timestamp
   estimatedFee: string;
   status: "draft" | "confirmed";
-  txHash?: string;
+  txhash?: string;
   summaryCID?: string;
 };
 
@@ -30,7 +30,7 @@ export const PurchaseSummaryPreview: React.FC<PurchaseSummaryProps> = ({
   estimatedDeadline,
   estimatedFee,
   status,
-  txHash,
+  txhash,
   summaryCID,
 }) => {
   return (
@@ -49,8 +49,8 @@ export const PurchaseSummaryPreview: React.FC<PurchaseSummaryProps> = ({
         <li><strong>Estimated Deadline:</strong> {estimatedDeadline}</li>
         <li><strong>Protocol Fee:</strong> {estimatedFee}</li>
         <li><strong>Asset Metadata:</strong> <a href={`https://ipfs.io/ipfs/${metadataCID}`} target="_blank" rel="noreferrer">{metadataCID}</a></li>
-        {status === "confirmed" && txHash && (
-          <li><strong>Transaction:</strong> <a href={`https://your-explorer.com/tx/${txHash}`} target="_blank" rel="noreferrer">{txHash.slice(0, 10)}…</a></li>
+        {status === "confirmed" && txhash && (
+          <li><strong>Transaction:</strong> <a href={`https://your-explorer.com/tx/${txhash}`} target="_blank" rel="noreferrer">{txhash.slice(0, 10)}…</a></li>
         )}
         {status === "confirmed" && summaryCID && (
           <li><strong>Stored Summary:</strong> <a href={`https://ipfs.io/ipfs/${summaryCID}`} target="_blank" rel="noreferrer">{summaryCID}</a></li>

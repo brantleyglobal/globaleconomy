@@ -1,338 +1,489 @@
+"use client";
+
 import { Modal } from "./common/modal";
 import { useAccount, useWriteContract } from "wagmi";
-import { parseEther } from "viem";
-import React, { useEffect, useState } from "react";
-import { PurchaseSummaryPreview } from "~~/components/purchasePreview";
+import { createPublicClient, http } from "viem";
+import React, { useEffect, useState, forwardRef, useImperativeHandle, useRef } from "react";
 import { useCheckoutStore } from "~~/components/useCheckoutStore";
-import abi from "~~/lib/abi/assetPurchaseAbi.json";
-import deployments from "../../hardhat/deployments.json";
-import { Web3Storage, File } from "../../../node_modules/web3.storage";
 import { ethers } from "ethers";
-import { BrowserProvider } from "ethers";
-import { Interface } from "ethers";
-import {AssetSummary} from "~~/lib/asset"
-import { useScaffoldWriteContract } from "~~/hooks/globalDEX/useScaffoldWriteContract";
+import { supportedTokens } from "./constants/tokens";
+import { StablecoinRate, getExchangeRates } from "~~/lib/exchangeRates";
+import { GLOBALCHAIN } from "~~/utils/globalEco/customChains";
+import deployments from "~~/lib/contracts/deployments.json";
+import { RainbowKitCustomConnectButton } from "~~/components/globalEco";
+import { toast, Toaster } from "react-hot-toast";
+import { initiatePurchase } from "~~/hooks/globalEco/usePurchaseHandler";
+import { token } from "../../hardhat/typechain-types/@openzeppelin/contracts";
+import { PaymentMethodStep } from "~~/components/steps/paymentMethod";
+import { SystemConfigurationStep } from "~~/components/steps/systemConfiguration";
+import { OutputCustomizationStep } from "~~/components/steps/outputCustomization";
+import { TermsStep } from "~~/components/steps/terms";
+import { CheckoutReviewStep } from "~~/components/steps/checkoutReview";
+import { PurchaseSummaryStep } from "~~/components/steps/purchaseSummary";
+import { PrivacyPolicyStep } from "~~/components/steps/privacyPolicy";
+import { ReturnsStep } from "~~/components/steps/returns";
+import { handleStripeReturn } from "~~/hooks/globalEco/usePurchaseHandler";
 
 
 
+export function getContractAddress(contractName: keyof typeof deployments): string {
+  return deployments[contractName] ?? "";
+}
 
-
-type CheckoutModalProps = {
-  onClose: () => void;
-  asset: {
-    assetId: number;
-    name: string;
-  };
-  selectedCurrency: string;
+export type StripeReturnContext = {
+  sessionId?: string | null;
+  cancelled?: boolean;
+  new?: boolean;
 };
 
-const CheckoutModal: React.FC<CheckoutModalProps> = ({ onClose, asset, selectedCurrency }) => {
-  const [currentStep, setCurrentStep] = useState(1);
+// Represents a priced variation like panel type, monitoring, etc.
+export type AssetVariation = {
+  label: string;
+  apriceInGBDO: bigint;
+};
+
+export type CheckoutModalProps = {
+  isOpen: boolean;
+  selectedCurrency: string;
+  variationGroups: Record<string, AssetVariation[]>;
+  selectedVariations: Record<string, AssetVariation>;
+  setSelectedVariations: (value: Record<string, AssetVariation>) => void;
+  onClose: () => void;
+  openWalletModal: () => void;
+};
+
+export type CheckoutModalRef = {
+  handlePurchaseConfirm: (ctx?: StripeReturnContext) => void;
+};
+
+const publicClient = createPublicClient({
+  chain: GLOBALCHAIN, // replace with your actual chain
+  transport: http(),
+});
+
+
+// Modal component
+const CheckoutModalBase = (
+  {
+    onClose,
+    isOpen,
+    openWalletModal,
+    selectedCurrency,
+    variationGroups,
+    selectedVariations,
+    setSelectedVariations,
+  }: CheckoutModalProps,
+  ref: React.Ref<CheckoutModalRef>
+) => {
+
+  const [currentStep, setCurrentStep] = useState<number>(1);
+
+    // Legal and contract checks
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [returnsAccepted, setReturnsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
-  const [contractAccepted, setContractAccepted] = useState(false);
-  const [selectedToken] = useState<"native" | "stable">("native");
-  const [txHash, setTxHash] = useState<string | null>(null);
-  const [ipfsCid, setIpfsCid] = useState<string | null>(null);
-  const [purchaseId, setPurchaseId] = useState<number | null>(null);
 
-  const [termsText, setTermsText] = useState("");
-  const [policyText, setPolicyText] = useState("");
-  const [returnsText, setReturnsText] = useState("");
+  const [termsText, setTermsText] = useState<string | null>(null);
+  const [privacyText, setPrivacyText] = useState<string | null>(null);
+  const [returnsText, setReturnsText] = useState<string | null>(null);
 
-  const PURCHASE_CONTRACT_ADDRESS = deployments.AssetPurchase;
-  const client = new Web3Storage({ token: process.env.NEXT_PUBLIC_WEB3STORAGE_TOKEN! });
 
+  useEffect(() => {
+    const loadLegalDocs = async () => {
+      try {
+        const [terms, privacy, returns] = await Promise.all([
+          fetch("/legal/terms-conditions.txt").then(res => res.text()),
+          fetch("/legal/privacy-policy.txt").then(res => res.text()),
+          fetch("/legal/refund-returns.txt").then(res => res.text()),
+        ]);
+
+        setTermsText(terms);
+        setPrivacyText(privacy);
+        setReturnsText(returns);
+      } catch (err) {
+        console.error("Failed to load legal documents", err);
+      }
+    };
+
+    loadLegalDocs();
+  }, []);
+
+ const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.ethereum) {
+      const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
+      setProvider(web3Provider);
+    } else {
+      console.warn("No Ethereum provider found");
+      // You can still show the modal and prompt wallet connection
+    }
+  }, []);
+
+
+  const { chain } = useAccount();
+  const chainId = chain?.id;
+  
+  // System configuration selections
+  const [selectedVoltage, setSelectedVoltage] = useState<number>(360);
+  const [selectedPhase, setSelectedPhase] = useState<"Single-Phase" | "Split-Phase" | "3-Phase" | null>(null);
+  const [selectedFrequency, setSelectedFrequency] = useState<"50Hz" | "60Hz" | null>(null);
+
+  const epanelSelected = selectedVariations["epanel"];
+  const xpanelSelected = selectedVariations["xpanel"];
+
+  const isEpanelRestricted =
+    epanelSelected?.label === "Restricted" && selectedVoltage === 120;
+
+  const isXpanelRestricted =
+    xpanelSelected?.label === "Restricted" &&
+    selectedVoltage === 360 &&
+    selectedPhase === "3-Phase" &&
+    selectedFrequency === "60Hz";
+
+  const isRestrictedCombo = isEpanelRestricted || isXpanelRestricted;
+  const basePriceInGBDO = useCheckoutStore(state => state.asset?.basePriceInGBDO ?? BigInt(0));
+
+ // External data and contract hooks
   const { address } = useAccount();
   const { writeContractAsync } = useWriteContract();
 
-  type ExtendedAsset = {
-    id: number;
-    name: string;
-    metadataCID: string;
-    priceInUSD: number;
-    baseDays: number;
-    perUnitDelay: number;
-  };
-  
+  const stepLabels = [
+    "Configure",
+    "Tuning",
+    "Terms",
+    "Refunds",
+    "Privacy",
+    "Method",
+    "Review",
+    "Done",
+  ];
 
+  // Store-driven state (like payment method and estimates)
   const {
     asset: checkoutAsset,
     quantity,
     tokenSymbol,
     estimatedTotal,
     estimatedEscrow,
-  } = useCheckoutStore();
+    paymentMethod,
+    stripeSessionId,
+    stripeConfirmation, 
+    txhash,
+    userAddress,
+    transactionStatus,
+    ipfsCid,
+    setField,
+  } = useCheckoutStore(); 
+  
+  // Label helpers
+  const variationDisplayLabels: Record<string, string> = {
+    epanel: "Panel Configuration",
+    xpanel: "Panel Configuration",
+    monitoring: "Remote Monitoring",
+    etie: "Grid Integration",
+    xtie: "Grid Integration",
+  };
 
-  const assetWithDelay = checkoutAsset as ExtendedAsset;
+  // Delivery estimate
+  const deliveryDays =
+    (checkoutAsset?.baseDays ?? 0) +
+    (checkoutAsset?.perUnitDelay ?? 0) * (quantity - 1);
 
-  const handleSubmitPurchase = async () => {
-    try {
-      const tx = await writeContractAsync({
-        address: PURCHASE_CONTRACT_ADDRESS,
-        abi: abi.abi,
-        functionName: "purchase",
-        args: [
-          checkoutAsset?.id,
-          quantity,
-          selectedCurrency === "native" ? "0x0000000000000000000000000000000000000000" : selectedCurrency,
-        ],
-        value: selectedCurrency === "native" ? parseEther("1.0") : undefined,
-      });
+  const deliveryDeadline = new Date(Date.now() + deliveryDays * 86400000).toLocaleDateString(
+    "en-US",
+    { year: "numeric", month: "short", day: "numeric" }
+  );
 
-      const hash = tx as `0x${string}`;
-      setTxHash(hash);
+  const [customizeGroupKey, setCustomizeGroupKey] = useState<string | null>(null);
 
-      setPurchaseId(purchaseId);// or use viem client
+  const handleClose = () => {
+    setCustomizeGroupKey(null);
+    setCurrentStep(1); // Optional: reset step to beginning
+    onClose(); // Call parent-provided close
+  };  
 
-      // Simulate extracting purchase ID (adjust if using indexed logs directly)
-      const provider = new BrowserProvider(window.ethereum);
-      const receipt = await provider.waitForTransaction(hash);
+  function calculateTotalPrice(
+    variations: Record<string, AssetVariation>,
+    method: "cash" | "native" | "stable",
+    tokenSymbol: string,
+    exchangeData: {
+      rates: StablecoinRate[];
+      gbdoRate: number;
+      lastUpdated: number;
+    },
+    basePriceInGBDO: BigInt
+  ): number {
+    // Convert microGBDO to GBDO
+    const basePrice = Number(basePriceInGBDO) / 1e6;
+    //console.log("[Pricing] Base GBDO:", basePrice);
 
-      if (!receipt) {
-        console.error("Transaction receipt not found.");
-        return;
-}
+    // Sum variations
+    const variationTotal = Object.values(variations)
+      .reduce((sum, v) => sum + Number(v.apriceInGBDO), 0) / 1e6;
+    //console.log("[Pricing] Variation Total GBDO:", variationTotal);
 
+    let subtotalGBDO = basePrice + variationTotal;
+    //console.log("[Pricing] Subtotal before Fees:", subtotalGBDO);
 
-      const iface = new Interface(abi.abi);
+    // Apply fee based on method
+    if (method === "stable") {
+      const fee = subtotalGBDO * 0.0025;
+      subtotalGBDO += fee;
+      //console.log("[Fee] Stablecoin fee applied:", fee);
+    } else if (method === "cash") {
+      const fee = subtotalGBDO * 0.029 + 0.30;
+      subtotalGBDO += fee;
+      //console.log("[Fee] Cash fee applied:", fee);
+    }
 
-      receipt.logs.forEach(log => {
-        try {
-          const parsedLog = iface.parseLog(log);
-          if (parsedLog?.name === "Purchased") {
-            const extractedPurchaseId = parsedLog.args.purchaseId.toString();
-            setPurchaseId(Number(extractedPurchaseId));
-          }
-        } catch {
-          // Ignore logs that don’t match
+    //console.log("[Pricing] Subtotal after Fees:", subtotalGBDO);
+
+    // Determine token rate
+    const effectiveSymbol = method === "cash" ? "USDC" : tokenSymbol;
+    const tokenRate = effectiveSymbol === "GBDO"
+      ? 1
+      : exchangeData.rates.find(r => r.symbol === effectiveSymbol)?.rate ?? 1;
+
+    //console.log(`[Pricing] Using Rate for ${effectiveSymbol}:`, tokenRate);
+    //console.log(`[Pricing] GBDO Reference Rate: ${exchangeData.gbdoRate}`);
+
+    // Final calculation
+    const finalPrice = subtotalGBDO * tokenRate;
+    //console.log(`[Pricing] Final Price in ${effectiveSymbol}:`, finalPrice);
+
+    return Math.round(finalPrice * 100) / 100;
+  }
+
+  const [finalizing, setFinalizing] = useState(true);
+
+  async function handleNext() {
+    const exchangeData = await getExchangeRates();
+
+    const total = calculateTotalPrice(
+      selectedVariations,
+      paymentMethod,
+      tokenSymbol,
+      exchangeData,
+      basePriceInGBDO
+    );
+
+    setField("estimatedTotal", total.toFixed(2));
+    setCurrentStep(7);
+  }
+
+  const handlePurchaseConfirm = async ({ sessionId, cancelled, new: isNew }: StripeReturnContext = {}) => {
+    // Stripe return flow — skip calculations and contract calls
+    if (sessionId || cancelled) {
+      try {
+        const stripeReturnData = await handleStripeReturn(); // purely reads from localStorage
+        if (!stripeReturnData) {
+          toast.error("Missing Stripe return data.");
+          return;
         }
-      });
 
+        const { checkoutAsset, estimatedTotal } = stripeReturnData;
 
+        setField("asset", checkoutAsset);
+        setField("estimatedTotal", estimatedTotal);
+        setField("stripeConfirmation", sessionId);
 
-      let extractedPurchaseId: string | null = null;
-      if (!extractedPurchaseId) {
-        console.warn("No Purchased event found in logs");
-        return;
+        setCurrentStep(sessionId ? 8 : 7); // Step 8 for success, 7 for cancelled
+      } catch (error) {
+        console.error("Error handling Stripe return", error);
+        toast.error("Failed to resume checkout.");
       }
 
-      setPurchaseId(Number(extractedPurchaseId));
-      
-      const summary = {
-        purchaseId: Number(extractedPurchaseId),
-        assetId: checkoutAsset?.id,
-        buyer: address,
+      return; // Exit early — no need to calculate or initiate purchase
+    }
+
+    if (isNew) {
+      console.log("Starting New Checkout Session...");
+    }
+    // Fresh purchase flow — full calculation and contract initiation
+    let provider: ethers.providers.Web3Provider | null = null;
+
+    if (paymentMethod !== "cash") {
+      if (window.ethereum) {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+      } else {
+        toast.error("Wallet not connected or provider missing.");
+        return;
+      }
+    }
+
+    try {
+      const exchangeData = await getExchangeRates();
+
+      const total = calculateTotalPrice(
+        selectedVariations,
+        paymentMethod,
+        tokenSymbol,
+        exchangeData,
+        basePriceInGBDO
+      );
+
+      setField("estimatedTotal", total.toFixed(2));
+      setField("asset", checkoutAsset);
+
+      if (!checkoutAsset) throw new Error("checkoutAsset must be defined before initiating purchase");
+
+      const selectedTokenMeta = supportedTokens.find(t => t.symbol === tokenSymbol);
+      if (!selectedTokenMeta) throw new Error(`Token metadata not found for symbol: ${tokenSymbol}`);
+
+      const purchaseCompleted = await initiatePurchase({
+        currentStep: 8,
+        paymentMethod,
+        checkoutAsset,
+        estimatedTotal: total.toFixed(2),
+        tokenSymbol,
         quantity,
-        token: selectedCurrency,
-        txHash: hash,
-        timestamp: new Date().toISOString(),
-      };
+        toast,
+        publicClient,
+        userAddress: address ?? "",
+        chainId: chainId ?? GLOBALCHAIN.id,
+        selectedToken: {
+          symbol: tokenSymbol,
+          address: selectedTokenMeta.address,
+          decimals: selectedTokenMeta.decimals,
+        },
+        value: total.toFixed(2),
+      });
 
-      const blob = new Blob([JSON.stringify(summary)], { type: "application/json" });
-      const cid = await client.put([new File([blob], `purchase-${extractedPurchaseId}.json`)]);
-      setIpfsCid(cid);
-
-      setCurrentStep(6);
-    } catch (err) {
-      console.error("Transaction failed:", err);
+      setCurrentStep(purchaseCompleted ? 8 : 7);
+    } catch (error) {
+      console.error("Error confirming purchase", error);
+      toast.error("Purchase failed.");
     }
   };
 
-  const deliveryDays = (assetWithDelay.baseDays ?? 0) + (assetWithDelay.perUnitDelay ?? 0) * (quantity - 1);
-
-
-  const estimatedDeadline = new Date(Date.now() + deliveryDays * 86400000)
-    .toISOString()
-    .split("T")[0];
-
-  const estimatedFee =
-    estimatedTotal && !isNaN(Number(estimatedTotal))
-      ? ((Number(estimatedTotal) * 5) / 1_000_000).toFixed(6)
-      : "0";
-
-
-  const summaryProps = {
-    assetName: checkoutAsset?.name || "N/A",
-    assetId: Number(checkoutAsset?.id) || 0,
-    metadataCID: checkoutAsset?.metadataCID || "",
-    quantity,
-    tokenSymbol,
-    buyer: address || "0x0",
-    estimatedTotal: estimatedTotal?.toString() || "0",
-    estimatedEscrow: estimatedEscrow?.toString() || "0",
-    deliveryDays,
-    estimatedDeadline,
-    estimatedFee,
-    status: (txHash ? "confirmed" : "draft") as "confirmed" | "draft",
-    txHash: txHash || "",
-    summaryCID: ipfsCid || "",
-  };
-
-
-  useEffect(() => {
-    fetch("/legal/terms-conditions.txt").then(res => res.text()).then(setTermsText);
-    fetch("/legal/privacy-policy.txt").then(res => res.text()).then(setPolicyText);
-    fetch("/legal/refund-returns.txt").then(res => res.text()).then(setReturnsText);
-  }, []);
+  useImperativeHandle(ref, () => ({
+    handlePurchaseConfirm,
+  }));
 
   return (
-    <Modal isOpen={true} onClose={onClose} title="Complete Checkout">
-      <div className="space-y-4 h-[600px] flex flex-col">
+    <Modal isOpen={isOpen} onClose={handleClose} title="">
+      {/* Step Tracker */}
+      <div className="flex justify-between text-xs mt-10 mb-6 px-2">
+        {stepLabels.map((label, index) => (
+          <div key={label} className="flex items-center gap-1">
+            <div
+              className={`w-4 h-4 rounded-full border-1 mb-6 ${
+                currentStep > index
+                  ? "bg-info border-info"
+                  : currentStep === index
+                  ? "bg-secondary border-info"
+                  : "border-gray-400"
+              }`}
+            />
+            <span
+              className={`${
+                currentStep === index ? "font-light text-info" : "text-gray-500"
+              }`}
+            >
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-2 h-[550px] flex flex-col">
         {currentStep === 1 && (
-          <>
-            <h3 className="text-lg font-semibold">Terms & Conditions</h3>
-            <div className="flex-1 overflow-y-auto text-sm border p-2 text-justify rounded bg-black">
-              {termsText || "Loading…"}
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={termsAccepted} onChange={() => setTermsAccepted(!termsAccepted)} />
-              I agree to the Terms & Conditions
-            </label>
-            <div className="flex justify-end">
-              <button className="btn btn-primary btn-sm" disabled={!termsAccepted} onClick={() => setCurrentStep(2)}>
-                Next
-              </button>
-            </div>
-          </>
+          <SystemConfigurationStep
+            currentStep={currentStep}
+            setCurrentStep={setCurrentStep}
+            variationGroups={variationGroups}
+            selectedVariations={selectedVariations}
+            setSelectedVariations={setSelectedVariations}
+            customizeGroupKey={customizeGroupKey}
+            setCustomizeGroupKey={setCustomizeGroupKey}
+          />
         )}
+
 
         {currentStep === 2 && (
-          <>
-            <h3 className="text-lg font-semibold">Returns & Refunds</h3>
-            <div className="flex-1 overflow-y-auto text-sm border p-2 text-justify rounded bg-black">
-              {returnsText || "Loading…"}
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={returnsAccepted} onChange={() => setReturnsAccepted(!returnsAccepted)} />
-              I agree to the Returns & Refund Policy
-            </label>
-            <div className="flex justify-end">
-              <button className="btn btn-primary btn-sm" disabled={!returnsAccepted} onClick={() => setCurrentStep(3)}>
-                Next
-              </button>
-            </div>
-          </>
+          <OutputCustomizationStep
+            currentStep={currentStep}
+            setCurrentStep={setCurrentStep}
+            selectedVoltage={selectedVoltage}
+            setSelectedVoltage={setSelectedVoltage}
+            selectedFrequency={selectedFrequency}
+            setSelectedFrequency={setSelectedFrequency}
+            selectedPhase={selectedPhase}
+            setSelectedPhase={setSelectedPhase}
+            isRestrictedCombo={isRestrictedCombo}
+          />
         )}
 
+        {/* Step 3 - Terms */}
         {currentStep === 3 && (
-          <>
-            <h3 className="text-lg font-semibold">Privacy Policy</h3>
-            <div className="flex-1 overflow-y-auto text-sm border p-2 text-justify rounded bg-black">
-              {policyText || "Loading…"}
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={privacyAccepted} onChange={() => setPrivacyAccepted(!privacyAccepted)} />
-              I agree to the Privacy Policy
-            </label>
-            <div className="flex justify-end">
-              <button className="btn btn-primary btn-sm" disabled={!privacyAccepted} onClick={() => setCurrentStep(4)}>
-                Next
-              </button>
-            </div>
-          </>
+          <TermsStep
+            termsText={termsText}
+            termsAccepted={termsAccepted}
+            setTermsAccepted={setTermsAccepted}
+            setCurrentStep={setCurrentStep}
+            currentStep={currentStep}
+            customizeGroupKey={customizeGroupKey}
+            selectedVariations={selectedVariations}
+          />
         )}
 
+        {/* Step 4 - Returns */}
         {currentStep === 4 && (
-          <>
-            <h3 className="text-lg font-semibold">Smart Contract Summary</h3>
-            <div className="flex-1 overflow-y-auto text-sm border p-2 text-justify rounded bg-black">
-              <PurchaseSummaryPreview {...summaryProps} />
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={contractAccepted} onChange={() => setContractAccepted(!contractAccepted)} />
-              I accept the Smart Contract terms
-            </label>
-            <div className="flex justify-end">
-              <button className="btn btn-primary btn-sm" disabled={!contractAccepted} onClick={() => setCurrentStep(5)}>
-                Next
-              </button>
-            </div>
-          </>
+          <ReturnsStep
+            returnsText={returnsText}
+            returnsAccepted={returnsAccepted}
+            setReturnsAccepted={setReturnsAccepted}
+            setCurrentStep={setCurrentStep}
+            currentStep={currentStep}
+            customizeGroupKey={customizeGroupKey}
+            selectedVariations={selectedVariations}
+          />
         )}
 
-        {/* Step 5 - Confirm */}
+        {/* Step 5 - Privacy */}
         {currentStep === 5 && (
-          <>
-            <h3 className="text-lg font-semibold">Confirm and Checkout</h3>
-            <div className="flex-1 overflow-y-auto text-sm border p-3 rounded bg-black space-y-2">
-              <p>
-                Payment Method:{" "}
-                <strong>{selectedToken === "native" ? "GBD" : "USDC"}</strong>
-              </p>
-              <p>
-                Estimated Total:{" "}
-                <strong>{estimatedTotal} {tokenSymbol}</strong>
-              </p>
-              <p>
-                Protocol Fee:{" "}
-                <strong>{estimatedFee} {tokenSymbol}</strong>
-              </p>
-              <hr className="my-2 border-gray-700" />
-              <p>
-                Product: <strong>{assetWithDelay?.name}</strong>
-              </p>
-              <p>Asset ID: {assetWithDelay?.id}</p>
-              <hr className="my-2 border-gray-700" />
-              <p>
-                Expected Delivery Time:{" "}
-                <strong>{deliveryDays} day{deliveryDays === 1 ? "" : "s"}</strong>
-              </p>
-              <p>
-                Estimated Delivery Deadline: <strong>{estimatedDeadline}</strong>
-              </p>
-            </div>
-            <div className="flex justify-end">
-              <button className="btn btn-success btn-sm" onClick={handleSubmitPurchase}>
-                Confirm Purchase
-              </button>
-            </div>
-          </>
+          <PrivacyPolicyStep
+            privacyText={privacyText}
+            privacyAccepted={privacyAccepted}
+            setPrivacyAccepted={setPrivacyAccepted}
+            setCurrentStep={setCurrentStep}
+          />
         )}
-
 
         {currentStep === 6 && (
-          <>
-            <h3 className="text-lg font-semibold">Purchase Complete</h3>
-            <div className="flex-1 overflow-y-auto text-sm border p-3 rounded bg-black space-y-2">
-              <p>
-                <strong>Transaction Confirmed</strong>
-              </p>
-              <p>
-                Purchase ID: <strong>{purchaseId}</strong>
-              </p>
-              <p>
-                Transaction Hash:{" "}
-                <a
-                  href={`https://etherscan.io/tx/${txHash}`}
-                  target="_blank"
-                  className="underline text-blue-500"
-                >
-                  View on Etherscan
-                </a>
-              </p>
-              {ipfsCid ? (
-                <p>
-                  IPFS Receipt:{" "}
-                  <a
-                    href={`https://ipfs.io/ipfs/${ipfsCid}`}
-                    target="_blank"
-                    className="underline text-blue-500"
-                  >
-                    View on IPFS
-                  </a>
-                </p>
-              ) : (
-                <p className="italic text-gray-400">Generating IPFS receipt…</p>
-              )}
-            </div>
-            <div className="flex justify-end">
-              <button className="btn btn-sm" onClick={onClose}>
-                Close
-              </button>
-            </div>
-          </>
+          <PaymentMethodStep
+            currentStep={currentStep}
+            setCurrentStep={setCurrentStep}
+            handleNext={handleNext}
+          />
+        )}
+
+        {/* Step 7 - Review and Checkout */}
+        {currentStep === 7 && checkoutAsset && (
+          <CheckoutReviewStep
+            checkoutAsset={checkoutAsset}
+            paymentMethod={paymentMethod}
+            tokenSymbol={tokenSymbol}
+            estimatedTotal={estimatedTotal}
+            quantity={quantity}
+            deliveryDays={deliveryDays}
+            deliveryDeadline={deliveryDeadline}
+            setCurrentStep={setCurrentStep}
+            handlePurchaseConfirm={() => handlePurchaseConfirm({ new: true })}
+          />
+        )}
+
+        {currentStep === 8 && (
+          <PurchaseSummaryStep
+            transactionStatus={transactionStatus}
+            paymentMethod={paymentMethod}
+            tokenSymbol={tokenSymbol}
+            stripeConfirmation={stripeConfirmation}
+            txhash={txhash}
+            finalizing={finalizing}
+            ipfsCid={ipfsCid}
+          />
         )}
 
       </div>
@@ -340,5 +491,4 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ onClose, asset, selectedC
   );
 };
 
-export default CheckoutModal;
- 
+export const CheckoutModal = forwardRef(CheckoutModalBase);

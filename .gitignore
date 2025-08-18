@@ -1,3 +1,5 @@
+#####Base#####
+
 # dependencies
 node_modules
 
@@ -14,6 +16,7 @@ node_modules
 
 # misc
 .DS_Store
+.env.local
 
 # IDE
 .vscode
@@ -21,3 +24,88 @@ node_modules
 
 # cli
 dist
+
+#####hardhat#####
+
+# dependencies
+hardhat/node_modules
+
+# env files
+hardhat/.env
+hardhat/.env.vault
+
+# coverage
+hardhat/coverage
+hardhat/coverage.json
+
+# typechain
+hardhat/typechain
+hardhat/typechain-types
+
+# hardhat files
+hardhat/cache
+hardhat/artifacts
+
+# zkSync files
+hardhat/artifacts-zk
+hardhat/cache-zk
+
+# deployments
+hardhat/deployments/localhost
+
+# typescript
+hardhat/*.tsbuildinfo
+
+# other
+hardhat/temp
+
+hardhat/.secret
+hardhat/keystore/deployments
+
+hardhat/artifact/
+hardhat/cache/
+hardhat/test
+hardhat/sync/
+
+#####NEXT######
+# dependencies
+nextjs/node_modules
+nextjs/.pnp
+nextjs/.pnp.js
+
+# testing
+nextjs/coverage
+
+# next.js
+nextjs/.next/
+nextjs/out/
+nextjs/.vercel
+
+# production
+nextjs/build
+
+# misc
+nextjs/.DS_Store
+nextjs/*.pem
+
+# debug
+nextjs/npm-debug.log*
+nextjs/yarn-debug.log*
+nextjs/yarn-error.log*
+nextjs/.pnpm-debug.log*
+
+# local env files
+nextjs/.env
+nextjs/.env.local
+nextjs/.env.development.local
+nextjs/.env.test.local
+nextjs/.env.production.local
+nextjs/.env.production
+
+# typescript
+nextjs/*.tsbuildinfo
+
+nextjs/ipfs-upload.config.json
+nextjs/lib/generated/prisma
+
+

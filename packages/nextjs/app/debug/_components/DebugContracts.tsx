@@ -4,8 +4,8 @@ import { useEffect, useMemo } from "react";
 import { useSessionStorage } from "usehooks-ts";
 import { BarsArrowUpIcon } from "@heroicons/react/20/solid";
 import { ContractUI } from "~~/app/debug/_components/contract";
-import { ContractName, GenericContract } from "~~/utils/globalDEX/contract";
-import { useAllContracts } from "~~/utils/globalDEX/contractsData";
+import { ContractName, GenericContract } from "~~/utils/globalEco/contract";
+import { useAllContracts } from "~~/utils/globalEco/contractsData";
 
 const selectedContractStorageKey = "globalDEX2.selectedContract";
 

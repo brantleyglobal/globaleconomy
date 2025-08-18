@@ -1,5 +1,5 @@
 import { AbiFunction, AbiParameter } from "abitype";
-import { AbiParameterTuple } from "~~/utils/globalDEX/contract";
+import { AbiParameterTuple } from "~~/utils/globalEco/contract";
 
 /**
  * Generates a key based on function metadata

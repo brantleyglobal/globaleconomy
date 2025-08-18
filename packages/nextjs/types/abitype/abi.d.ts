@@ -17,7 +17,7 @@ declare module "~~/node_modules/viem/node_modules/abitype" {
 
 export interface Asset {
   name: string;
-  priceInUSD: bigint;
+  priceInGBDO: bigint;
   metadataCID: string;
   baseDays: number;
   perUnitDelay: number;
@@ -26,7 +26,7 @@ export interface Asset {
 
 export interface AssetOnChain {
   name: string;
-  priceInUSD: bigint;
+  priceInGBDO: bigint;
   metadataCID: string;
   active: boolean;
   baseDays: number;

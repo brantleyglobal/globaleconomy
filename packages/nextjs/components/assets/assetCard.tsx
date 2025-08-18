@@ -1,20 +1,22 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
-import CheckoutModal from "~~/components/checkoutModal";
-import { useCheckoutStore } from "~~/components/useCheckoutStore";
-import { exchangeRates } from "~~/lib/exchangeRates";
-import { Modal } from "~~/components/common/descriptionModal"
 
-type AssetVariation = {
-  label: string;
-  apriceInUSD: bigint;
-};
+import React, { useState, useEffect, useMemo } from "react";
+import { CheckoutModal } from "~~/components/checkoutModal";
+import { useCheckoutStore } from "~~/components/useCheckoutStore";
+import { DModal } from "~~/components/common/descriptionModal";
+import { Modal } from "~~/components/common/modal";
+import { StablecoinRate } from "~~/lib/exchangeRates";
+import { GlobalWalletModal } from "~~/components/globalEco/RainbowKitCustomConnectButton/globalWalletConnect";
+import { RainbowKitCustomConnectButton } from "~~/components/globalEco";
+import { AssetImageGallery } from "~~/components/gallery/imageGallery"
+
+type AssetVariation = { label: string; apriceInGBDO: bigint; };
 
 type Props = {
   data: {
     asset: {
       assetId: number;
-      basePriceInUSD: number;
+      basePriceInGBDO: number;
       baseDays: number;
       perUnitDelay: string;
       variant: "eseries" | "xseries";
@@ -29,59 +31,111 @@ type Props = {
   };
 };
 
+const fiatToStablecoin: Record<string, string> = {
+  USD: "USDC",
+  EUR: "EURC",
+  USDT: "USDT",
+  DAI: "DAI",
+  GBP: "GBPT",
+  JPY: "JPYC",
+  CAD: "QCAD",
+  AUD: "AUDD",
+  BRL: "BRL1",
+  CHF: "XCHF",
+  INR: "INRX",
+  SGD: "XSGD",
+  ZAR: "ZARP",
+  KRW: "KRT",
+  MXN: "MMXN",
+  PYUSD: "PYUSD",
+  FDUSD: "FDUSD",
+  NGN: "NGNT",
+  ARS: "ARSX",
+  TRY: "TRYX"
+};
 
-export const AssetCard = ({ data }: Props) => {
+
+const variationGroupsMap: Record<"eseries" | "xseries", Record<string, AssetVariation[]>> = {
+  eseries: {
+    epanel: [
+      { label: "120v Split Phase @60Hz", apriceInGBDO: BigInt(0) },
+      { label: "Customize", apriceInGBDO: BigInt(1_000_000_000) },
+    ],
+    monitoring: [
+      { label: "No Monitoring", apriceInGBDO: BigInt(0) },
+      { label: "Monitoring", apriceInGBDO: BigInt(2_000_000_000) },
+    ],
+    etie: [
+      { label: "Stand Alone", apriceInGBDO: BigInt(0) },
+      { label: "Grid Tie", apriceInGBDO: BigInt(1_000_000_000) },
+    ],
+  },
+  xseries: {
+    xpanel: [
+      { label: "360v 3 Phase @60Hz", apriceInGBDO: BigInt(0) },
+      { label: "Customize", apriceInGBDO: BigInt(5_000_000_000) },
+    ],
+    monitoring: [
+      { label: "No Monitoring", apriceInGBDO: BigInt(0) },
+      { label: "Monitoring", apriceInGBDO: BigInt(2_000_000_000) },
+    ],
+    xtie: [
+      { label: "Stand Alone", apriceInGBDO: BigInt(0) },
+      { label: "Grid Tie", apriceInGBDO: BigInt(5_000_000_000) },
+    ],
+  },
+};
+
+const galleryMap: Record<"eseries" | "xseries", { 
+  pool: string[];
+  main: string;
+  hover: string 
+}> = {
+  eseries: {
+    pool: ["/LegionE1.png", "/LegionE2.png", "/LegionE3.png", "/LegionE4.png", "/LegionE5.png"],
+    main: "/LegionE1.png",
+    hover: "/LegionEAlt.png"
+  },
+  xseries: {
+    pool: ["/LegionX1.png", "/LegionX2.png", "/LegionX3.png",  "/LegionX4.png", "/LegionX5.png"],
+    main: "/LegionX2.png",
+    hover: "/LegionXAlt.png"
+  }
+};
+
+export const AssetCard: React.FC<Props> = ({ data }) => {
   const { asset: itemAsset, metadata } = data;
+  const variationGroups = variationGroupsMap[itemAsset.variant];
 
-  const fiatToStablecoin: Record<string, string> = {
-    USD: "USDC", AED: "XAED", AUD: "AUDT", BRL: "BRZ", CAD: "QCAD", CHF: "XCHF",
-    CNY: "CNH₮", DAI: "DAI", EUR: "EURC", FDUSD: "FDUSD", FRAX: "FRAX", GBP: "GBPT",
-    GUSD: "GUSD", INR: "XINR", JPY: "JPYC", KRW: "KRT", MXN: "MMXN", PYUSD: "PYUSD",
-    SGD: "XSGD", TUSD: "TUSD", USDP: "USDP", USDT: "USDT", ZAR: "XZAR",
-  };
-
-  const allVariationGroups: Record<"eseries" | "xseries", Record<string, AssetVariation[]>> = {
-    eseries: {
-      epanel: [
-        { label: "Split Phase @60Hz", apriceInUSD: BigInt(0) },
-        { label: "Customized", apriceInUSD: BigInt(1_000_000_000) },
-      ],
-      monitoring: [
-        { label: "No Monitoring", apriceInUSD: BigInt(0) },
-        { label: "Monitoring", apriceInUSD: BigInt(2_000_000_000) },
-      ],
-      etie: [
-        { label: "Stand Alone", apriceInUSD: BigInt(0) },
-        { label: "Grid Tie", apriceInUSD: BigInt(1_000_000_000) },
-      ],
-    },
-    xseries: {
-      xpanel: [
-        { label: "600v 3 Phase @60Hz", apriceInUSD: BigInt(0) },
-        { label: "Customized", apriceInUSD: BigInt(5_000_000_000) },
-      ],
-      monitoring: [
-        { label: "No Monitoring", apriceInUSD: BigInt(0) },
-        { label: "Monitoring", apriceInUSD: BigInt(2_000_000_000) },
-      ],
-      xtie: [
-        { label: "Stand Alone", apriceInUSD: BigInt(0) },
-        { label: "Grid Tie", apriceInUSD: BigInt(5_000_000_000) },
-      ],
-    },
-  };
-
-  const variationGroups = allVariationGroups[itemAsset.variant];
-  const fiatCurrencyList = Object.keys(fiatToStablecoin);
   const [selectedVariations, setSelectedVariations] = useState<Record<string, AssetVariation>>({});
-  const [selectedCurrency, setSelectedCurrency] = useState("USD");
+  const [selectedCurrency, setSelectedCurrency] = useState("GBDO");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "crypto">("crypto");
+  const [cryptoType, setCryptoType] = useState<"native" | "stable">("native");
+  const [selectedStablecoin, setSelectedStablecoin] = useState("GBDO");
+
   const [convertedPrice, setConvertedPrice] = useState(0);
-  const [imageSrc, setImageSrc] = useState(metadata.image);
   const [quantity, setQuantity] = useState(1);
   const [buyModalOpen, setBuyModalOpen] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState<{ assetId: number; name: string } | null>(null);
-  const altImage = metadata.altImage || metadata.image;
-  const setField = useCheckoutStore(state => state.setField);
+  const [descriptionModalOpen, setDescriptionModalOpen] = useState(false);
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const rawBasePriceGBDO = Number(itemAsset.basePriceInGBDO) / 1e6;
+  const [modalOpen, setModalOpen] = useState(false);
+  const variantKey = itemAsset.variant;
+  const galleryImages = galleryMap[variantKey]?.pool || [];
+  const variantImages = galleryMap[itemAsset.variant];
+  const [imageSrc, setImageSrc] = useState(variantImages.main);
+    
+  const store = useCheckoutStore.getState();
+  const resetForm = () => {
+    setSelectedVariations({});
+    setSelectedCurrency("GBDO");
+    setPaymentMethod("crypto");
+    setCryptoType("native");
+    setSelectedStablecoin("GBDO");
+    setConvertedPrice(0);
+    setQuantity(1);
+    setImageSrc(variantImages.main);
+  };
 
   useEffect(() => {
     const initial: Record<string, AssetVariation> = {};
@@ -91,169 +145,194 @@ export const AssetCard = ({ data }: Props) => {
     setSelectedVariations(initial);
   }, [itemAsset.variant]);
 
-  const basePriceUSD = useMemo(() => {
+  const basePriceGBDO = useMemo(() => {
+    const base = BigInt(itemAsset.basePriceInGBDO ?? 0);
     const variationTotal = Object.values(selectedVariations).reduce(
-      (sum, v) => sum + v.apriceInUSD,
+      (sum, v) => sum + BigInt(v.apriceInGBDO ?? 0),
       BigInt(0)
     );
-    return Number(BigInt(itemAsset.basePriceInUSD) + variationTotal) / 1e6;
-  }, [itemAsset.basePriceInUSD, selectedVariations]);
+    return Number(base + variationTotal) / 1e6;
+  }, [itemAsset.basePriceInGBDO, selectedVariations]);
+
+
+  const [exchangeData, setExchangeData] = useState<{
+    rates: StablecoinRate[];
+    gbdoRate: number;
+    lastUpdated: number;
+  } | null>(null);
+
 
   useEffect(() => {
-    const rate = exchangeRates[selectedCurrency] || 1;
-    setConvertedPrice(basePriceUSD * rate);
-  }, [basePriceUSD, selectedCurrency]);
+    if (!exchangeData || !selectedCurrency) return;
+
+    const tokenData = exchangeData.rates.find(r => r.symbol === selectedCurrency);
+    const rateAgainstGBDO = tokenData?.rateAgainstGBDO ?? 1;
+
+    setConvertedPrice(basePriceGBDO * rateAgainstGBDO);
+  }, [basePriceGBDO, selectedCurrency, exchangeData]);
 
   useEffect(() => {
-    const stablecoin = fiatToStablecoin[selectedCurrency] || selectedCurrency;
-    setField("asset", {
-      id: itemAsset.assetId,
-      name: metadata.name || "",
-      metadataCID: metadata.image || "",
-      priceInUSD: itemAsset.basePriceInUSD,
-    });
-    setField("quantity", quantity);
-    setField("tokenSymbol", stablecoin);
-    setField("estimatedTotal", (convertedPrice * quantity).toString());
-    setField("estimatedEscrow", ((convertedPrice * quantity) / 2).toString());
-  }, [itemAsset.assetId, itemAsset.basePriceInUSD, metadata, quantity, selectedCurrency, convertedPrice]);
+    const tokenSymbol =
+      paymentMethod === "cash"
+        ? null
+        : cryptoType === "native"
+        ? "GBDO"
+        : selectedStablecoin;
 
-  const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const currency = e.target.value;
-    setSelectedCurrency(currency);
-  };
+    store.setField("quantity", quantity);
+    store.setField("tokenSymbol", tokenSymbol || "");
+    store.setField("estimatedTotal", (convertedPrice * quantity).toString());
+    store.setField("estimatedEscrow", ((convertedPrice * quantity) / 2).toString());
+    store.setField("paymentMethod", paymentMethod === "cash" ? "cash" : cryptoType);
+  }, [quantity, selectedCurrency, convertedPrice, paymentMethod, cryptoType, selectedStablecoin]);
 
 
-  const totalDays =
+  const deliveryDays =
     itemAsset.baseDays + (quantity - 1) * Number(itemAsset.perUnitDelay);
 
-  const variationDisplayLabels: Record<string, string> = {
-    epanel: "Panel Configuration",
-    xpanel: "Panel Configuration",
-    monitoring: "Remote Monitoring",
-    etie: "Grid Integration",
-    xtie: "Grid Integration",
-  };
-
-  const [descriptionModalOpen, setDescriptionModalOpen] = useState(false);
-
-
+  
 
   return (
-    
-    <div className="bg-base-100 rounded-xl shadow-md p-4 flex flex-col">
-      {metadata.image && (
+    <div className="bg-base-100 rounded-xl shadow-md p-4 flex flex-col space-y-4">
+      {galleryImages.length > 0 && (
         <img
-          src={`https://ipfs.io/ipfs/${imageSrc}`}
-          className="rounded-lg mb-3 h-40 object-cover transition duration-200 hover:scale-105"
-          onMouseEnter={() => setImageSrc(altImage)}
-          onMouseLeave={() => setImageSrc(metadata.image)}
-          alt={metadata.name || "Asset image"}
+          src={imageSrc}
+          alt="..."
+          onMouseEnter={() => setImageSrc(variantImages.hover)}
+          onMouseLeave={() => setImageSrc(variantImages.main)}
+          onClick={() => setModalOpen(true)}
+          className="rounded-lg h-50 object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
         />
       )}
 
-      <h3 className="text-lg font-light mb-0">{metadata.name}</h3>
-      <p className="text-sm text-info-400 mt-0">{metadata.model}</p>
 
-      <button
-        onClick={() => setDescriptionModalOpen(true)}
-        className="btn btn-ghost btn-sm w-fit self-end text-info-500 hover:bg-base-300"
-      >
-        Description
-      </button>
-
-
-      {Object.entries(variationGroups).map(([groupKey, options]) => (
-        <div key={groupKey}>
-          <h3 className="text-sm mt-6 font-light text-info-400">
-            {variationDisplayLabels[groupKey] || groupKey.toUpperCase()}
-          </h3>
-          <div className="flex rounded-md mt-3 overflow-hidden border-none w-full mb-4">
-            {options.map(option => (
-              <button
-                key={option.label}
-                onClick={() =>
-                  setSelectedVariations(prev => ({ ...prev, [groupKey]: option }))
-                }
-                className={`flex-1 px-3 py-1 text-sm mx-2 font-medium transition-colors duration-200 ${
-                  selectedVariations[groupKey]?.label === option.label
-                    ? "bg-secondary-content rounded text-info-500"
-                    : "bg-secondary text-info-500 rounded hover:bg-neutral-800"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+      <div className="flex items-center justify-between gap-4">
+        {/* Title and Model */}
+        <div>
+          <h3 className="text-md font-light">{metadata.name}</h3>
+          <p className="text-xs text-info-400">{metadata.model}</p>
         </div>
-      ))}
 
-      <p className="text-md mt-10 font-medium mb-3">
-        {convertedPrice.toFixed(2)} {selectedCurrency}
-      </p>
-
-      <div className="flex items-center justify-center gap-2">
+        {/* Description Button */}
         <button
-          onClick={() => setQuantity(q => Math.max(1, q - 1))}
-          className="btn btn-xs"
+          onClick={() => setDescriptionModalOpen(true)}
+          className="btn btn-ghost border-none outline-none btn-sm text-info hover:bg-base-300"
         >
-          –
-        </button>
-        <span className="font-medium">{quantity}</span>
-        <button
-          onClick={() => setQuantity(q => q + 1)}
-          className="btn btn-xs"
-        >
-          +
+          Description ▸
         </button>
       </div>
 
-      <select
-        className="select select-bordered w-full my-2"
-        value={selectedCurrency}
-        onChange={handleCurrencyChange}
-      >
-        {fiatCurrencyList.map(currency => (
-          <option key={currency} value={currency}>
-            Pay in {currency} ({fiatToStablecoin[currency] || "Stablecoin"})
-          </option>
-        ))}
-      </select>
-
-      <button
-        className="btn btn-secondary w-full"
-        onClick={() => {
-          setSelectedAsset({
-            assetId: itemAsset.assetId,
-            name: metadata.name || "Unnamed Asset",
-          });
-          setBuyModalOpen(true);
-        }}
-      >
-        Checkout
-      </button>
-
-      {buyModalOpen && selectedAsset && (
-        <CheckoutModal
-          asset={selectedAsset}
-          selectedCurrency={selectedCurrency}
-          onClose={() => setBuyModalOpen(false)}
+      <p className="flex items-baseline gap-1">
+        <img
+          src="/globalw.png"
+          className="w-3 h-3 ml-3 opacity-80 mt-2"
         />
-      )}
+        <span className="text-lg font-light">
+          {rawBasePriceGBDO.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
+
+      </p>
+
+      {/* Quantity Controls */}
+      <div className="flex justify-center items-center gap-2">
+        <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="btn btn-xs">–</button>
+        <span className="font-medium">{quantity}</span>
+        <button onClick={() => setQuantity(q => q + 1)} className="btn btn-xs">+</button>
+      </div>
+
+      {/* Checkout Button */}
+      <div className="mt-6 w-full">
+        <button
+          className="btn bg-white/5 text-white font-light text-xs rounded-md w-full py-3 hover:bg-secondary/30 transition-all"
+          onClick={() => {
+            useCheckoutStore.getState().setField("asset", {
+              id: itemAsset.assetId,
+              name: metadata.name ?? "Unnamed Asset",
+              metadataCID: metadata.altImage ?? metadata.image ?? "",
+              basePriceInGBDO: BigInt(itemAsset.basePriceInGBDO ?? 0),
+              baseDays: itemAsset.baseDays,
+              perUnitDelay: Number(itemAsset.perUnitDelay ?? "0"),
+              variant: itemAsset.variant,
+            });
+
+            setBuyModalOpen(true);
+          }}
+        >
+          CHECKOUT
+        </button>
+      </div>
+
+
+      {/* Description Modal */}
       {descriptionModalOpen && (
-        <Modal title="Product Description" onClose={() => setDescriptionModalOpen(false)}>
-          <div className="max-h-96 overflow-y-auto whitespace-pre-line text-sm px-1">
+        <DModal isOpen={modalOpen} onClose={() => setDescriptionModalOpen(false)}>
+          <div className="max-h-200 max-w-400 overflow-y-auto whitespace-pre-line text-sm mb-8 px-1">
             {(metadata.description || "")
               .split("|||")
               .map((para, idx) => (
                 <p key={idx} className="mb-3">{para}</p>
               ))}
           </div>
+        </DModal>
+      )}
+
+      {/* Checkout Modal */}
+      {buyModalOpen && (
+        <CheckoutModal
+          isOpen={buyModalOpen} 
+          selectedCurrency={selectedCurrency}
+          variationGroups={variationGroups}
+          selectedVariations={selectedVariations}
+          setSelectedVariations={setSelectedVariations}
+          onClose={() => {
+            setBuyModalOpen(false);
+            resetForm();
+          }}
+          openWalletModal={() => setWalletModalOpen(true)}
+        />
+      )}
+
+      {/* Wallet Modal — render independently */}
+      {walletModalOpen && (
+        <GlobalWalletModal
+          isOpen={walletModalOpen}
+          onClose={() => setWalletModalOpen(false)}
+        />
+      )}
+
+      {modalOpen && (
+        <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={metadata.name}>
+          <div className="flex h-[70vh] gap-4">
+            {/* Left Panel: Thumbnails */}
+            <div className="w-1/4 overflow-y-auto pr-2 border-r border-base-300">
+              {galleryImages.map((img, idx) => (
+                <img
+                  key={idx}
+                  src={img}
+                  alt={`Asset ${idx + 1}`}
+                  className={`mb-3 w-full h-24 object-cover rounded-md cursor-pointer hover:scale-105 transition ${
+                    img === imageSrc ? "ring ring-info" : ""
+                  }`}
+                  onClick={() => setImageSrc(img)}
+                />
+              ))}
+            </div>
+
+            {/* Right Panel: Selected Image */}
+            <div className="flex-grow flex items-center justify-center p-4">
+              <img
+                src={imageSrc}
+                alt="Selected Preview"
+                className="max-w-full max-h-full rounded-lg transition-transform duration-300 hover:scale-105"
+              />
+            </div>
+          </div>
         </Modal>
       )}
 
-
-      <p className="text-xs text-gray-500 mb-2">Lead Time {totalDays} days</p>
+      <p className="text-sm text-light text-gray-500 text-center">
+        Lead Time: {deliveryDays} day{deliveryDays === 1 ? "" : "s"}
+      </p>
     </div>
   );
 };

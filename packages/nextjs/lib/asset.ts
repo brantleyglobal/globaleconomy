@@ -1,6 +1,6 @@
 export type AssetSummary = {
   assetId: number;
-  priceInUSD: bigint;
+  basePriceInGBDO: BigInt;
   baseDays: number;
   perUnitDelay: number;
   name: string;              // from metadata

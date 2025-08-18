@@ -1,8 +1,10 @@
+"use client";
+
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { ContractInput } from "./ContractInput";
 import { getFunctionInputKey, getInitialTupleArrayFormState } from "./utilsContract";
-import { replacer } from "~~/utils/globalDEX/common";
-import { AbiParameterTuple } from "~~/utils/globalDEX/contract";
+import { replacer } from "~~/utils/globalEco/common";
+import { AbiParameterTuple } from "~~/utils/globalEco/contract";
 
 type TupleArrayProps = {
   abiTupleParameter: AbiParameterTuple & { isVirtual?: true };

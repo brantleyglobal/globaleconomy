@@ -1,60 +1,63 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.22;
 
-contract WETH9 {
-    string public name = "Wrapped GBD";
-    string public symbol = "WGBD";
-    uint8  public decimals = 18;
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-    event  Approval(address indexed src, address indexed guy, uint wad);
-    event  Transfer(address indexed src, address indexed dst, uint wad);
-    event  Deposit(address indexed dst, uint wad);
-    event  Withdrawal(address indexed src, uint wad);
 
-    mapping(address => uint)                       public  balanceOf;
-    mapping(address => mapping(address => uint))  public  allowance;
+import "./libraries/WGBDLib.sol";
+
+contract WGBD is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+    WGBDLib.Data private data;
+
+    event Approval(address indexed owner, address indexed spender, uint128 value);
+    event Transfer(address indexed from, address indexed to, uint128 value);
+    event Deposit(address indexed user, uint128 value);
+    event Withdrawal(address indexed user, uint128 value);
+
+    function initialize(address _owner) public initializer {
+        __Ownable_init(_owner);
+        __UUPSUpgradeable_init();
+        WGBDLib.initialize(data);
+    }
 
     receive() external payable {
         deposit();
     }
 
     function deposit() public payable {
-        balanceOf[msg.sender] += msg.value;
-        emit Deposit(msg.sender, msg.value);
+        WGBDLib.deposit(data, msg.sender, uint128(msg.value));
+        emit Deposit(msg.sender, uint128(msg.value));
     }
 
-    function withdraw(uint wad) public {
-        require(balanceOf[msg.sender] >= wad, "insufficient balance");
-        balanceOf[msg.sender] -= wad;
-        payable(msg.sender).transfer(wad);
+    function withdraw(uint128 wad) public {
+        WGBDLib.withdraw(data, msg.sender, wad);
         emit Withdrawal(msg.sender, wad);
     }
 
-    function approve(address guy, uint wad) public returns (bool) {
-        allowance[msg.sender][guy] = wad;
-        emit Approval(msg.sender, guy, wad);
+    function approve(address spender, uint128 amount) public returns (bool) {
+        WGBDLib.approve(data, msg.sender, spender, amount);
+        emit Approval(msg.sender, spender, amount);
         return true;
     }
 
-    function transfer(address dst, uint wad) public returns (bool) {
-        return transferFrom(msg.sender, dst, wad);
-    }
-
-    function transferFrom(address src, address dst, uint wad)
-        public
-        returns (bool)
-    {
-        require(balanceOf[src] >= wad, "insufficient balance");
-
-        if (src != msg.sender && allowance[src][msg.sender] != type(uint).max) {
-            require(allowance[src][msg.sender] >= wad, "insufficient allowance");
-            allowance[src][msg.sender] -= wad;
-        }
-
-        balanceOf[src] -= wad;
-        balanceOf[dst] += wad;
-
-        emit Transfer(src, dst, wad);
+    function transfer(address to, uint128 amount) public returns (bool) {
+        WGBDLib.transfer(data, msg.sender, to, amount);
+        emit Transfer(msg.sender, to, amount);
         return true;
     }
+
+    function transferFrom(address from, address to, uint128 amount) public returns (bool) {
+        WGBDLib.transferFrom(data, from, to, msg.sender, amount);
+        emit Transfer(from, to, amount);
+        return true;
+    }
+
+    function balanceOf(address account) public view returns (uint256) {
+        return WGBDLib.balanceOf(data, account);
+    }
+
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

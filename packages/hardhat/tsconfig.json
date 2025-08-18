@@ -2,10 +2,14 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "commonjs",
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "forceConsistentCasingInFileNames": true,
     "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "outDir": "dist",
     "skipLibCheck": true
-  }
+  },
+  "include": ["./scripts", "./test", "./typechain-types", "hardhat.config.ts", "hardhat-upgrades.d.ts", "../../../sync/capitalManager/manageCapital.ts"]
+
 }

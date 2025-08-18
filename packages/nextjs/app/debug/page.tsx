@@ -1,10 +1,10 @@
 import { DebugContracts } from "./_components/DebugContracts";
 import type { NextPage } from "next";
-import { getMetadata } from "~~/utils/globalDEX/getMetadata";
+import { getMetadata } from "~~/utils/globalEco/getMetadata";
 
 export const metadata = getMetadata({
   title: "Debug Contracts",
-  description: "Debug your deployed 🏗 globalDEX 2 contracts in an easy way",
+  description: "Debug your deployed 🏗 Global Economy contracts in an easy way",
 });
 
 const Debug: NextPage = () => {

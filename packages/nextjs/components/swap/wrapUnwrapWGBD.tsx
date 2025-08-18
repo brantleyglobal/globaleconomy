@@ -1,23 +1,22 @@
+"use client";
+
 import { useState } from "react";
 import { ethers } from "ethers";
-import  abi from "~~/../hardhat/artifacts/contracts/WGBD.sol/WETH9.json"; // Adjust path as needed
-
-
-
-
+import  abi from "~~/../hardhat/artifacts/contracts/WGBD.sol/WGBD.json";
 
 
 export default function WrapUnwrapWGBD({ wgbdAddress }: { wgbdAddress: string }) {
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<"wrap" | "unwrap">("wrap");
+  
 
   async function handleAction() {
     if (!window.ethereum || !amount) return;
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
     const wgbd = new ethers.Contract(wgbdAddress, abi.abi, signer);
-    const value = ethers.utils.parseEther(amount);
+    const value = ethers.parseEther(amount);
 
     try {
       if (mode === "wrap") {

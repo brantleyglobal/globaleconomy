@@ -1,0 +1,6 @@
+{
+  "databaseURL": "https://globalanchor-9here8.ap-southeast-2.xata.sh/db/globalanchor:main",
+  "codegen": {
+    "output": "xdb.ts"
+  }
+}

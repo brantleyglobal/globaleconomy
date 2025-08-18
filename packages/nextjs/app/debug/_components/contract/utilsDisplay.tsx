@@ -1,8 +1,10 @@
+"use client";
+
 import { ReactElement, useState } from "react";
 import { TransactionBase, TransactionReceipt, formatEther, isAddress, isHex } from "viem";
 import { ArrowsRightLeftIcon } from "@heroicons/react/24/solid";
-import { Address } from "~~/components/globalDEX";
-import { replacer } from "~~/utils/globalDEX/common";
+import { Address } from "~~/components/globalEco";
+import { replacer } from "~~/utils/globalEco/common";
 
 type DisplayContent =
   | string

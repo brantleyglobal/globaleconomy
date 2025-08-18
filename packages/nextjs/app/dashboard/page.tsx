@@ -1,17 +1,16 @@
-// app/page.tsx
-import { mockTransactions } from "~~/components/common/transactions";
-import { TokenBalancesPanel } from "~~/components/balances/tokenBalancesPanel";
-import { TransactionHistory } from "~~/components/transactions/transactionHistory";
+//"use client";
+import DashboardClientWrapper from "~~/components/pages/DashboardClientWrapper";
 
+//export const dynamic: "force-dynamic" = "force-dynamic";
 
+export const metadata = {
+  title: "Dashboard | BG Company",
+  description: "Track your transactions and token balances in real time.",
+  icons: {
+    icon: "/favicon.png",
+  },
+};
 
-export default function Dashboard() {
-  const transactions = []; // Fetch this from your backend or JSON mock
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 p-4 bg-black">
-        <TransactionHistory transactions={mockTransactions} />
-        <TokenBalancesPanel />
-    </div>
-  );
+export default function DashboardPage() {
+  return <DashboardClientWrapper />;
 }

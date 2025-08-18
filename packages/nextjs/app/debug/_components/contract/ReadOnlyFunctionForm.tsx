@@ -13,8 +13,8 @@ import {
   getParsedContractFunctionArgs,
   transformAbiFunction,
 } from "~~/app/debug/_components/contract";
-import { useTargetNetwork } from "~~/hooks/globalDEX/useTargetNetwork";
-import { getParsedError, notification } from "~~/utils/globalDEX";
+import { useTargetNetwork } from "~~/hooks/globalEco/useTargetNetwork";
+import { getParsedError, notification } from "~~/utils/globalEco";
 
 type ReadOnlyFunctionFormProps = {
   contractAddress: Address;
@@ -29,14 +29,18 @@ export const ReadOnlyFunctionForm = ({
   inheritedFrom,
   abi,
 }: ReadOnlyFunctionFormProps) => {
-  const [form, setForm] = useState<Record<string, any>>(() => getInitialFormState(abiFunction));
+  const [form, setForm] = useState(() => getInitialFormState(abiFunction));
   const [result, setResult] = useState<unknown>();
   const { targetNetwork } = useTargetNetwork();
 
-  const { isFetching, refetch, error } = useReadContract({
+  const {
+    isFetching,
+    refetch,
+    error,
+  } = useReadContract({
     address: contractAddress,
+    abi,
     functionName: abiFunction.name,
-    abi: abi,
     args: getParsedContractFunctionArgs(form),
     chainId: targetNetwork.id,
     query: {
@@ -47,20 +51,19 @@ export const ReadOnlyFunctionForm = ({
 
   useEffect(() => {
     if (error) {
-      const parsedError = getParsedError(error);
-      notification.error(parsedError);
+      notification.error(getParsedError(error));
     }
   }, [error]);
 
   const transformedFunction = transformAbiFunction(abiFunction);
-  const inputElements = transformedFunction.inputs.map((input, inputIndex) => {
-    const key = getFunctionInputKey(abiFunction.name, input, inputIndex);
+  const inputElements = transformedFunction.inputs.map((input, index) => {
+    const key = getFunctionInputKey(abiFunction.name, input, index);
     return (
       <ContractInput
         key={key}
-        setForm={updatedFormValue => {
+        setForm={updatedForm => {
           setResult(undefined);
-          setForm(updatedFormValue);
+          setForm(updatedForm);
         }}
         form={form}
         stateObjectKey={key}
@@ -72,13 +75,12 @@ export const ReadOnlyFunctionForm = ({
   return (
     <div className="flex flex-col gap-3 py-5 first:pt-0 last:pb-1">
       <p className="font-medium my-0 break-words">
-        {abiFunction.name}
-        <InheritanceTooltip inheritedFrom={inheritedFrom} />
+        {abiFunction.name} <InheritanceTooltip inheritedFrom={inheritedFrom} />
       </p>
       {inputElements}
       <div className="flex flex-col md:flex-row justify-between gap-2 flex-wrap">
         <div className="grow w-full md:max-w-[80%]">
-          {result !== null && result !== undefined && (
+          {result !== undefined && result !== null && (
             <div className="bg-secondary rounded-3xl text-sm px-4 py-1.5 break-words overflow-auto">
               <p className="font-bold m-0 mb-1">Result:</p>
               <pre className="whitespace-pre-wrap break-words">{displayTxResult(result, "sm")}</pre>
@@ -93,7 +95,7 @@ export const ReadOnlyFunctionForm = ({
           }}
           disabled={isFetching}
         >
-          {isFetching && <span className="loading loading-spinner loading-xs"></span>}
+          {isFetching && <span className="loading loading-spinner loading-xs" />}
           Read 📡
         </button>
       </div>

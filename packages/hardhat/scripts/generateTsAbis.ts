@@ -113,7 +113,7 @@ const generateTsAbis: DeployFunction = async function () {
   fs.writeFileSync(
     `${TARGET_DIR}deployedContracts.ts`,
     await prettier.format(
-      `${generatedContractComment} import { GenericContractsDeclaration } from "~~/utils/globalDEX/contract"; \n\n
+      `${generatedContractComment} import { GenericContractsDeclaration } from "~~/utils/globalEco/contract"; \n\n
  const deployedContracts = {${fileContent}} as const; \n\n export default deployedContracts satisfies GenericContractsDeclaration`,
       {
         parser: "typescript",

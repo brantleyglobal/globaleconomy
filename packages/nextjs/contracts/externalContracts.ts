@@ -1,4 +1,4 @@
-import { GenericContractsDeclaration } from "~~/utils/globalDEX/contract";
+import { GenericContractsDeclaration } from "~~/utils/globalEco/contract";
 
 /**
  * @example

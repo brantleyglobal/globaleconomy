@@ -1,20 +1,23 @@
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import fs from "fs";
 import path from "path";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  console.log("Deploying UniswapV2Factory from:", deployer.address);
+  console.log("Deploying UniswapV2Factory (UUPS proxy) from:", deployer.address);
 
-  // You can set the deployer as the feeToSetter or replace with another address
   const feeToSetter = deployer.address;
 
   const Factory = await ethers.getContractFactory("UniswapV2Factory");
-  const factory = await Factory.deploy(feeToSetter);
+  const factory = await upgrades.deployProxy(Factory, [feeToSetter], {
+    initializer: "initialize",
+    kind: "uups"
+  });
+
   await factory.waitForDeployment();
 
   const factoryAddress = await factory.getAddress();
-  console.log("UniswapV2Factory deployed at:", factoryAddress);
+  console.log("UniswapV2Factory proxy deployed at:", factoryAddress);
 
   // Save to deployments.json
   const file = path.join(__dirname, "..", "deployments.json");
@@ -27,7 +30,7 @@ async function main() {
     JSON.stringify({ ...existing, UniswapV2Factory: factoryAddress }, null, 2)
   );
 
-  console.log("Deployment saved to deployments.json");
+  console.log("Address saved to deployments.json");
 }
 
 main().catch((error) => {

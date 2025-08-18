@@ -1,6 +1,6 @@
 import { Abi, AbiFunction } from "abitype";
 import { WriteOnlyFunctionForm } from "~~/app/debug/_components/contract";
-import { Contract, ContractName, GenericContract, InheritedFunctions } from "~~/utils/globalDEX/contract";
+import { Contract, ContractName, GenericContract, InheritedFunctions } from "~~/utils/globalEco/contract";
 
 export const ContractWriteMethods = ({
   onChange,

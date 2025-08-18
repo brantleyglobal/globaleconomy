@@ -1,216 +1,120 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity ^0.8.22;
 
-interface IERC20 {
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
-    function transfer(address recipient, uint256 amount) external returns (bool);
-}
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
-interface IStableSwapGateway {
-    function lockRedemption(address user) external;
-}
+import "./libraries/assetPurchaseLib.sol";
 
-contract AssetPurchase {
-    address public admin;
+contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+    using AssetPurchaseLib for AssetPurchaseLib.Data;
 
-    enum Status { Pending, InProgress, Completed, Cancelled }
+    AssetPurchaseLib.Data private data;
+    uint256 public feeBasisPoints;
 
-    struct Asset {
-        string name;
-        uint256 priceInUSD; // e.g., $100 = 100e6
-        string metadataCID;
-        bool active;
-        uint256 baseDays;
-        uint256 perUnitDelay;
+
+    function initialize(address _owner, uint256 _initialFeeBps) public initializer {
+        __Ownable_init(_owner);
+        __UUPSUpgradeable_init();
+        _transferOwnership(_owner);
+        feeBasisPoints = _initialFeeBps;
     }
 
-    struct Purchase {
-        address buyer;
-        address tokenUsed;
-        uint256 assetId;
-        uint256 quantity;
-        uint256 depositAmount;
-        uint256 escrowAmount;
-        uint256 purchaseTime;
-        uint256 deliveryDeadline;
-        string progressCID;
-        string completionCID;
-        Status status;
-        uint256 proposedExtension;
-        bool extensionPending;
-    }
-
-    address public feeRecipient;
-    uint256 public constant FEE_BASIS_POINTS = 5; // 0.005% = 5 / 1,000,000
-    uint256 public constant BASIS_POINT_DIVISOR = 1_000_000;
-
-    uint256 public nextAssetId;
-    uint256 public nextPurchaseId;
-
-    mapping(uint256 => Asset) public assets;
-    mapping(uint256 => Purchase) public purchases;
-    mapping(address => uint256) public stableTokenToRate; // token → micro USD
-
-    IStableSwapGateway public redemptionGateway;
-
-    event AssetAdded(uint256 id, string name);
-    event Purchased(uint256 indexed purchaseId, address indexed buyer, uint256 assetId);
-    event ProgressUploaded(uint256 id, string cid);
-    event CompletionUploaded(uint256 id, string cid);
-    event EscrowReleased(uint256 id);
-    event Refunded(uint256 id);
-    event ExtensionProposed(uint256 id, uint256 duration);
-    event ExtensionApproved(uint256 id, uint256 newDeadline);
-    event RedemptionLocked(address user);
-
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "Not admin");
-        _;
-    }
-
-    constructor() {
-        admin = msg.sender;
-        feeRecipient = msg.sender; // or a treasury/multisig wallet
-
-    }
-
-    function setRate(address token, uint256 rate) external onlyAdmin {
-        stableTokenToRate[token] = rate;
-    }
-
-    function setRedemptionGateway(address gateway) external onlyAdmin {
-        require(gateway != address(0), "Invalid gateway");
-        redemptionGateway = IStableSwapGateway(gateway);
-    }
-
-    function addAsset(
+    // --- Asset Setup ---
+    function setAsset(
         string calldata name,
-        uint256 usdPrice,
+        uint128 priceInGBDO,
         string calldata cid,
-        uint256 baseDays,
-        uint256 delayPerUnit
-    ) external onlyAdmin {
-        assets[nextAssetId] = Asset(name, usdPrice, cid, true, baseDays, delayPerUnit);
-        emit AssetAdded(nextAssetId, name);
-        nextAssetId++;
+        uint32 baseDays,
+        uint32 delayPerUnit
+    ) external onlyOwner {
+        data.addAsset(name, priceInGBDO, cid, baseDays, delayPerUnit);
     }
 
-    function purchase(uint256 assetId, uint256 quantity, address token) external {
-        Asset memory a = assets[assetId];
-        require(a.active, "Asset inactive");
-        require(quantity > 0, "Invalid quantity");
+    function setFeeBasisPoints(uint256 newBps) external onlyOwner {
+        require(newBps <= 5000, "Fee too high");
+        feeBasisPoints = newBps;
+    }
 
-        uint256 rate = stableTokenToRate[token];
-        require(rate > 0, "Rate not set");
-
-        uint256 totalUSD = a.priceInUSD * quantity;
-        uint256 totalToken = (totalUSD * 1e18) / rate;
-        uint256 deposit = totalToken / 2;
-        uint256 escrow = totalToken - deposit;
-
-        uint256 feeAmount = (totalToken * FEE_BASIS_POINTS) / BASIS_POINT_DIVISOR;
-        uint256 netAmount = totalToken - feeAmount;
-
-
-        IERC20(token).transferFrom(msg.sender, address(this), netAmount);
-        IERC20(token).transferFrom(msg.sender, feeRecipient, feeAmount);
-
-
-        uint256 delay = a.baseDays + a.perUnitDelay * (quantity - 1);
-        uint256 deadline = block.timestamp + delay * 1 days;
-
-        purchases[nextPurchaseId] = Purchase(
+    // --- Purchase Entry ---
+    function purchase(
+        uint64 assetId,
+        uint32 quantity,
+        address token,
+        uint256 rate,
+        address feeRecipient
+    ) external returns (uint256 id) {
+        id = data.purchase(
             msg.sender,
             token,
             assetId,
             quantity,
-            deposit,
-            escrow,
-            block.timestamp,
-            deadline,
-            "",
-            "",
-            Status.InProgress,
-            0,
-            false
+            rate,
+            feeRecipient,
+            feeBasisPoints
         );
-
-        emit Purchased(nextPurchaseId, msg.sender, assetId);
-
-        if (address(redemptionGateway) != address(0)) {
-            redemptionGateway.lockRedemption(msg.sender);
-            emit RedemptionLocked(msg.sender);
-        }
-
-        nextPurchaseId++;
     }
 
-    function uploadProgress(uint256 id, string calldata cid) external onlyAdmin {
-        Purchase storage p = purchases[id];
-        require(p.status == Status.InProgress, "Not active");
-        p.progressCID = cid;
-        emit ProgressUploaded(id, cid);
+    // --- Delivery Management ---
+    function uploadProgress(uint256 id, string calldata cid) external onlyOwner {
+        data.uploadProgress(id, cid);
     }
 
-    function uploadCompletion(uint256 id, string calldata cid) external onlyAdmin {
-        Purchase storage p = purchases[id];
-        require(p.status == Status.InProgress, "Not active");
-        p.completionCID = cid;
-        emit CompletionUploaded(id, cid);
+    function uploadCompletion(uint256 id, string calldata cid) external onlyOwner {
+        data.uploadCompletion(id, cid);
     }
 
-    function releaseEscrow(uint256 id) external onlyAdmin {
-        Purchase storage p = purchases[id];
-        require(p.status == Status.InProgress, "Not active");
-        require(bytes(p.completionCID).length > 0, "No final proof");
-
-        p.status = Status.Completed;
-        IERC20(p.tokenUsed).transfer(admin, p.escrowAmount);
-        emit EscrowReleased(id);
+    // --- Escrow & Refunds ---
+    function releaseEscrow(uint256 id) external onlyOwner {
+        data.releaseEscrow(id, owner());
     }
 
-    function autoRefund(uint256 id) external {
-        Purchase storage p = purchases[id];
-        require(p.status == Status.InProgress, "Not active");
-        require(block.timestamp > p.deliveryDeadline, "Not expired");
-        require(bytes(p.completionCID).length == 0, "Already fulfilled");
-
-        p.status = Status.Cancelled;
-        IERC20(p.tokenUsed).transfer(p.buyer, p.escrowAmount);
-        emit Refunded(id);
+    function refund(uint256 id) external {
+        data.autoRefund(id);
     }
 
-    function proposeExtension(uint256 id, uint256 extraDays) external onlyAdmin {
-        Purchase storage p = purchases[id];
-        require(p.status == Status.InProgress, "Not active");
-        require(!p.extensionPending, "Already proposed");
+    function cancelPurchase(uint256 id, uint256 graceDays) external {
+        data.cancelPurchase(id, graceDays);
+    }
 
-        p.proposedExtension = extraDays;
-        p.extensionPending = true;
-        emit ExtensionProposed(id, extraDays);
+    // --- Extensions ---
+    function proposeExtension(uint256 id, uint256 extraDays) external {
+        data.proposeExtension(id, extraDays);
     }
 
     function approveExtension(uint256 id) external {
-        Purchase storage p = purchases[id];
-        require(msg.sender == p.buyer, "Not buyer");
-        require(p.extensionPending, "No proposal");
-
-        p.deliveryDeadline += p.proposedExtension * 1 days;
-        p.extensionPending = false;
-        p.proposedExtension = 0;
-
-        emit ExtensionApproved(id, p.deliveryDeadline);
+        data.approveExtension(id);
     }
 
-    function cancelPurchase(uint256 id) external {
-        Purchase storage p = purchases[id];
-        require(msg.sender == p.buyer, "Not buyer");
-        require(p.status == Status.InProgress, "Invalid status");
-        require(block.timestamp < p.purchaseTime + 5 days, "Window expired");
-
-        p.status = Status.Cancelled;
-        uint256 totalRefund = p.depositAmount + p.escrowAmount;
-        IERC20(p.tokenUsed).transfer(p.buyer, totalRefund);
-        emit Refunded(id);
+    // --- Admin Withdrawals ---
+    function withdrawTokens(
+        address token,
+        uint128 amount,
+        uint256 lockedEscrow,
+        uint256 withinGracePeriod
+    ) external onlyOwner {
+        data.withdrawTokens(token, owner(), amount, lockedEscrow, withinGracePeriod);
     }
+
+    // --- Read-only Views ---
+    function getUserPurchases(address user)
+        external
+        view
+        returns (AssetPurchaseLib.Purchase[] memory)
+    {
+        return data.getUserPurchases(user);
+    }
+
+    function getPurchase(uint256 id)
+        external
+        view
+        returns (AssetPurchaseLib.Purchase memory)
+    {
+        return data.purchases[id];
+    }
+
+    // --- Upgrade Logic ---
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

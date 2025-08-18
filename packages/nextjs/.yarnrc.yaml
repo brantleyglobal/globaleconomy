@@ -1,0 +1,15 @@
+# .yarnrc.yml (repo root)
+yarnPath: .yarn/releases/yarn-3.2.3.cjs
+nodeLinker: node-modules
+nmHoistingLimits: workspaces
+
+packageExtensions:
+  "@walletconnect/utils@2.21.0":
+    dependencies:
+      viem: "2.33.2"
+  "@walletconnect/utils@2.21.1":
+    dependencies:
+      viem: "2.33.2"
+  "burner-connector@0.0.16":
+    dependencies:
+      viem: "2.33.2"

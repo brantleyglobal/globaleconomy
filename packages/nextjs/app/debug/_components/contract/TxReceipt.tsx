@@ -1,8 +1,8 @@
 import { TransactionReceipt } from "viem";
 import { CheckCircleIcon, DocumentDuplicateIcon } from "@heroicons/react/24/outline";
 import { ObjectFieldDisplay } from "~~/app/debug/_components/contract";
-import { useCopyToClipboard } from "~~/hooks/globalDEX/useCopyToClipboard";
-import { replacer } from "~~/utils/globalDEX/common";
+import { useCopyToClipboard } from "~~/hooks/globalEco/useCopyToClipboard";
+import { replacer } from "~~/utils/globalEco/common";
 
 export const TxReceipt = ({ txResult }: { txResult: TransactionReceipt }) => {
   const { copyToClipboard: copyTxResultToClipboard, isCopiedToClipboard: isTxResultCopiedToClipboard } =

@@ -11,8 +11,8 @@ import {
   InputBase,
   IntegerInput,
   IntegerVariant,
-} from "~~/components/globalDEX";
-import { AbiParameterTuple } from "~~/utils/globalDEX/contract";
+} from "~~/components/globalEco";
+import { AbiParameterTuple } from "~~/utils/globalEco/contract";
 
 type ContractInputProps = {
   setForm: Dispatch<SetStateAction<Record<string, any>>>;

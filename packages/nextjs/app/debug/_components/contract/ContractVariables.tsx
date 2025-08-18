@@ -1,6 +1,6 @@
 import { DisplayVariable } from "./DisplayVariable";
 import { Abi, AbiFunction } from "abitype";
-import { Contract, ContractName, GenericContract, InheritedFunctions } from "~~/utils/globalDEX/contract";
+import { Contract, ContractName, GenericContract, InheritedFunctions } from "~~/utils/globalEco/contract";
 
 export const ContractVariables = ({
   refreshDisplayVariables,

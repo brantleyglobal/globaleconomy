@@ -13,12 +13,12 @@ const getValidatedPassword = async () => {
     if (pass === confirmation) {
       return pass;
     }
-    console.log("❌ Passwords don't match. Please try again.");
+    console.log("Passwords don't match. Please try again.");
   }
 };
 
 const setNewEnvConfig = async (existingEnvConfig = {}) => {
-  console.log("👛 Generating new Wallet\n");
+  console.log("Generating new Wallet\n");
   const randomWallet = ethers.Wallet.createRandom();
 
   const pass = await getValidatedPassword();
@@ -31,9 +31,9 @@ const setNewEnvConfig = async (existingEnvConfig = {}) => {
 
   // Store in .env
   fs.writeFileSync(envFilePath, stringify(newEnvConfig));
-  console.log("\n📄 Encrypted Private Key saved to packages/hardhat/.env file");
+  console.log("\nEncrypted Private Key saved to packages/hardhat/.env file");
   console.log("🪄 Generated wallet address:", randomWallet.address, "\n");
-  console.log("⚠️ Make sure to remember your password! You'll need it to decrypt the private key.");
+  console.log("Make sure to remember your password! You'll need it to decrypt the private key.");
 };
 
 async function main() {
@@ -45,7 +45,7 @@ async function main() {
 
   const existingEnvConfig = parse(fs.readFileSync(envFilePath).toString());
   if (existingEnvConfig.DEPLOYER_PRIVATE_KEY_ENCRYPTED) {
-    console.log("⚠️ You already have a deployer account. Check the packages/hardhat/.env file");
+    console.log("You already have a deployer account. Check the packages/hardhat/.env file");
     return;
   }
 

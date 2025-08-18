@@ -1,0 +1,7 @@
+contracts/deployedContracts.ts(279,34): error TS1005: ';' expected.
+contracts/externalContracts.ts(16,34): error TS1005: ';' expected.
+scaffold.config.ts(49,12): error TS1005: ',' expected.
+scaffold.config.ts(49,22): error TS1005: ',' expected.
+tsconfig.json(12,25): error TS6046: Argument for '--moduleResolution' option must be: 'node', 'classic', 'node16', 'nodenext'.
+utils/globalEco/purchaseQueue.ts(195,7): error TS1005: ',' expected.
+utils/globalEco/purchaseQueue.ts(195,17): error TS1005: ',' expected.
