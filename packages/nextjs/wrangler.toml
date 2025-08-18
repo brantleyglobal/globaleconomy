@@ -65,7 +65,3 @@ binding = "DB_REDEMPTIONS"
 database_name = "redemption-db"
 database_id = "32863e7a-84d5-4901-bfea-2b1899364bff"
 
-
-[env.production.vars]
-API_SECRET = "bb5099d7a7839591b2d1c642270f71bbef5f7"
-
