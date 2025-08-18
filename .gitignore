@@ -73,6 +73,7 @@ nextjs/node_modules
 nextjs/.pnp
 nextjs/.pnp.js
 
+
 # testing
 nextjs/coverage
 
@@ -87,6 +88,7 @@ nextjs/build
 # misc
 nextjs/.DS_Store
 nextjs/*.pem
+nextjs/.yarn
 
 # debug
 nextjs/npm-debug.log*
