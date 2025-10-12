@@ -63,6 +63,8 @@ hardhat/.secret
 hardhat/keystore/deployments
 
 hardhat/artifact/
+hardhat/dist/
+hardhat/.openzeppelin/
 hardhat/cache/
 hardhat/test
 hardhat/sync/

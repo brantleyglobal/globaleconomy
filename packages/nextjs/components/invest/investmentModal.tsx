@@ -306,7 +306,7 @@ export const InvestmentModal: React.FC<Props> = ({
                       } else if (userAction == "region") {
                         setStep(ModalStep.RegionStep);
                       } else { 
-                        router.push("/trader");
+                        {/*router.push("/trader");*/} //URL FOR TRADING
                       }
                     }}
                     disabled={!(policyAccepted)}

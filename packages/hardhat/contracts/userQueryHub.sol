@@ -13,14 +13,12 @@ contract UserQueryHub is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     address public transferTracker;
     address public assetPurchase;
     address public smartVault;
-    address public stableSwapGateway;
 
     function initialize(
         address _owner,
         address _transferTracker,
         address _assetPurchase,
-        address _smartVault,
-        address _stableSwapGateway
+        address _smartVault
     ) public initializer {
         __Ownable_init(_owner);
         __UUPSUpgradeable_init();
@@ -28,7 +26,6 @@ contract UserQueryHub is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         transferTracker = _transferTracker;
         assetPurchase = _assetPurchase;
         smartVault = _smartVault;
-        stableSwapGateway = _stableSwapGateway;
     }
 
     // Helper internal functions for calls
@@ -77,17 +74,6 @@ contract UserQueryHub is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function getUserMultiplier(address user) external view returns (uint256) {
         bytes memory returnData = _callAddress(smartVault, "getMultiplier(address)", abi.encode(user));
         return abi.decode(returnData, (uint256));
-    }
-
-
-    function getUserSwaps(address user) external view returns (UserQueryLib.SwapRecord[] memory) {
-        bytes memory returnData = _callAddress(stableSwapGateway, "getSwaps(address)", abi.encode(user));
-        return abi.decode(returnData, (UserQueryLib.SwapRecord[]));
-    }
-
-    function getUserSwapsByStatus(address user, UserQueryLib.SwapStatus status) external view returns (UserQueryLib.SwapRecord[] memory) {
-        bytes memory returnData = _callAddress(stableSwapGateway, "getSwapsByStatus(address,uint8)", abi.encode(user, uint8(status)));
-        return abi.decode(returnData, (UserQueryLib.SwapRecord[]));
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}

@@ -1,105 +1,203 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "./interfaces/ISmartVault.sol";
 
-interface IPool {
-    function getAllDepositors() external view returns (address[] memory);
-    function getDepositedAmount(address user) external view returns (uint256);
-    function getCommittedQuarters(address user) external view returns (uint256);
-    function getDepositStartTime(address user) external view returns (uint256);
-    function getPoolBalance() external view returns (uint256);
+struct Payout {
+    address user;
+    uint256 amount;
 }
 
-interface IQueryHub {
-    function getMultiplier(address user) external view returns (uint256);
-}
+contract PoolManager is UUPSUpgradeable, OwnableUpgradeable {
+    // Vault reference
+    address public vaultAddress;
+    address public payoutAddress;
 
-contract PoolManager is Initializable, UUPSUpgradeable {
-    // Storage variables must be in the same order if you plan to upgrade
-    address public poolAddress;
-    address public queryHubAddress;
+    // Bitmask flags
+    mapping(address => uint8) public userFlags;
 
-    uint256 public redemptionPeriod;
+    // Distribution tracking
+    mapping(address => uint256) public lastProcessedDistribution;
 
-    // Optional: store an admin address for upgrade control
-    address public admin;
+    // Bitmask definitions
+    uint8 constant FLAG_ACTIVE    = 1 << 0;
+    uint8 constant FLAG_REDEEMED  = 1 << 1;
+    uint8 constant FLAG_ELIGIBLE  = 1 << 2;
+    uint8 constant FLAG_DIVIDEND_PAID = 1 << 3;
+    uint8 constant FLAG_REDEMPTION_PAID = 1 << 4;
+    uint8 constant FLAG_COMMITTED = 1 << 5;
+    uint8 constant FLAG_PENDING_REDEMPTION = 1 << 6;
 
-    // Initialize function instead of constructor
-    function initialize(address _pool, address _queryHub, address _admin) public initializer {
-        poolAddress = _pool;
-        queryHubAddress = _queryHub;
-        redemptionPeriod = 3 * 90 days; // Example: 3 quarters (approx)
-        admin = _admin;
+    // Events
+    event FlagUpdated(address indexed user, uint8 newFlags);
+    event PayoutTriggered(address indexed user, uint256 amount);
+    event VaultUpdated(address indexed newVault);
+    event PayoutSkipped(address indexed user, uint256 attemptedAmount);
+    event PayoutAddressUpdated(address indexed oldAddress, address indexed newAddress);
+
+    // Initializer for upgradeable contract
+    function initialize(address _owner, address _vaultAddress) public initializer {
+        __Ownable_init(_owner);
+        __UUPSUpgradeable_init();
+        vaultAddress = _vaultAddress;
     }
 
-    // UUPS upgrade authorization
-    function _authorizeUpgrade(address /* newImplementation */) internal override {
-        require(msg.sender == admin, "Not authorized");
+    function setPayoutAddress(address _newAddress) external onlyOwner {
+        require(_newAddress != address(0), "Invalid address");
+        payoutAddress = _newAddress;
     }
 
-    struct PayoutResult {
-        address user;
-        uint256 payout;
-        bool redeemed;
+    // Required for UUPS upgrades
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    // Flag logic
+    function setFlag(address user, uint8 flag) external onlyOwner {
+        userFlags[user] |= flag;
+        emit FlagUpdated(user, userFlags[user]);
     }
 
-    function calculatePayouts() external view returns (PayoutResult[] memory results) {
-        IPool pool = IPool(poolAddress);
-        IQueryHub queryHub = IQueryHub(queryHubAddress);
+    function markCommitted(address user) external onlyOwner {
+        userFlags[user] |= FLAG_COMMITTED;
+        emit FlagUpdated(user, userFlags[user]);
+    }
 
-        address[] memory users = pool.getAllDepositors();
-        uint256 totalBalance = pool.getPoolBalance();
 
-        uint256 redemptionReserve = 0;
-        uint256 totalWeight = 0;
+    function clearFlag(address user, uint8 flag) external onlyOwner {
+        userFlags[user] &= ~flag;
+        emit FlagUpdated(user, userFlags[user]);
+    }
 
-        bool[] memory redeemed = new bool[](users.length);
-        uint256[] memory deposits = new uint256[](users.length);
-        uint256[] memory multipliers = new uint256[](users.length);
+    function hasFlag(address user, uint8 flag) public view returns (bool) {
+        return (userFlags[user] & flag) != 0;
+    }
 
-        // First loop: determine redemption status and gather data
+    // Batch flagging
+    function batchSetFlags(address[] calldata users, uint8 flag) external onlyOwner {
+        for (uint256 i = 0; i < users.length; i++) {
+            userFlags[users[i]] |= flag;
+            emit FlagUpdated(users[i], userFlags[users[i]]);
+        }
+    }
+
+    function batchClearFlags(address[] calldata users, uint8 flag) external onlyOwner {
+        for (uint256 i = 0; i < users.length; i++) {
+            userFlags[users[i]] &= ~flag;
+            emit FlagUpdated(users[i], userFlags[users[i]]);
+        }
+    }
+
+    function deployCapital(address recipient, uint256 amount, string calldata reason) external onlyOwner {
+        ISmartVault vault = ISmartVault(vaultAddress);
+        vault.spendCapital(recipient, amount, reason);
+    }
+
+    // Payout logic
+    function triggerDividend(address user, uint256 amount) external onlyOwner {
+        require(hasFlag(user, FLAG_ACTIVE), "User not active");
+
+        ISmartVault vault = ISmartVault(vaultAddress);
+        vault.dispatchDividend(user, amount);
+
+        lastProcessedDistribution[user] = block.timestamp;
+        userFlags[user] |= FLAG_DIVIDEND_PAID;
+
+        emit PayoutTriggered(user, amount);
+    }
+
+    function triggerRedemption(address user, uint256 amount) external onlyOwner {
+        require(hasFlag(user, FLAG_ELIGIBLE), "User not eligible");
+        require(!hasFlag(user, FLAG_REDEMPTION_PAID), "Already redeemed");
+
+        ISmartVault vault = ISmartVault(vaultAddress);
+        vault.processRedemption(user, amount);
+
+        userFlags[user] |= FLAG_REDEMPTION_PAID;
+        emit PayoutTriggered(user, amount);
+    }
+
+    // Batch payout
+    function batchTriggerUnifiedPayout(address[] calldata users, uint256[] calldata amounts) external onlyOwner {
+        require(users.length == amounts.length, "Length mismatch");
+        ISmartVault vault = ISmartVault(vaultAddress);
+
         for (uint256 i = 0; i < users.length; i++) {
             address user = users[i];
-            deposits[i] = pool.getDepositedAmount(user);
-            uint256 depositTime = pool.getDepositStartTime(user);
-            uint256 multiplier = queryHub.getMultiplier(user);
-            multipliers[i] = multiplier;
+            uint256 amount = amounts[i];
 
-            // Check if user has reached redemption period
-            if (block.timestamp >= depositTime + redemptionPeriod) {
-                // User is eligible for redemption
-                redemptionReserve += deposits[i];
-                redeemed[i] = true;
+            if (hasFlag(user, FLAG_ELIGIBLE) && !hasFlag(user, FLAG_REDEMPTION_PAID)) {
+                vault.processRedemption(user, amount);
+                userFlags[user] |= FLAG_REDEMPTION_PAID;
+                emit PayoutTriggered(user, amount);
+            } else if (hasFlag(user, FLAG_ACTIVE) && !hasFlag(user, FLAG_DIVIDEND_PAID)) {
+                vault.dispatchDividend(user, amount);
+                userFlags[user] |= FLAG_DIVIDEND_PAID;
+                emit PayoutTriggered(user, amount);
             } else {
-                // Not redeemed yet, include for profit sharing
-                totalWeight += multiplier;
-            }
-        }
-
-        // Calculate remaining pool for profit sharing
-        uint256 profitPool = totalBalance - redemptionReserve;
-
-        // Prepare results array
-        results = new PayoutResult[](users.length);
-
-        // Second loop: assign payouts
-        for (uint256 i = 0; i < users.length; i++) {
-            uint256 payout;
-            if (redeemed[i]) {
-                // Redeemed depositor gets back deposit amount
-                payout = deposits[i];
-            } else {
-                // Not redeemed: distribute profit proportionally
-                payout = (profitPool * multipliers[i]) / totalWeight;
+                // Fallback: user not eligible for any payout
+                emit PayoutSkipped(user, amount);
             }
 
-            results[i] = PayoutResult({
-                user: users[i],
-                payout: payout,
-                redeemed: redeemed[i]
-            });
+            lastProcessedDistribution[user] = block.timestamp;
         }
     }
+
+    function batchDispatchDividend(address[] calldata users, uint256[] calldata amounts) external onlyOwner {
+        require(users.length == amounts.length, "Length mismatch");
+        ISmartVault vault = ISmartVault(vaultAddress);
+
+        for (uint256 i = 0; i < users.length; i++) {
+            address user = users[i];
+            uint256 amount = amounts[i];
+
+            if (hasFlag(user, FLAG_ACTIVE)) {
+                vault.dispatchDividend(user, amount);
+                lastProcessedDistribution[user] = block.timestamp;
+                userFlags[user] |= FLAG_DIVIDEND_PAID;
+                emit PayoutTriggered(user, amount);
+            }
+        }
+    }
+
+    function batchProcessRedemption(address[] calldata users, uint256[] calldata amounts) external onlyOwner {
+        require(users.length == amounts.length, "Length mismatch");
+        ISmartVault vault = ISmartVault(vaultAddress);
+
+        for (uint256 i = 0; i < users.length; i++) {
+            address user = users[i];
+            uint256 amount = amounts[i];
+
+            if (hasFlag(user, FLAG_ELIGIBLE) && !hasFlag(user, FLAG_REDEMPTION_PAID)) {
+                vault.processRedemption(user, amount);
+                userFlags[user] |= FLAG_REDEMPTION_PAID;
+                emit PayoutTriggered(user, amount);
+            }
+        }
+    }
+
+    // Vault management
+    function updateVault(address newVault) external onlyOwner {
+        vaultAddress = newVault;
+        emit VaultUpdated(newVault);
+    }
+
+        function getVaultUserInfo(address user) external view returns (
+        uint256 amount,
+        uint32 committedQuarters,
+        uint32 multiplier,
+        uint256 unlockQuarter,
+        uint256 dividendsReceived,
+        uint256 redemptionsReceived
+    ) {
+        return ISmartVault(vaultAddress).getUserInfo(user);
+    }
+
+    function routeCapitalToPayout(uint256 amount, string calldata reason) external onlyOwner {
+        require(payoutAddress != address(0), "Payout address not set");
+        ISmartVault vault = ISmartVault(vaultAddress);
+        vault.spendCapital(payoutAddress, amount, reason);
+    }
+
+
 }

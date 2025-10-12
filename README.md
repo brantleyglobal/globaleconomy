@@ -76,10 +76,6 @@ Visit the [What's next section of our docs](https://docs.globalDEX.io/quick-star
 
 To know more about products and platform, check out our [website](https://brantley-global.com).
 
-## Entrypoint Address
-
-EntryPoint Address: 0xCd442314e8D6B8B9E2C5883c019098DE7be32313
-
 ## Hardhat
 
 ****remove .openzepplin directory to avoid address conflict during redeployments &&& run
@@ -102,7 +98,7 @@ git push -u origin main
 
 ## Test
 
-curl -X POST http://rpc.brantley-global:8545 \
+curl -X POST http://rpc.brantley-global.com:8545 \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc":"2.0",
@@ -123,4 +119,6 @@ npx wrangler d1 execute global-db --file=schema.sql --remote
 ## CF WORK
 
 wrangler deploy --env production
+
+wrangler init my-worker
 

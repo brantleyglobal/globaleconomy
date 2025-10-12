@@ -1,126 +1,105 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 library SmartVaultLib {
+    using SafeERC20 for IERC20;
+
+    // Constants
+    uint256 public constant BASE_MULTIPLIER = 100;
+    address constant NATIVE_TOKEN = address(0);
+
+    // User staking and term info
     struct UserInfo {
-        uint128 amount;              // covers up to ~10^38
-        uint64 depositTime;          // good for 500+ years
-        uint64 claimedDistribution;  // compressed
-        uint32 recommitCount;        // small number
-        uint32 eligibleQuarter;
-        uint32 committedQuarters;
-        uint32 unlockQuarter;
-        uint32 multiplier;
+        uint256 amount;           // Native currency amount staked/tracked for this user
+        uint32 committedQuarters; // Number of quarters committed in this term
+        uint32 multiplier;        // Dividend multiplier based on commitment, for rewards scaling
+        uint256 unlockQuarter;    // Quarter timestamp from which user can redeem
     }
 
+    // Redemption request info
     struct Redemption {
-        address user;         // 20 bytes
-        uint128 amount;       // compressed
-        uint32 requestQuarter;
-        bool fulfilled;       // 1 byte
+        address user;
+        uint256 amount;
+        uint256 requestQuarter;
+        bool fulfilled;
     }
 
-    // Calculation Functions
+    // Events for modular usage in consuming contracts
+    event FundsTransferred(address indexed to, uint256 amount, address token);
 
-    function computeEligibilityQuarter(uint64 timestamp, uint32 committedQuarters) internal pure returns (uint32) {
-        uint32 quarter = getQuarter(uint32(timestamp));
-        uint32 startOfQ = getQuarterStart(uint32(timestamp));
-        uint32 daysIntoQuarter = uint32(timestamp - startOfQ) / 1 days;
-        uint32 graceWindow = committedQuarters >= 3 ? 20 : 0;
-        return uint32(daysIntoQuarter <= graceWindow ? quarter : quarter + 1);
+    // Validation helpers
+
+    function validateDeposit(uint256 amount) internal pure {
+        require(amount > 0, "Deposit must be greater than zero");
     }
 
-    function getQuarter(uint32 ts) internal pure returns (uint32) {
-        uint32 yearsSince1970 = ts / 31556926;
-        uint32 year = 1970 + yearsSince1970;
-        uint32 month = ((ts / 2592000) % 12) + 1;
-        uint32 quarter = ((month - 1) / 3) + 1;
-        return uint32(year * 4 + quarter);
+    function validateCapitalSpend(address recipient, uint256 amount, string calldata reason) internal pure {
+        require(recipient != address(0), "Invalid recipient");
+        require(amount > 0, "Amount must be greater than zero");
+        require(bytes(reason).length > 0, "Reason required");
     }
 
-    function getQuarterStart(uint32 ts) internal pure returns (uint32) {
-        uint32 yearsSince1970 = ts / 31556926;
-        uint32 year = 1970 + yearsSince1970;
-        uint32 month = ((ts / 2592000) % 12) + 1;
-        uint32 quarterStartMonth = ((month - 1) / 3) * 3 + 1;
-        return toTimestamp(year, quarterStartMonth, 1);
+    function validateRedemption(UserInfo storage u, uint256 amount) internal view {
+        require(u.amount >= amount, "Insufficient balance for redemption");
     }
 
-    function toTimestamp(uint32 year, uint32 month, uint32 day) internal pure returns (uint32) {
-        return (year - 1970) * 365 days + (month - 1) * 30 days + (day - 1) * 1 days;
+    function validateDividend(address user, uint256 amount) internal pure {
+        require(user != address(0), "Invalid user address");
+        require(amount > 0, "Dividend must be greater than zero");
     }
 
-    // Utility Views
-
-    function getUserVaultInfo(
-        UserInfo memory u,
-        uint256[] memory redIds,
-        Redemption[] memory redemptionQueue
-    ) internal pure returns (
-        uint128 amount,
-        uint32 committedQuarters,
-        uint32 unlockQuarter,
-        uint256[] memory redemptionIds,
-        Redemption[] memory redemptions
-    ) {
-        amount = u.amount;
-        committedQuarters = u.committedQuarters;
-        unlockQuarter = u.unlockQuarter;
-
-        redemptions = new Redemption[](redIds.length);
-        for (uint256 i = 0; i < redIds.length; i++) {
-            redemptions[i] = redemptionQueue[redIds[i]];
-        }
-        redemptionIds = redIds;
-    }
-
-    function getUserDepositStatus(
-        UserInfo memory u,
-        uint64 blockTimestamp
-    ) internal pure returns (
-        uint256 depositAmount,
-        uint256 depositStartTime,
-        uint256 elapsedDays,
-        uint256 remainingDays,
-        bool isPending,
-        bool isClosed
-    ) {
-        depositAmount = u.amount;
-        depositStartTime = u.depositTime;
-
-        if (depositAmount == 0) {
-            return (0, 0, 0, 0, false, true);
-        }
-
-        uint256 lockPeriodSeconds = u.committedQuarters * 90 days;
-        uint256 depositEndTime = u.depositTime + lockPeriodSeconds;
-
-        if (blockTimestamp < depositEndTime) {
-            elapsedDays = (blockTimestamp - u.depositTime) / 1 days;
-            remainingDays = (depositEndTime - blockTimestamp) / 1 days;
-            isPending = true;
-            isClosed = false;
-        } else {
-            elapsedDays = u.committedQuarters * 90;
-            remainingDays = 0;
-            isPending = false;
-            isClosed = true;
-        }
-    }
-
-    // Compute multiplier based on committedQuarters
-    function computeMultiplier(uint32 committedQuarters) internal pure returns (uint32) {
-        if (committedQuarters >= 6) {
-            return 200;
-        } else if (committedQuarters >= 3) {
+    function getMultiplier(uint8 committedQuarters) internal pure returns (uint16) {
+        if (committedQuarters == 2) {
+            return 110;
+        } else if (committedQuarters == 3) {
+            return 115;
+        } else if (committedQuarters == 4) {
+            return 120;
+        } else if (committedQuarters == 5) {
+            return 130;
+        } else if (committedQuarters == 6) {
+            return 140;
+        } else if (committedQuarters == 7) {
             return 150;
-        } else {
-            return 125;
-        }
+        } 
+        return 100; // default base multiplier
     }
 
-    // Update user's multiplier based on current committedQuarters
-    function updateUserMultiplier(UserInfo storage user) internal {
-        user.multiplier = computeMultiplier(user.committedQuarters);
+    // Create redemption struct
+    function createRedemption(address user, uint256 amount, uint256 currentQuarter) internal pure returns (Redemption memory) {
+        return Redemption({
+            user: user,
+            amount: amount,
+            requestQuarter: currentQuarter,
+            fulfilled: false
+        });
+    }
+
+    // Fulfill redemption, transferring payoutToken to user
+    function fulfillRedemption(mapping(uint256 => Redemption) storage queue, uint256 redemptionId, address payoutToken) internal {
+        Redemption storage r = queue[redemptionId];
+        require(!r.fulfilled, "Already fulfilled");
+        require(r.amount > 0, "Invalid redemption");
+
+        r.fulfilled = true;
+        transferFunds(payoutToken, r.user, r.amount);
+    }
+
+    // Generic transfer helper, supports both native currency and ERC20 token via safe transfers
+    function transferFunds(address token, address to, uint256 amount) internal {
+        require(to != address(0), "Invalid recipient");
+        require(amount > 0, "Amount must be greater than zero");
+
+        if (token == NATIVE_TOKEN) {
+            require(address(this).balance >= amount, "Insufficient native balance");
+            (bool success, ) = to.call{value: amount}("");
+            require(success, "Native transfer failed");
+        } else {
+            IERC20(token).safeTransfer(to, amount);
+        }
+        emit FundsTransferred(to, amount, token);
     }
 }

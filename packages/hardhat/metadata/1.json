@@ -1,0 +1,15 @@
+{
+  "name": "Global Dominion",
+  "description": "Dividend Backed Termed Token",
+  "image": "https://brantley-global.com/global.png",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Rare"
+    },
+    {
+      "trait_type": "Power",
+      "value": 100
+    }
+  ]
+}

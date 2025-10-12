@@ -1,0 +1,15 @@
+{
+  "name": "Copian",
+  "description": "Project Backed Termed Token",
+  "image": "https://brantley-global.com/COPx.png",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "Common"
+    },
+    {
+      "trait_type": "Power",
+      "value": 10
+    }
+  ]
+}
