@@ -4,14 +4,17 @@ import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 import {
   metaMaskWallet,
   injectedWallet,
+  trustWallet,
 } from "@rainbow-me/rainbowkit/wallets";
 import { rainbowkitBurnerWallet } from "burner-connector";
 import * as chains from "viem/chains";
 import scaffoldConfig from "~~/scaffold.config";
 
+
 const { onlyLocalBurnerWallet, targetNetworks } = scaffoldConfig;
 
 const wallets = [
+  trustWallet,
   metaMaskWallet,
   injectedWallet,
   ...(!targetNetworks.some(network => network.id !== (chains.hardhat as chains.Chain).id) || !onlyLocalBurnerWallet
@@ -31,7 +34,7 @@ export const wagmiConnectors = connectorsForWallets(
   ],
 
   {
-    appName: "globalDEX",
+    appName: "globalEco",
     projectId: scaffoldConfig.walletConnectProjectId,
   },
 );

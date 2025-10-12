@@ -1,6 +1,6 @@
 "use client";
 
-import type { Transaction } from "~~/types/transactions";
+import type { Transaction } from "~~/components/transactions/transactions";
 import { SharedColumns } from "./sharedColumns";
 
 export const DividendTable = ({ transactions }: { transactions: Transaction[] }) => {
@@ -17,9 +17,10 @@ export const DividendTable = ({ transactions }: { transactions: Transaction[] })
       <table className="table table-zebra w-full text-sm font-light">
         <thead className="bg-base-300 text-base-content">
           <tr>
-            <th>Currency</th>
+            <th>Asset</th>
             <th>Account</th>
             <th>Amount</th>
+            <th>Contract Address</th>
             <th>Timestamp</th>
             <th>Status</th>
           </tr>
@@ -27,9 +28,10 @@ export const DividendTable = ({ transactions }: { transactions: Transaction[] })
         <tbody>
           {transactions.map(tx => (
             <tr key={tx.timestamp} className="hover:bg-base-300">
-              <td>{tx.paymentmethod}</td>
+              <td>{tx.asset}</td>
               <td className="truncate max-w-[120px]">{tx.useraddress}</td>
               <td>{tx.amount}</td>
+              <td>{tx.contractaddress}</td>
               <SharedColumns tx={tx} />
             </tr>
           ))}

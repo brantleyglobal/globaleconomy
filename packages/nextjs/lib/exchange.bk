@@ -1,0 +1,168 @@
+import { ethers } from "ethers";
+import { supportedTokens } from "~~/components/constants/tokens";
+
+// Chainlink Aggregator ABI
+const aggregatorAbi = [
+  "function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)"
+];
+
+// Interfaces
+interface StablecoinMeta {
+  symbol: string;
+  network: string;
+  currency: string;
+  rate: number;
+  disabled?: boolean;
+  timestamp: number;
+  rateAgainstGBDO?: number;
+}
+
+export interface StablecoinRate {
+  symbol: string;
+  rate: number;
+  currency: string;
+  healthy: boolean;
+  network: string;
+  timestamp: number;
+  rateAgainstGBDO?: number;
+}
+
+const PRIME_FACTOR = 1.481;
+const SMOOTHING_THRESHOLD = 0.02;
+
+let cachedGBDORate: number | null = null;
+let lastUpdated: number | null = null;
+const rateGuards: Record<string, { min: number; max: number; fallback?: number }> = {
+  USDC: { min: 0.98, max: 1.02, fallback: 1.00 },
+  USDT: { min: 0.98, max: 1.02, fallback: 1.00 },
+  DAI:  { min: 0.98, max: 1.02, fallback: 1.00 },
+  TUSD: { min: 0.98, max: 1.02, fallback: 1.00 },
+  USDP: { min: 0.98, max: 1.02, fallback: 1.00 },
+  GUSD: { min: 0.98, max: 1.02, fallback: 1.00 },
+  FDUSD:{ min: 0.98, max: 1.02, fallback: 1.00 },
+  FRAX: { min: 0.97, max: 1.03, fallback: 1.00 },
+  PYUSD: { min: 0.98, max: 1.02, fallback: 1.00 },
+  COPX: { min: 1.00, max: 1.00, fallback: 1.00 },
+  JPYC: { min: 0.0065, max: 0.0073 }, // JPY ≈ ¥1 ≈ $0.0069
+  EURC: { min: 1.08, max: 1.12 },     // EUR ≈ €1 ≈ $1.10
+  EURe: { min: 1.08, max: 1.12 },
+  GBPT: { min: 1.20, max: 1.30 },
+  AUDT: { min: 0.65, max: 0.69 },
+  AUDD: { min: 0.65, max: 0.69 },
+  QCAD: { min: 0.72, max: 0.76 },
+  XCHF: { min: 1.10, max: 1.14 },
+  ZARP: { min: 0.054, max: 0.064 },
+  BRL1: { min: 0.19, max: 0.21 },
+  MMXN: { min: 0.058, max: 0.062 },
+  NGNT: { min: 0.00063, max: 0.00068 },
+  INRX: { min: 0.0118, max: 0.0124 },
+  TRYX: { min: 0.030, max: 0.033 },
+  XSGD: { min: 0.74, max: 0.76 },
+};
+
+// Fetch stablecoin rates from Cloudflare Worker
+async function fetchStablecoinRates(apiUrl: string, apiKey: string): Promise<Record<string, number>> {
+  const body = {
+    jsonrpc: "2.0",
+    id: 1,
+    method: "getCurrentRates",
+    params: {},
+  };
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch stablecoin rates: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  if (data.error) throw new Error(data.error.message);
+
+  // data.result is an array of { symbol, rate, timestamp }
+  // Convert to a map for quick lookup by symbol
+  const ratesMap: Record<string, number> = {};
+  for (const rateInfo of data.result) {
+    ratesMap[rateInfo.symbol] = rateInfo.rate;
+  }
+  return ratesMap;
+}
+
+function applyGuard(symbol: string, rate: number): number {
+  const guard = rateGuards[symbol];
+  if (!guard) return rate;
+  if (rate < guard.min) return guard.fallback ?? guard.min;
+  if (rate > guard.max) return guard.fallback ?? guard.max;
+  return rate;
+}
+
+function smoothRate(current: number, previous: number): number {
+  const change = Math.abs(current - previous) / previous;
+  return change > SMOOTHING_THRESHOLD
+    ? previous * 0.7 + current * 0.3
+    : current;
+}
+
+function calculateGBDORate(rates: StablecoinRate[]): number {
+  const healthyRates = rates.filter(r => r.healthy);
+  if (healthyRates.length === 0) return 1;
+  const avg = healthyRates.reduce((sum, r) => sum + r.rate, 0) / healthyRates.length;
+  return avg * PRIME_FACTOR;
+}
+
+// Main function to fetch, map and process rates
+export async function getExchangeRates(apiUrl: string, apiKey: string, supportedTokens: any[]): Promise<{
+  rates: StablecoinRate[];
+  gbdoRate: number;
+  lastUpdated: number;
+}> {
+  const stablecoinRatesMap = await fetchStablecoinRates(apiUrl, apiKey);
+  const now = Date.now();
+
+  // Map supportedTokens with fetched rates and metadata
+  let stablecoinRates: StablecoinRate[] = supportedTokens.map(token => {
+    const baseRate = stablecoinRatesMap[token.symbol] ?? null;
+
+    const guardedRate = baseRate !== null ? applyGuard(token.symbol, baseRate) : null;
+    const healthy = guardedRate !== null && guardedRate >= (rateGuards[token.symbol]?.min ?? 0.0001) && guardedRate <= (rateGuards[token.symbol]?.max ?? 10000);
+
+    return {
+      symbol: token.symbol,
+      rate: guardedRate ?? 0,
+      currency: token.currency ?? "USD",
+      healthy,
+      network: token.network ?? "ethereum",
+      timestamp: now,
+    };
+  });
+
+  // Calculate GBDO and smooth over last value
+  const rawGbdo = calculateGBDORate(stablecoinRates);
+  const smoothedGbdo = cachedGBDORate !== null ? smoothRate(rawGbdo, cachedGBDORate) : rawGbdo;
+
+  cachedGBDORate = smoothedGbdo;
+  lastUpdated = now;
+
+  // Scale each rate with GBDO and calculate relative rate
+  stablecoinRates = stablecoinRates.map(r => {
+    const scaledRate = r.symbol === "COPX" ? smoothedGbdo : r.rate * smoothedGbdo;
+    const rateAgainstGBDO = r.symbol === "COPX" ? 1 : scaledRate / smoothedGbdo;
+    return {
+      ...r,
+      rate: scaledRate,
+      rateAgainstGBDO,
+    };
+  });
+
+  return {
+    rates: stablecoinRates,
+    gbdoRate: smoothedGbdo,
+    lastUpdated: now,
+  };
+}

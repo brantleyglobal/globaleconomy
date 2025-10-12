@@ -1,43 +1,68 @@
+<div style="font-family:Segoe UI, Arial, sans-serif; color:#e0e0e0; line-height:1.6; max-width:800px; margin:auto; padding:0;">
+  <h2 style="margin-top:5px; font-weight: lighter; margin-bottom:16px;">SECTION 1 – Cancellations</h2>
+  <p>
+    Cancellations may be requested at any time prior to the shipment of your order. All cancellations are subject to the terms and conditions outlined below.
+  </p>
 
+  <h2 style="margin-top:30px; font-weight: lighter; margin-bottom:16px;">SECTION 2 – Refunds</h2>
+  <p>
+    All refunds are subject to processing fees, and said fees are based on the payment method used at the time of purchase as well as the time the refund request was made. Please contact <a href="mailto:info@legion-gen.com">info@legion-gen.com</a> to obtain possible fees. All purchasers have 15 days to request a refund. To initiate a refund, email <a href="mailto:info@legion-gen.com">info@legion-gen.com</a>.
+  </p>
 
-SECTION 1 – Cancellations
+  <p>
+    All refunds requested following the initial 15-day time period and prior to shipping are subject to a partial refund equivalent to the order total less processing fees (including fees incurred at the time of purchase and any fees required to return payment), as well as a 10% restocking fee. The 10–50% restocking fee will be applied to the product purchase price, not including shipping or taxes. Restocking fees are determined based on the development stage of the product ordered by the purchaser.
+  </p>
 
-Cancellations may be requested at any time prior to the shipment of your order. All cancellations are subject to the terms and conditions outlined below.
+  <h2 style="margin-top:30px; font-weight: lighter; margin-bottom:16px;">SECTION 3 – Returns</h2>
+  <p>
+    All return requests should be sent by email to <a href="mailto:info@legion-gen.com">info@legion-gen.com</a>. Returns may be initiated at any time upon product receipt and before 30 days have elapsed after said product receipt by the purchaser. All returns requested are subject to a restocking fee as well as transaction fees.
+  </p>
 
-SECTION 2 – Refunds
+  <p>
+    Refund amounts resulting from a return are equivalent to the order total less processing fees (including fees incurred at the time of purchase and any transaction fees required to return the purchaser’s payment), as well as a 30–50% restocking fee. The 30–50% restocking fee will be applied to the product purchase price, not including shipping or taxes.
+  </p>
 
-All refunds are subject processing fees and said fees are based on the payment method used at the time of purchase as well as the time the refund request was made. Please contact info@legion-gen.com to obtain possible fees. All purchasers have 15 days to request a refund. To initiate a refund email info@legion-gen.com.
+  <p>
+    All return requests are processed upon receipt of the return request. A refund subject to the aforementioned will be disbursed provided the following conditions are met:
+  </p>
+  <ul style="margin-left:20px;">
+    <li>Products should be unused and unopened.</li>
+    <li>Original and undamaged packaging is required.</li>
+  </ul>
 
-All refunds requested following the initial 15 day time period and prior to shipping are subjected to a partial refund equivalent to the order total less processing fees (to include processing fees incurred at the time of purchase and any fees required to return payment) as well as a 10% restocking fee. The 10-50% restock fee will be applied to the product purchase price not including shipping or taxes. Restocking fee are determined based on the development stage of the product ordered by the purchaser.
+  <p>
+    All returns within 30 days will be refunded within 14 days of receipt and verification of the purchased item. Return shipping costs are covered by the purchaser.
+  </p>
 
-SECTION 3 – Returns
+  <p>
+    If 30 days have elapsed from the date of product receipt by the purchaser, no refund or exchange will be issued. To be eligible for a return, your item must be unused and in the same condition that it was received. It must also be in the original packaging.
+  </p>
 
-All return requests should be sent by email to info@legion-gen.com. Returns may be initiated at any time upon product receipt and before the 30 days elapsed after said product receipt by the purchaser. All returns requested are subject to a restocking fee as well as transaction fees. Refunds amounts that are the result of a return are equivalent to the order total less processing fees (to include processing fees incurred at the time of purchase and any transaction fees required to return the purchaser’s payment) as well as a 30-50% restocking fee. The 30-50% restocking fee will be applied to the product purchase price not including shipping or taxes. All return requests are processed upon receipt of the return request. A refund subject to the aforementioned will be disbursed provided the below conditions are met:
+  <p>
+    To complete your return, a receipt or proof of purchase is required. There are no exceptions. Once a return is received and inspected, an email will be sent to the purchaser to notify you that the item has been received. A follow-up email will be sent acknowledging the approval or rejection of your refund. If approved, your refund will be processed and a credit will automatically be applied to your credit card or original method of payment.
+  </p>
 
-– Products should be unused and unopened.
+  <h3 style="margin-top:24px;">Late or Missing Refunds (if applicable):</h3>
+  <p>
+    If the purchaser has been notified that a refund has been issued and has not received the refund:
+  </p>
+  <ul style="margin-left:20px;">
+    <li>Check your bank account again.</li>
+    <li>Contact your credit card company; it may take some time before your refund is officially posted.</li>
+    <li>Contact your bank. There is often some processing time before a refund is posted.</li>
+    <li>If all of the above has been completed and the purchaser has not received a refund, submit an inquiry to <a href="mailto:info@legion-gen.com">info@legion-gen.com</a>.</li>
+  </ul>
 
-– Original and undamaged packaging required.
+  <h2 style="margin-top:30px; font-weight: lighter; margin-bottom:16px;">SECTION 4 – Shipping</h2>
+  <p>
+    To return your product, please email <a href="mailto:info@legion-gen.com">info@legion-gen.com</a>.
+  </p>
 
-All Returns within 30 days and will be refunded within 14 days of receipt and verification of the purchased item. Return shipping costs are covered by the purchaser.
+  <p>
+    The purchaser is responsible for shipping costs associated with returning the item. Shipping costs are non-refundable. If the purchaser receives a refund, the cost of return shipping will be deducted from the refund amount, provided the return shipping was not handled by the purchaser.
+  </p>
 
-If 30 days has elapsed from date the of product receipt by the purchaser, no refund or exchange will be issued. To be eligible for a return, your item must be unused and in the same condition that it was received. It must also be in the original packaging.
-
-To complete your return, receipt or proof of purchase is required. There are no exceptions. Once a return is received and inspected, an email sell be sent to purchaser to notify you that the subject item has been received. A follow up email will be sent acknowledging the approval or rejection of your refund. If you are approved, then your refund will be processed, and a credit will automatically be applied to your credit card or original method of payment.
-
-Late or Missing Refunds (if applicable):
-
-If the purchaser has been notified that a refund has been issued and the purchaser has not received the refund:
-
-– Check your bank account again.
-
-– Contact your credit card company, it may take some time before your refund is officially posted.
-
-– Contact your bank. There is often some processing time before a refund is posted.
-
-– If all of the aforementioned has been completed and the purchaser has not received a refund, submit an inquiry to info@legion-gen.com.
-
-SECTION 4 – Shipping
-
-To return your product, please email info@legion-gen.com.
-
-The purchaser is responsible for shipping costs associated with returning the item. Shipping costs are non-refundable. If the purchaser receives a refund, the cost of return shipping will be deducted from your refund amount, provided the return shipping not handled by the purchaser. Any return initiated by the purchaser, must be tracked and tracked by the purchaser. The seller will not be responsible for any return shipping handled by the purchaser.
+  <p>
+    Any return initiated by the purchaser must be tracked and traceable by the purchaser. The seller will not be responsible for any return shipping handled by the purchaser.
+  </p>
+</div>

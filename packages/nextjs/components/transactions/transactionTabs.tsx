@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import type { Transaction } from "~~/types/transactions";
+import type { Transaction } from "~~/components/transactions/transactions";
 import { PurchaseTable } from "./tabs/purchaseTable";
-import { SwapTable } from "./tabs/swapTable";
+import { XchangeTable } from "./tabs/xchangeTable";
+import { XchangeDepositTable } from "./tabs/xchangeDepositTable";
+import { XchangeRefundTable } from "./tabs/xchangeRefundTable";
 import { VaultTable } from "./tabs/vaultTable";
 import { TransferTable } from "./tabs/transfersTable"
 import { DividendTable } from "./tabs/dividendTable"
 
-const tabs = ["PURCHASES", "SWAPS",  "TRANSFERS", "VAULT", "DIVIDENDS"];
+const tabs = ["PURCHASES", "ASSETXCHANGE",  "XDEPOSITS", "XREFUNDS", "TRANSFERS", "VAULT", "DIVIDENDS"];
 
-type TabKey = "PURCHASES" | "SWAPS" | "TRANSFERS" | "VAULT" | "DIVIDENDS";
+type TabKey = "PURCHASES" | "ASSETXCHANGE" | "XDEPOSITS" | "XREFUNDS" | "TRANSFERS" | "VAULT" | "DIVIDENDS";
 
 export const TransactionTabs = () => {
   const { address: userAddress, isConnected } = useAccount();
@@ -19,7 +21,9 @@ export const TransactionTabs = () => {
   const [activeTab, setActiveTab] = useState<TabKey>("PURCHASES");
   const [data, setData] = useState<Record<TabKey, Transaction[]>>({
     PURCHASES: [],
-    SWAPS: [],
+    ASSETXCHANGE: [],
+    XDEPOSITS: [],
+    XREFUNDS: [],
     TRANSFERS: [],
     VAULT: [],
     DIVIDENDS: [],
@@ -40,7 +44,9 @@ export const TransactionTabs = () => {
     try {
       const endpointMap = {
         PURCHASES: "getPurchase",
-        SWAPS: "getSwap",
+        ASSETXCHANGE: "getSwap",
+        XDEPOSITS: "getSwap",
+        XREFUNDS: "getSwap",
         TRANSFERS: "getTransfer",
         VAULT: "getVault",
         DIVIDENDS: "getRedemption",
@@ -60,10 +66,23 @@ export const TransactionTabs = () => {
         }),
       });
 
-      const json = await res.json();
-      const result = json.result?.[tab.toLowerCase()] ?? [];
+      const responseKeyMap: Record<TabKey, string> = {
+        PURCHASES: "purchases",
+        ASSETXCHANGE: "swaps",
+        XDEPOSITS: "swaps",
+        XREFUNDS: "swaps",
+        TRANSFERS: "transfers",
+        VAULT: "vault",
+        DIVIDENDS: "redemptions",
+      };
 
+      const json = await res.json();
+      console.log("API response:", json);
+      const responseKey = responseKeyMap[tab];
+      const result = json.result?.[responseKey] ?? [];
+      console.log(`Data extracted for tab ${tab}:`, result);
       setData(prev => ({ ...prev, [tab]: result }));
+
     } catch (err) {
       console.error(err);
       setError("Failed to load transactions.");
@@ -80,7 +99,9 @@ export const TransactionTabs = () => {
     switch (activeTab) {
       case "PURCHASES": return <PurchaseTable transactions={data.PURCHASES} />;
       case "TRANSFERS": return <TransferTable transactions={data.TRANSFERS} />;
-      case "SWAPS": return <SwapTable transactions={data.SWAPS} />;
+      case "ASSETXCHANGE": return <XchangeTable transactions={data.ASSETXCHANGE} />;
+      case "XDEPOSITS": return <XchangeDepositTable transactions={data.XDEPOSITS} />;
+      case "XREFUNDS": return <XchangeRefundTable transactions={data.XREFUNDS} />;
       case "VAULT": return <VaultTable transactions={data.VAULT} />;
       case "DIVIDENDS": return <DividendTable transactions={data.DIVIDENDS} />;
       default: return null;
@@ -89,7 +110,22 @@ export const TransactionTabs = () => {
 
   return (
     <div className="p-4">
-      <div className="flex overflow-x-auto space-x-2 mb-4 pb-2 border-b border-base-300">
+      {/* Mobile Dropdown */}
+      <div className="md:hidden mb-4">
+        <select
+          value={activeTab}
+          onChange={(e) => setActiveTab(e.target.value as TabKey)}
+          className="select rounded-md bg-[#09120b] w-full text-info-600 mb-4 outline-none hover:bg-white/10 border-none focus:ring-0 focus:outline-none"
+        >
+          {tabs.map(tab => (
+            <option key={tab} value={tab}>
+              {tab}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="hidden md:flex overflow-x-auto space-x-2 mb-4 pb-2 border-b border-base-300">
+        {/*Desktop*/}
         {tabs.map(tab => (
           <button
             key={tab}

@@ -48,7 +48,7 @@ const smartAssets: SmartAsset[] = [
   },
   {
     id: "real-estate",
-    title: "REAL ESTATE PROJECT – Term-Bound Investment",
+    title: "REAL ESTATE – Term-Bound Investment",
     description:
       "Phase-driven activation and milestone-based returns structured within fixed terms.",
     lifecycle: [

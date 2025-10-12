@@ -3,7 +3,7 @@ export type AssetSummary = {
   basePriceInGBDO: BigInt;
   baseDays: number;
   perUnitDelay: number;
-  name: string;              // from metadata
+  name: string;
   model?: string;
   description?: string;
   image?: string;

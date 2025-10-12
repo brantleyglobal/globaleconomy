@@ -4,6 +4,8 @@ export type CommonInputProps<T = string> = {
   name?: string;
   placeholder?: string;
   disabled?: boolean;
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
+  onFocus?: React.FocusEventHandler<HTMLInputElement>;
 };
 
 export enum IntegerVariant {

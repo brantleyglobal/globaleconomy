@@ -1,7 +1,7 @@
 "use client";
 
 // SharedColumns.tsx
-import type { Transaction } from "~~/types/transactions";
+import type { Transaction } from "~~/components/transactions/transactions";
 
 export const SharedColumns = ({ tx }: { tx: Transaction }) => (
   <>

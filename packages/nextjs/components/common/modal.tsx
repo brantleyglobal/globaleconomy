@@ -23,9 +23,7 @@ export const Modal: React.FC<ModalProps> = ({
       role="dialog"
       aria-modal="true"
     >
-      <div
-        className="bg-base-100 rounded-xl shadow-lg w-full max-w-md sm:max-w-lg p-6 relative overflow-y-auto max-h-[90vh]"
-      >
+      <div className="bg-base-100 rounded-xl shadow-lg w-full max-w-md sm:max-w-lg p-6 relative overflow-y-auto max-h-[90vh]">
         {/* Close Button */}
         <button
           onClick={onClose}

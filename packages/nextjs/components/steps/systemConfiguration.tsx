@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { AssetVariation } from "../checkoutModal";
+import type { AssetVariation } from "../purchase/checkoutModal";
 
 type Props = {
   currentStep: number;
@@ -43,8 +43,9 @@ export const SystemConfigurationStep: React.FC<Props> = ({
           {variationDisplayLabels[labelKey] || labelKey}
         </h4>
         <div className="grid grid-cols-2 gap-4">
-          {group.map(variation => {
+          {group.map((variation) => {
             const isSelected = selectedVariations[groupKey]?.label === variation.label;
+
             return (
               <button
                 key={`${groupKey}-${variation.label}`}
@@ -52,16 +53,19 @@ export const SystemConfigurationStep: React.FC<Props> = ({
                   setSelectedVariations({ ...selectedVariations, [groupKey]: variation });
                   setCustomizeGroupKey(variation.label === "Customize" ? groupKey : null);
                 }}
-                className={`w-full h-[60px] p-3 border rounded-md shadow-sm flex flex-col justify-between ${
+                  className={`relative w-full h-auto min-h-[48px] p-2 sm:p-3 border rounded-md shadow-sm flex flex-col justify-between transition-all duration-200 ease-in-out ${
                   isSelected
-                    ? "bg-neutral-800 border-none text-info hover:bg-secondary/30"
-                    : "bg-neutral-800 border-none hover:bg-secondary/30"
+                    ? "bg-secondary/30 text-info border-none"
+                    : "bg-black/50 text-info-400 border-none hover:bg-secondary/30"
                 }`}
               >
                 <div className="font-light">{variation.label}</div>
                 <div className="text-xs text-info-300">
                   +${Number(variation.apriceInGBDO) / 1e6} {currency}
                 </div>
+                {/*{isSelected && (
+                  <div className="absolute right-0 top-0 h-full w-1 bg-info rounded-l-md animate-slideFade" />
+                )}*/}
               </button>
             );
           })}
@@ -74,34 +78,42 @@ export const SystemConfigurationStep: React.FC<Props> = ({
     const shouldCustomize =
       customizeGroupKey &&
       selectedVariations[customizeGroupKey]?.label === "Customize";
-    setCurrentStep(shouldCustomize ? 2 : 3);
+    setCurrentStep(shouldCustomize ? 1 : 2);
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-grow overflow-y-auto p-4 space-y-6">
-        <h3 className="text-xl font-light tracking-tight mb-10 text-info">
-          SYSTEM CONFIGURATION
-        </h3>
-
-        {variationGroups.epanel
-          ? renderVariationGroup("epanel", "epanel", "GBDO")
-          : variationGroups.xpanel && renderVariationGroup("xpanel", "xpanel", "GBDO")}
-
-        {variationGroups.etie
-          ? renderVariationGroup("etie", "etie", "USD")
-          : variationGroups.xtie && renderVariationGroup("xtie", "xtie", "USD")}
-
-        {variationGroups.monitoring && renderVariationGroup("monitoring", "monitoring", "USD")}
+    <div className="flex flex-col h-full space-y-2">
+      <div className="px-0">
+        <h3 className="text-xl font-light tracking-tight text-primary">SYSTEM CONFIGURATION</h3>
       </div>
+      <div className="flex flex-col justify-between h-full rounded-xl"> 
+        <div className="flex-grow h-full overflow-y-auto mb-10">
+          
+          {variationGroups.epanel
+            ? renderVariationGroup("epanel", "epanel", "GBDO")
+            : variationGroups.xpanel && renderVariationGroup("xpanel", "xpanel", "GBDO")}
 
-      <div className="flex justify-end gap-2 p-4 border-t bg-transparent">
-        <button
-          className="btn btn-primary px-6 rounded-md h-6 text-white btn-sm"
-          onClick={handleNext}
-        >
-          Next
-        </button>
+          {variationGroups.etie
+            ? renderVariationGroup("etie", "etie", "USD")
+            : variationGroups.xtie && renderVariationGroup("xtie", "xtie", "USD")}
+
+          {variationGroups.monitoring &&
+            renderVariationGroup("monitoring", "monitoring", "USD")}
+        </div>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 py-4 border-t bg-transparent w-full">
+          <button
+            className="invisible btn btn-primary/15 btn-sm h-8 text-xs rounded-md px-6"
+            aria-hidden="true"
+          >
+            Previous
+          </button>
+          <button
+            className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
+            onClick={handleNext}
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -16,14 +16,13 @@ import { Header } from "~~/components/Header";
 import { Footer } from "~~/components/Footer";
 import { ThemeProvider } from "~~/components/ThemeProvider";
 import { WalletAutoAdd } from "~~/components/walletAutoAdd";
-//import { AccountProvider } from "~~/lib/wallet/SmartWalletContext";
 import { GLOBALCHAIN } from "~~/utils/globalEco/customChains";
 import dynamic from "next/dynamic";
 
-const AccountProvider = dynamic(
+/*const AccountProvider = dynamic(
   () => import("~~/lib/wallet/SmartWalletContext").then(mod => mod.AccountProvider),
   { ssr: false }
-);
+);*/
 
 export const customchains = [GLOBALCHAIN] as const;
 
@@ -51,14 +50,12 @@ export default function ClientProviders({ children }: { children: ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <WagmiProvider config={wagmiConfig}>
           <RainbowKitProvider avatar={BlockieAvatar} theme={theme}>
-            {/*<AccountProvider>*/}
-              <div className="flex flex-col min-h-screen">
-                <Header />
-                <main className="flex-1">{children}</main>
-                <WalletAutoAdd />
-                <Footer />
-              </div>
-            {/*</AccountProvider>*/}
+            <div className="flex flex-col min-h-screen">
+              <Header />
+              <main className="flex-1">{children}</main>
+              <WalletAutoAdd />
+              <Footer />
+            </div>
           </RainbowKitProvider>
         </WagmiProvider>
       </QueryClientProvider>

@@ -5,7 +5,7 @@ export default function MirrorModeToggle() {
   const pathname = usePathname();
 
   const isDashboard = pathname?.startsWith("/dashboard");
-  const isStorefront = pathname?.startsWith("/storefront");
+  const isStorefront = pathname?.startsWith("/");
 
   return (
     <section className="hover:bg-transparent z-1 relative bg-transparent active:!bg-transparent">
@@ -29,7 +29,7 @@ export default function MirrorModeToggle() {
               </td>
               <td>
                 <button
-                  onClick={() => router.push("/storefront")}
+                  onClick={() => router.push("/")}
                   onMouseDown={(e) => e.preventDefault()}
                   className={`w-full h-full px-4 py-2 cursor-pointer text-left 
                     bg-transparent hover:bg-base-300 

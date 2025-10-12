@@ -1,15 +1,15 @@
 // components/storeFrontBanner.tsx
 export const Banner = () => {
   return (
-    <div className="bg-transparent border-b border-black/10 shadow-white py-6 px-4 md:px-12 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+    <div className="bg-transparent border-b border-black/10 shadow-white py-8 px-4 md:px-12 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       
       {/* Left Side: Heading */}
       <div className="text-left md:w-1/3">
-        <h1 className="text-3xl md:text-4xl font-light text-gray-100 mb-2">
+        <h1 className="text-3xl md:text-4xl font-light text-primary">
           ENERGY REDEFINED
         </h1>
-        <p className="text-sm font-light text-gray-100">
-          Power solutions backed by blockchain technology
+        <p className="text-sm font-light text-primary">
+          Energy solutions backed by blockchain technology
         </p>
       </div>
 

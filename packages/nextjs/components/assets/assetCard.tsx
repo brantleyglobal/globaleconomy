@@ -1,14 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { CheckoutModal } from "~~/components/checkoutModal";
-import { useCheckoutStore } from "~~/components/useCheckoutStore";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { CheckoutModal } from "~~/components/purchase/checkoutModal";
+import { useCheckoutStore } from "~~/components/purchase/useCheckoutStore";
 import { DModal } from "~~/components/common/descriptionModal";
 import { Modal } from "~~/components/common/modal";
 import { StablecoinRate } from "~~/lib/exchangeRates";
 import { GlobalWalletModal } from "~~/components/globalEco/RainbowKitCustomConnectButton/globalWalletConnect";
-import { RainbowKitCustomConnectButton } from "~~/components/globalEco";
-import { AssetImageGallery } from "~~/components/gallery/imageGallery"
 
 type AssetVariation = { label: string; apriceInGBDO: bigint; };
 
@@ -124,6 +122,7 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
   const galleryImages = galleryMap[variantKey]?.pool || [];
   const variantImages = galleryMap[itemAsset.variant];
   const [imageSrc, setImageSrc] = useState(variantImages.main);
+  const thumbnailRefs = useRef<(HTMLImageElement | null)[]>([]);
     
   const store = useCheckoutStore.getState();
   const resetForm = () => {
@@ -201,7 +200,7 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
           onMouseEnter={() => setImageSrc(variantImages.hover)}
           onMouseLeave={() => setImageSrc(variantImages.main)}
           onClick={() => setModalOpen(true)}
-          className="rounded-lg h-50 object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
+          className="rounded-lg h-50 object-cover mt-1 transition-transform duration-200 hover:scale-105 cursor-pointer"
         />
       )}
 
@@ -230,7 +229,6 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
         <span className="text-lg font-light">
           {rawBasePriceGBDO.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
-
       </p>
 
       {/* Quantity Controls */}
@@ -241,9 +239,9 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
       </div>
 
       {/* Checkout Button */}
-      <div className="mt-6 w-full">
+      <div className="mt-0 w-full">
         <button
-          className="btn bg-white/5 text-white font-light text-xs rounded-md w-full py-3 hover:bg-secondary/30 transition-all"
+          className="btn bg-white/5 text-white font-light text-xs rounded-md w-full py-2 hover:bg-secondary/30 transition-all"
           onClick={() => {
             useCheckoutStore.getState().setField("asset", {
               id: itemAsset.assetId,
@@ -266,7 +264,7 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
       {/* Description Modal */}
       {descriptionModalOpen && (
         <DModal isOpen={modalOpen} onClose={() => setDescriptionModalOpen(false)}>
-          <div className="max-h-200 max-w-400 overflow-y-auto whitespace-pre-line text-sm mb-8 px-1">
+          <div className="max-h-200 max-w-400 overflow-y-auto whitespace-pre-line text-sm mb-8 px-6 text-justify">
             {(metadata.description || "")
               .split("|||")
               .map((para, idx) => (
@@ -300,37 +298,55 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
         />
       )}
 
-      {modalOpen && (
-        <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={metadata.name}>
-          <div className="flex h-[70vh] gap-4">
-            {/* Left Panel: Thumbnails */}
-            <div className="w-1/4 overflow-y-auto pr-2 border-r border-base-300">
-              {galleryImages.map((img, idx) => (
-                <img
-                  key={idx}
-                  src={img}
-                  alt={`Asset ${idx + 1}`}
-                  className={`mb-3 w-full h-24 object-cover rounded-md cursor-pointer hover:scale-105 transition ${
-                    img === imageSrc ? "ring ring-info" : ""
-                  }`}
-                  onClick={() => setImageSrc(img)}
-                />
-              ))}
-            </div>
-
-            {/* Right Panel: Selected Image */}
-            <div className="flex-grow flex items-center justify-center p-4">
-              <img
-                src={imageSrc}
-                alt="Selected Preview"
-                className="max-w-full max-h-full rounded-lg transition-transform duration-300 hover:scale-105"
-              />
-            </div>
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)}>
+        <div className="flex flex-col h-[70vh]">
+          {/* Title */}
+          <div className="px-4 py-2 border-b border-base-300">
+            <h2 className="text-lg font-light uppercase text-center text-primary">
+              {metadata.model} | {metadata.name}
+            </h2>
           </div>
-        </Modal>
-      )}
 
-      <p className="text-sm text-light text-gray-500 text-center">
+          {/* Main Image */}
+          <div className="flex-grow flex items-center justify-center">
+            <img
+              src={imageSrc}
+              alt="Selected Preview"
+              className="max-w-full max-h-full rounded-lg transition-transform duration-300 hover:scale-101"
+            />
+          </div>
+
+          {/* Thumbnail Gallery */}
+          <div className="flex gap-2 overflow-x-auto px-4 py-2 border-t border-base-300">
+            {galleryImages.map((img, idx) => (
+              <img
+                key={idx}
+                ref={(el) => {
+                  thumbnailRefs.current[idx] = el;
+                }}
+                src={img}
+                alt={`Asset ${idx + 1}`}
+                className={`h-30 w-auto object-cover rounded-md cursor-pointer hover:scale-105 transition ${
+                  img === imageSrc ? "ring ring-info" : ""
+                }`}
+                onClick={() => {
+                  setImageSrc(img);
+                  // Scroll into view
+                  setTimeout(() => {
+                    thumbnailRefs.current[idx]?.scrollIntoView({
+                      behavior: "smooth",
+                      inline: "center",
+                      block: "nearest",
+                    });
+                  }, 0);
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      </Modal>
+
+      <p className="text-sm text-light text-gray-500 text-center mt-1">
         Lead Time: {deliveryDays} day{deliveryDays === 1 ? "" : "s"}
       </p>
     </div>

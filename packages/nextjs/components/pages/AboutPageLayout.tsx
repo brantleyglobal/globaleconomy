@@ -101,9 +101,9 @@ export default function AboutLayout() {
               bg="bg-black"
               text="text-gray-400"
               tokens={[
-                "USD", "AED", "AUD", "BRL", "CAD", "CHF", "CNY", "DAI", "EUR", "FDUSD",
+                "USD", "AED", "AUD", "BRL", "CHF", "CNY", "DAI", "EUR", "FDUSD",
                 "FRAX", "GBP", "GUSD", "INR", "JPY", "KRW", "MXN", "PYUSD", "SGD", "TUSD",
-                "USDP", "USDT", "ZAR", "ZARP", "BRL1", "NGNT", "GBPT", "ARSX", "INRX", "TRYX"
+                "USDP", "USDT", "ZAR", "ZARP", "BRL1", "NGNT", "GBPT", "INRX", "TRYX"
               ]}
             />
           </div>
@@ -121,7 +121,7 @@ export default function AboutLayout() {
           href="/whitepaper"
           className="px-4 py-2 text-sm font-light text-white bg-white/20 hover:bg-white/30 transition rounded shadow-sm"
         >
-          View Our Whitepaper
+          View The Whitepaper
         </Link>
       </section>
     </main>
@@ -151,12 +151,12 @@ function ArchitectureBlock({
   tokens?: string[];
 }) {
   return (
-    <div className={`${bg} p-5 rounded`}>
+    <div className={`${bg} p-5 rounded-md`}>
       <h3 className={`text-lg ${text} mb-2`}>{title}</h3>
       <p className={`text-sm ${text} leading-relaxed mb-4`}>{description}</p>
       {tokens && (
         <>
-          <h4 className="text-lg text-white mb-2 mt-10 font-light">Supported Token Symbols</h4>
+          <h4 className="text-lg text-white mb-2 mt-10 font-light">Supported Tokens</h4>
           <div className="grid grid-cols-8 gap-x-4 gap-y-2 text-secondary text-xs font-medium tracking-wide">
             {tokens.map((token) => (
               <span key={token}>{token}</span>

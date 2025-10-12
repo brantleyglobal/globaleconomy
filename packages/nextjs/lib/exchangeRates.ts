@@ -40,21 +40,21 @@ const chainlinkFeeds: Record<string, string> = {
 };
 
 const currencyMap: Record<string, string> = {
-  USDC: "USD", DAI: "USD", FDUSD: "USD", TUSD: "USD", USDT: "USD", FRAX: "USD",
-  GUSD: "USD", PYUSD: "USD", USDP: "USD",
-  EURC: "EUR", EURe: "EUR",
+  USDC: "USD", DAI: "USD", FDUSD: "USD", TUSD: "USD",
+  GUSD: "USD", PYUSD: "USD", USDP: "USD", FRAX: "USD",
+  EURC: "EUR", EURe: "EUR",  USDT: "USD",
   GBPT: "GBP", ARSX: "ARS", INRX: "INR", TRYX: "TRY",
   NGNT: "NGN", ZARP: "ZAR", BRL1: "BRL", AUDT: "AUD", AUDD: "AUD",
   JPYC: "JPY", MMXN: "MXN", QCAD: "CAD", XCHF: "CHF", XSGD: "SGD"
 };
 
 const networkMap: Record<string, string> = {
-  USDC: "ethereum", DAI: "ethereum", FDUSD: "ethereum", TUSD: "ethereum", USDT: "ethereum", FRAX: "ethereum",
-  GUSD: "ethereum", PYUSD: "ethereum", USDP: "ethereum",
-  EURC: "ethereum", EURe: "gnosis",
+  USDC: "ethereum", DAI: "ethereum", FDUSD: "ethereum", TUSD: "ethereum", 
+  GUSD: "ethereum", PYUSD: "ethereum", USDP: "ethereum",  XSGD: "ethereum",
+  EURC: "ethereum", EURe: "gnosis", USDT: "ethereum", FRAX: "ethereum",
   GBPT: "optimism", ARSX: "arbitrum", INRX: "polygon", TRYX: "avalanche",
   NGNT: "bsc", ZARP: "polygon", BRL1: "ethereum", AUDT: "ethereum", AUDD: "ethereum",
-  JPYC: "ethereum", MMXN: "ethereum", QCAD: "ethereum", XCHF: "ethereum", XSGD: "ethereum"
+  JPYC: "ethereum", MMXN: "ethereum", QCAD: "ethereum", XCHF: "ethereum",
 };
 
 const redstoneFeeds: Record<string, string> = {
@@ -85,6 +85,7 @@ const rateGuards: Record<string, { min: number; max: number; fallback?: number }
   FDUSD:{ min: 0.98, max: 1.02, fallback: 1.00 },
   FRAX: { min: 0.97, max: 1.03, fallback: 1.00 },
   PYUSD: { min: 0.98, max: 1.02, fallback: 1.00 },
+  COPX: { min: 1.00, max: 1.00, fallback: 1.00 },
   JPYC: { min: 0.0065, max: 0.0073 }, // JPY ≈ ¥1 ≈ $0.0069
   EURC: { min: 1.08, max: 1.12 },     // EUR ≈ €1 ≈ $1.10
   EURe: { min: 1.08, max: 1.12 },
@@ -103,7 +104,7 @@ const rateGuards: Record<string, { min: number; max: number; fallback?: number }
 };
 
 // Constants
-const PRIME_FACTOR = 1.45;
+const PRIME_FACTOR = 1.481;
 const UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const SMOOTHING_THRESHOLD = 0.02;
 const RATE_EXPIRY_MS = 24 * 60 * 60 * 1000;
@@ -231,11 +232,22 @@ async function fetchRedStoneRate(coin: StablecoinMeta): Promise<StablecoinRate |
   }
 }
 
-
 async function fetchRate(coin: StablecoinMeta): Promise<StablecoinRate | null> {
   if (!coin.symbol || !coin.network) {
     //console.warn(`[FetchRate] Missing symbol or network:`, coin);
     return null;
+  }
+
+  if (coin.symbol === "COPx") {
+    const gbdoRate = cachedGBDORate ?? calculateGBDORate(Array.from(rateCache.values()));
+    return {
+      symbol: "COPx",
+      currency: "COPx",
+      rate: gbdoRate,
+      network: coin.network,
+      healthy: true,
+      timestamp: Date.now()
+    };
   }
 
   const rpcUrl = rpcUrls[coin.network];
@@ -277,7 +289,6 @@ async function fetchRate(coin: StablecoinMeta): Promise<StablecoinRate | null> {
 
   return rate;
 }
-
 
 async function fetchStablecoinRates(): Promise<StablecoinRate[]> {
   const results: StablecoinRate[] = [];
@@ -375,8 +386,8 @@ export async function getExchangeRates(): Promise<{
 
   // Step 4: Apply PRIME_FACTOR and derive rateAgainstGBDO
   const ratesWithGBDO = stablecoinRates.map(r => {
-    const scaledRate = r.rate * gbdoRate;
-    const relativeRate = gbdoRate > 0 ? scaledRate / gbdoRate : 0;
+    const scaledRate = r.symbol === "COPx" ? gbdoRate : r.rate * gbdoRate;
+    const relativeRate = r.symbol === "COPx" ? 1.0 : (gbdoRate > 0 ? scaledRate / gbdoRate : 0);
     //console.log(`[RateCalc] ${r.symbol}: raw=${r.rate}, scaled=${scaledRate}, rateAgainstGBDO=${relativeRate}`);
     return {
       ...r,

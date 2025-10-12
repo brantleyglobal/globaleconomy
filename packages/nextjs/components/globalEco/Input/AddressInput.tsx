@@ -11,7 +11,7 @@ import { CommonInputProps, InputBase, isENS } from "~~/components/globalEco";
 /**
  * Address input with ENS name resolution
  */
-export const AddressInput = ({ value, name, placeholder, onChange, disabled }: CommonInputProps<Address | string>) => {
+export const AddressInput = ({ value, name, placeholder, onChange, onBlur, onFocus, disabled }: CommonInputProps<Address | string>) => {
   // Debounce the input to keep clean RPC calls when resolving ENS names
   // If the input is an address, we don't need to debounce it
   const [_debouncedValue] = useDebounceValue(value, 500);
@@ -72,13 +72,13 @@ export const AddressInput = ({ value, name, placeholder, onChange, disabled }: C
     setEnteredEnsName(undefined);
   }, [value]);
 
-  const reFocus =
+  /*const reFocus =
     isEnsAddressError ||
     isEnsNameError ||
     isEnsNameSuccess ||
     isEnsAddressSuccess ||
     ensName === null ||
-    ensAddress === null;
+    ensAddress === null;*/
 
   return (
     <InputBase<Address>
@@ -87,17 +87,18 @@ export const AddressInput = ({ value, name, placeholder, onChange, disabled }: C
       error={ensAddress === null}
       value={value as Address}
       onChange={onChange}
+      onBlur={onBlur}
+      onFocus={onFocus}
       disabled={isEnsAddressLoading || isEnsNameLoading || disabled}
-      reFocus={reFocus}
       prefix={
         ensName ? (
-          <div className="flex bg-base-300 rounded-l-full items-center">
-            {isEnsAvatarLoading && <div className="skeleton bg-base-200 w-[35px] h-[35px] rounded-full shrink-0"></div>}
+          <div className="flex bg-black hover:bg-secondary/5 rounded-md items-center">
+            {isEnsAvatarLoading && <div className="skeleton bg-black hover:bg-secondary/5 w-[35px] rounded-md shrink-0"></div>}
             {ensAvatar ? (
               <span className="w-[35px]">
                 {
                   // eslint-disable-next-line
-                  <img className="w-full rounded-full" src={ensAvatar} alt={`${ensAddress} avatar`} />
+                  <img className="w-full rounded-md" src={ensAvatar} alt={`${ensAddress} avatar`} />
                 }
               </span>
             ) : null}
@@ -105,8 +106,8 @@ export const AddressInput = ({ value, name, placeholder, onChange, disabled }: C
           </div>
         ) : (
           (isEnsNameLoading || isEnsAddressLoading) && (
-            <div className="flex bg-base-300 rounded-l-full items-center gap-2 pr-2">
-              <div className="skeleton bg-base-200 w-[35px] h-[35px] rounded-full shrink-0"></div>
+            <div className="flex bg-black hover:bg-secondary/5 rounded-md items-center gap-2 pr-2">
+              <div className="skeleton bg-black w-[35px]  rounded-md shrink-0"></div>
               <div className="skeleton bg-base-200 h-3 w-20"></div>
             </div>
           )
@@ -115,7 +116,7 @@ export const AddressInput = ({ value, name, placeholder, onChange, disabled }: C
       suffix={
         // Don't want to use nextJS Image here (and adding remote patterns for the URL)
         // eslint-disable-next-line @next/next/no-img-element
-        value && <img alt="" className="rounded-full!" src={blo(value as `0x${string}`)} width="35" height="35" />
+        value && <img alt="" className="rounded-md!" src={blo(value as `0x${string}`)} width="35" height="35" />
       }
     />
   );

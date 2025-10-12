@@ -24,6 +24,11 @@ const tabData = [
     component: dynamic(() => import("~~/components/tabs/dividendsTab"), { ssr: false }),
   },
   {
+    id: "assetxchange",
+    title: "ASSETXCHANGE",
+    component: dynamic(() => import("~~/components/tabs/assetXchangeTab"), { ssr: false }),
+  },
+  {
     id: "governance",
     title: "GOVERNANCE",
     component: dynamic(() => import("~~/components/tabs/governanceTab"), { ssr: false }),

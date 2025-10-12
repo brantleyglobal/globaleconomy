@@ -1,4 +1,5 @@
 // constants/token.tsx
+import deployments from "../../lib/contracts//deployments.json";
 
 export interface Token {
   name: string;
@@ -6,16 +7,61 @@ export interface Token {
   address: string;
   decimals: number;
   isNative?: boolean;
+  displayName?: string;
 }
+
+interface Deployments {
+  [key: string]: string;
+}
+
+const deploymentsTyped = deployments as Deployments;
+
+const generateDividendTokens = (): Token[] => {
+  const tokens: Token[] = [];
+  for (let middle = 2; middle <= 8; middle++) {
+    const maxDigit = middle + 2;
+    for (let fl = 1; fl <= maxDigit; fl++) {
+      const name = `Dividend${fl}${middle}${fl}`;
+      const symbol = `GBD${fl}${middle}${fl}`;
+      const address = deploymentsTyped[name];
+
+      const displayName = `Global Dividend Terms--${middle}; `;
+
+      tokens.push({
+        name,
+        symbol,
+        address,
+        decimals: 18,
+        isNative: false,
+        displayName,
+      });
+    }
+  }
+  return tokens;
+};
 
 export const supportedTokens = [
 
   {
     name: "Global Dominion",
-    symbol: "GBDO",
-    address: "0x65B5373C94CE38488B0a0B5aa0D6eFe55250e4ca",
+    symbol: "GBDo",
+    address: "0x0000000000000000000000000000000000000000",
     decimals: 18,
     isNative: true,
+  },
+  {
+    name: "Global DominionX",
+    symbol: "GBDx",
+    address: deployments.GlobalDominionX,
+    decimals: 18,
+    isNative: false,
+  },
+  {
+    name: "Copian",
+    symbol: "COPx",
+    address: deployments.Copian,
+    decimals: 18,
+    isNative: false,
   },
   {
     name: "USD Coin",
@@ -32,16 +78,23 @@ export const supportedTokens = [
     isNative: false,
   },
   {
-    name: "QCAD",
+    name: "QCAD Token",
     symbol: "QCAD",
-    address: "0x4fAbF2bD7cC9848f2Cdd2d3Ec7bFf3bF1F4E5f2C",
+    address: "0x4A16BAf414b8e637Ed12019faD5Dd705735DB2e0",
     decimals: 6,
     isNative: false,
   },
   {
-    name: "CryptoFranc",
-    symbol: "XCHF",
-    address: "0xb4272071ecadd69d933adcd19ca99fe80664fc08",
+    name: "Wrapped Bitcoin",
+    symbol: "WBTC",
+    address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+    decimals: 8,
+    isNative: false,
+  },
+  {
+    name: "Wrapped Binance Coin",
+    symbol: "WBNB",
+    address: "0xB8c77482e45F1F44dE1745F52C74426C631bDD52",
     decimals: 18,
     isNative: false,
   },
@@ -67,17 +120,10 @@ export const supportedTokens = [
     isNative: false,
   },
   {
-    name: "Frax",
+    name: "FraxUSD",
     symbol: "FRAX",
     address: "0x853d955aCEf822Db058eb8505911ED77F175b99e",
     decimals: 18,
-    isNative: false,
-  },
-  {
-    name: "Gemini Dollar",
-    symbol: "GUSD",
-    address: "0x056Fd409E1d7A124BD7017459Dfea2F387B6d5Cd",
-    decimals: 2,
     isNative: false,
   },
   {
@@ -102,7 +148,7 @@ export const supportedTokens = [
     isNative: false,
   },
   {
-    name: "XSGD",
+    name: "StraitsX Singapore Dollar",
     symbol: "XSGD",
     address: "0x70e8de73ce538da2beed35d14187f6959a8eca96",
     decimals: 6,
@@ -150,13 +196,13 @@ export const supportedTokens = [
     decimals: 18,
     isNative: false,
   },
-  {
+  /*{
     name: "Nigerian Naira Token",
     symbol: "NGNT",
     address: "0x05BBeD16620B352A7F889E23E3Cf427D1D379FFE",
     decimals: 18,
     isNative: false,
-  },
+  },*/
   {
     name: "Poundtoken",
     symbol: "GBPT",
@@ -164,20 +210,13 @@ export const supportedTokens = [
     decimals: 18,
     isNative: false,
   },
-  {
-    name: "Argentine Peso Token",
-    symbol: "ARSX",
-    address: "0x7c7cA8E1fE6e7bC0eA1C7fD2bE2fFfC3aFfFfFfF",
-    decimals: 18,
-    isNative: false,
-  },
-  {
+  /*{
     name: "Indian Rupee Token",
     symbol: "INRX",
     address: "0xc71daC923823D748a86D0A3618ABdA2d6dCd6bf4",
     decimals: 18,
     isNative: false,
-  },
+  },*/
   {
     name: "Turkish Lira Token",
     symbol: "TRYX",
@@ -192,4 +231,15 @@ export const supportedTokens = [
     decimals: 18,
     isNative: false,
   },
+  {
+    name: "Wrapped Ethtereum",
+    symbol: "WETH",
+    address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    decimals: 18,
+    isNative: false,
+  },
 ];
+
+export const dividendTokens = [
+  ...generateDividendTokens(),
+]

@@ -23,8 +23,11 @@ export const GlobalWalletModal = ({
   const [connectError, setConnectError] = useState<string | null>(null);
   const isConnecting = status === "pending";
 
+  const isTrustWallet = typeof window !== "undefined" && window.ethereum?.isTrust;
+
   const metamaskConnector = connectors.find(c => c.name === "MetaMask");
   const injectedConnector = connectors.find(c => c.id === "injected");
+  const trustConnector = connectors.find(c => c.name === "Trust Wallet");  
 
   const switchToGlobalChain = async () => {
     const targetChainId = `0x${GLOBALCHAIN.id.toString(16)}`;
@@ -70,6 +73,17 @@ export const GlobalWalletModal = ({
 
         <div className="grid md:grid-cols-[280px_auto] gap-x-20 gap-y-6 items-start">
           <div className="flex flex-col gap-4 w-full max-w-[280px]">
+            {trustConnector ? (
+              <button
+                className="btn btn-success rounded-md btn-sm font-light w-full"
+                disabled={isConnecting}
+                onClick={() => handleConnectWallet(trustConnector)}
+              >
+                {isConnecting ? "Connecting..." : "Trust Wallet"}
+              </button>
+            ) : (
+              <span className="text-sm text-warning text-center">Trust Wallet not detected</span>
+            )}
             {metamaskConnector ? (
               <button
                 className="btn btn-sm font-light rounded-md w-full"
@@ -109,13 +123,13 @@ export const GlobalWalletModal = ({
 
           <div className="bg-[#0a0909] rounded-box px-8 py-6 flex flex-col items-center justify-center w-full max-w-[320px] mx-auto">
             <QRCodeSVG
-              value="https://metamask.io/download"
+              value="https://trustwallet.com/download"
               size={220}
               bgColor="#0a0909"
               fgColor="#ffffff"
             />
             <span className="mt-4 text-sm text-info text-center">
-              Scan to install MetaMask Mobile
+              Scan to install Trust Wallet Mobile
             </span>
           </div>
         </div>

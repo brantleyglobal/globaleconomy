@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Address, getContract } from "viem";
 import { usePublicClient } from "wagmi";
 import { erc20Abi } from "viem";
-import { supportedTokens } from "~~/components/constants/tokens";
+import { supportedTokens, dividendTokens } from "~~/components/constants/tokens";
 
 export const useDirectTokenBalances = (userAddress?: Address) => {
   const publicClient = usePublicClient();
@@ -13,9 +13,9 @@ export const useDirectTokenBalances = (userAddress?: Address) => {
   useEffect(() => {
     const fetchBalances = async () => {
       if (!userAddress || !publicClient) return;
-
+      const allTokens = [...supportedTokens, ...dividendTokens];
       const results = await Promise.allSettled(
-        supportedTokens.map(async token => {
+        allTokens.map(async (token) => {
           const balance = token.isNative
             ? await publicClient.getBalance({ address: userAddress })
             : await getContract({
@@ -23,7 +23,6 @@ export const useDirectTokenBalances = (userAddress?: Address) => {
                 abi: erc20Abi,
                 client: publicClient,
               }).read.balanceOf([userAddress]);
-
           return {
             symbol: token.symbol,
             address: token.address,
@@ -32,14 +31,13 @@ export const useDirectTokenBalances = (userAddress?: Address) => {
           };
         })
       );
-
       const filtered = results
-        .filter(r => r.status === "fulfilled")
-        .map(r => (r as PromiseFulfilledResult<any>).value);
+        .filter((r) => r.status === "fulfilled")
+        .map((r) => (r as PromiseFulfilledResult<any>).value)
+        .filter(token => token.balance > 0n); // filter only tokens with positive balance
 
       setBalances(filtered);
     };
-
     fetchBalances();
   }, [userAddress, publicClient]);
 

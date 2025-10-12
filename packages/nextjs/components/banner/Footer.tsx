@@ -27,7 +27,7 @@ export const Footer = () => {
           .map(token => {
             const rateObj = rateMap.get(token.symbol);
             if (!rateObj || rateObj.rateAgainstGBDO === undefined) return undefined;
-            return `GBDO : ${rateObj.rateAgainstGBDO.toFixed(4)} ${token.symbol}`;
+            return `GBDO ${rateObj.rateAgainstGBDO.toFixed(4)} : ${token.symbol}`;
           })
           .filter((rate): rate is string => typeof rate === "string");
 

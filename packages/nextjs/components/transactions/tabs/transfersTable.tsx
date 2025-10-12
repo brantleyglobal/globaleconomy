@@ -1,6 +1,6 @@
 "use client";
 
-import type { Transaction } from "~~/types/transactions";
+import type { Transaction } from "~~/components/transactions/transactions";
 import { SharedColumns } from "./sharedColumns";
 import { useAccount } from "wagmi";
 

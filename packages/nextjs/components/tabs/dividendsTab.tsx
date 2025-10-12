@@ -102,7 +102,7 @@ export default function DividendOverview() {
       <p className="text-zinc-300 max-w-3xl text-sm">
         All committed investments participate in the quarterly dividend pool. 
         Profits are allocated based on each user’s multiplier and duration commitment, and unlocked at the end of their cycle. 
-        There are no tiers—just transparent logic and predictable value flow.
+        Just transparent logic and predictable value flow.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-sm text-zinc-400">
@@ -137,7 +137,7 @@ export default function DividendOverview() {
           <strong>Redemption & Rollover</strong>
           <ul className="list-disc pl-5 space-y-1">
             <li>Withdraw or reinvest flexibly.</li>
-            <li>Unclaimed dividends remain accessible.</li>
+            <li>Unclaimed deposits remain accessible.</li>
             <li>Dashboard reflects all stale balances.</li>
           </ul>
         </div>

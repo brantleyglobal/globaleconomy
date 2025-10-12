@@ -1,38 +1,109 @@
 {
-"abi": [
+  "abi": [
     {
-      "anonymous": false,
       "inputs": [
         {
-          "indexed": false,
           "internalType": "address",
-          "name": "previousAdmin",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "newAdmin",
+          "name": "target",
           "type": "address"
         }
       ],
-      "name": "AdminChanged",
-      "type": "event"
+      "name": "AddressEmptyCode",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "implementation",
+          "type": "address"
+        }
+      ],
+      "name": "ERC1967InvalidImplementation",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ERC1967NonPayable",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "FailedCall",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidInitialization",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotInitializing",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnableInvalidOwner",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "OwnableUnauthorizedAccount",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ReentrancyGuardReentrantCall",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "SafeERC20FailedOperation",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "UUPSUnauthorizedCallContext",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "slot",
+          "type": "bytes32"
+        }
+      ],
+      "name": "UUPSUnsupportedProxiableUUID",
+      "type": "error"
     },
     {
       "anonymous": false,
       "inputs": [
         {
-          "indexed": false,
-          "internalType": "uint256",
+          "indexed": true,
+          "internalType": "uint64",
           "name": "id",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "name",
-          "type": "string"
+          "type": "uint64"
         }
       ],
       "name": "AssetAdded",
@@ -42,64 +113,44 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": false,
+          "internalType": "uint32",
+          "name": "productId",
+          "type": "uint32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "base",
+          "type": "uint256"
+        }
+      ],
+      "name": "DebugPurchase",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": true,
           "internalType": "address",
-          "name": "beacon",
+          "name": "token",
           "type": "address"
-        }
-      ],
-      "name": "BeaconUpgraded",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
         },
         {
-          "indexed": false,
-          "internalType": "string",
-          "name": "cid",
-          "type": "string"
-        }
-      ],
-      "name": "CompletionUploaded",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        }
-      ],
-      "name": "EscrowReleased",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "newDeadline",
+          "name": "amount",
           "type": "uint256"
         }
       ],
-      "name": "ExtensionApproved",
+      "name": "FundsWithdrawn",
       "type": "event"
     },
     {
@@ -107,28 +158,9 @@
       "inputs": [
         {
           "indexed": false,
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "extraDays",
-          "type": "uint256"
-        }
-      ],
-      "name": "ExtensionProposed",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint8",
+          "internalType": "uint64",
           "name": "version",
-          "type": "uint8"
+          "type": "uint64"
         }
       ],
       "name": "Initialized",
@@ -157,30 +189,24 @@
       "anonymous": false,
       "inputs": [
         {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
+          "indexed": true,
+          "internalType": "address",
+          "name": "oldAddress",
+          "type": "address"
         },
         {
-          "indexed": false,
-          "internalType": "string",
-          "name": "cid",
-          "type": "string"
+          "indexed": true,
+          "internalType": "address",
+          "name": "newAddress",
+          "type": "address"
         }
       ],
-      "name": "ProgressUploaded",
+      "name": "PayoutAddressUpdated",
       "type": "event"
     },
     {
       "anonymous": false,
       "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        },
         {
           "indexed": true,
           "internalType": "address",
@@ -192,22 +218,33 @@
           "internalType": "uint64",
           "name": "assetId",
           "type": "uint64"
-        }
-      ],
-      "name": "Purchased",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
+        },
+        {
+          "indexed": false,
+          "internalType": "uint32",
+          "name": "quantity",
+          "type": "uint32"
+        },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "id",
+          "name": "rate",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "baseAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "fee",
           "type": "uint256"
         }
       ],
-      "name": "Refunded",
+      "name": "PurchaseMade",
       "type": "event"
     },
     {
@@ -224,32 +261,45 @@
       "type": "event"
     },
     {
-      "inputs": [
+      "inputs": [],
+      "name": "UPGRADE_INTERFACE_VERSION",
+      "outputs": [
         {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
+          "internalType": "string",
+          "name": "",
+          "type": "string"
         }
       ],
-      "name": "approveExtension",
-      "outputs": [],
-      "stateMutability": "nonpayable",
+      "stateMutability": "view",
       "type": "function"
     },
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
+          "internalType": "uint32",
+          "name": "",
+          "type": "uint32"
         },
         {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "name": "accumBase",
+      "outputs": [
+        {
           "internalType": "uint256",
-          "name": "graceDays",
+          "name": "",
           "type": "uint256"
         }
       ],
-      "name": "cancelPurchase",
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "batchWithdraw",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -268,86 +318,13 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        }
-      ],
-      "name": "getPurchase",
+      "inputs": [],
+      "name": "feeRecipient",
       "outputs": [
         {
-          "components": [
-            {
-              "internalType": "address",
-              "name": "buyer",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "tokenUsed",
-              "type": "address"
-            },
-            {
-              "internalType": "uint64",
-              "name": "assetId",
-              "type": "uint64"
-            },
-            {
-              "internalType": "uint32",
-              "name": "quantity",
-              "type": "uint32"
-            },
-            {
-              "internalType": "uint128",
-              "name": "depositAmount",
-              "type": "uint128"
-            },
-            {
-              "internalType": "uint128",
-              "name": "escrowAmount",
-              "type": "uint128"
-            },
-            {
-              "internalType": "uint64",
-              "name": "purchaseTime",
-              "type": "uint64"
-            },
-            {
-              "internalType": "uint64",
-              "name": "deliveryDeadline",
-              "type": "uint64"
-            },
-            {
-              "internalType": "string",
-              "name": "progressCID",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "completionCID",
-              "type": "string"
-            },
-            {
-              "internalType": "uint8",
-              "name": "status",
-              "type": "uint8"
-            },
-            {
-              "internalType": "uint64",
-              "name": "proposedExtension",
-              "type": "uint64"
-            },
-            {
-              "internalType": "bool",
-              "name": "extensionPending",
-              "type": "bool"
-            }
-          ],
-          "internalType": "struct AssetPurchaseLib.Purchase",
+          "internalType": "address",
           "name": "",
-          "type": "tuple"
+          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -359,81 +336,24 @@
           "internalType": "address",
           "name": "user",
           "type": "address"
+        },
+        {
+          "internalType": "uint64",
+          "name": "productId",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint8",
+          "name": "region",
+          "type": "uint8"
         }
       ],
-      "name": "getUserPurchases",
+      "name": "getUserProductQuantity",
       "outputs": [
         {
-          "components": [
-            {
-              "internalType": "address",
-              "name": "buyer",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "tokenUsed",
-              "type": "address"
-            },
-            {
-              "internalType": "uint64",
-              "name": "assetId",
-              "type": "uint64"
-            },
-            {
-              "internalType": "uint32",
-              "name": "quantity",
-              "type": "uint32"
-            },
-            {
-              "internalType": "uint128",
-              "name": "depositAmount",
-              "type": "uint128"
-            },
-            {
-              "internalType": "uint128",
-              "name": "escrowAmount",
-              "type": "uint128"
-            },
-            {
-              "internalType": "uint64",
-              "name": "purchaseTime",
-              "type": "uint64"
-            },
-            {
-              "internalType": "uint64",
-              "name": "deliveryDeadline",
-              "type": "uint64"
-            },
-            {
-              "internalType": "string",
-              "name": "progressCID",
-              "type": "string"
-            },
-            {
-              "internalType": "string",
-              "name": "completionCID",
-              "type": "string"
-            },
-            {
-              "internalType": "uint8",
-              "name": "status",
-              "type": "uint8"
-            },
-            {
-              "internalType": "uint64",
-              "name": "proposedExtension",
-              "type": "uint64"
-            },
-            {
-              "internalType": "bool",
-              "name": "extensionPending",
-              "type": "bool"
-            }
-          ],
-          "internalType": "struct AssetPurchaseLib.Purchase[]",
+          "internalType": "uint32",
           "name": "",
-          "type": "tuple[]"
+          "type": "uint32"
         }
       ],
       "stateMutability": "view",
@@ -447,12 +367,19 @@
           "type": "address"
         },
         {
-          "internalType": "uint256",
-          "name": "_initialFeeBps",
-          "type": "uint256"
+          "internalType": "address[]",
+          "name": "initialStables",
+          "type": "address[]"
         }
       ],
       "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "initializeAccumBase",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -471,21 +398,29 @@
       "type": "function"
     },
     {
-      "inputs": [
+      "inputs": [],
+      "name": "payoutAddress",
+      "outputs": [
         {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "extraDays",
-          "type": "uint256"
+          "internalType": "address",
+          "name": "",
+          "type": "address"
         }
       ],
-      "name": "proposeExtension",
-      "outputs": [],
-      "stateMutability": "nonpayable",
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "poolManagerAddress",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -504,9 +439,24 @@
     {
       "inputs": [
         {
-          "internalType": "uint64",
-          "name": "assetId",
-          "type": "uint64"
+          "internalType": "address",
+          "name": "buyer",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "stable",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "productId",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
         },
         {
           "internalType": "uint32",
@@ -514,94 +464,24 @@
           "type": "uint32"
         },
         {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
           "internalType": "uint256",
           "name": "rate",
           "type": "uint256"
         },
         {
-          "internalType": "address",
-          "name": "feeRecipient",
-          "type": "address"
+          "internalType": "uint8",
+          "name": "region",
+          "type": "uint8"
         }
       ],
       "name": "purchase",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        }
-      ],
-      "name": "refund",
       "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        }
-      ],
-      "name": "releaseEscrow",
-      "outputs": [],
-      "stateMutability": "nonpayable",
+      "stateMutability": "payable",
       "type": "function"
     },
     {
       "inputs": [],
       "name": "renounceOwnership",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "name",
-          "type": "string"
-        },
-        {
-          "internalType": "uint128",
-          "name": "priceInGBDO",
-          "type": "uint128"
-        },
-        {
-          "internalType": "string",
-          "name": "cid",
-          "type": "string"
-        },
-        {
-          "internalType": "uint32",
-          "name": "baseDays",
-          "type": "uint32"
-        },
-        {
-          "internalType": "uint32",
-          "name": "delayPerUnit",
-          "type": "uint32"
-        }
-      ],
-      "name": "setAsset",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -623,11 +503,11 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "newOwner",
+          "name": "newAddress",
           "type": "address"
         }
       ],
-      "name": "transferOwnership",
+      "name": "setPayoutAddress",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -636,11 +516,56 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "newImplementation",
+          "name": "newManager",
           "type": "address"
         }
       ],
-      "name": "upgradeTo",
+      "name": "setPoolManager",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "stablecoins",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "totalWithdrawn",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -664,68 +589,8 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        },
-        {
-          "internalType": "string",
-          "name": "cid",
-          "type": "string"
-        }
-      ],
-      "name": "uploadCompletion",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        },
-        {
-          "internalType": "string",
-          "name": "cid",
-          "type": "string"
-        }
-      ],
-      "name": "uploadProgress",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "internalType": "uint128",
-          "name": "amount",
-          "type": "uint128"
-        },
-        {
-          "internalType": "uint256",
-          "name": "lockedEscrow",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "withinGracePeriod",
-          "type": "uint256"
-        }
-      ],
-      "name": "withdrawTokens",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
+      "stateMutability": "payable",
+      "type": "receive"
     }
   ]
 }
