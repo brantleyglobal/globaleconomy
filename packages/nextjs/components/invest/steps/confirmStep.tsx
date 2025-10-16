@@ -7,6 +7,7 @@ type Props = {
   amount: string;
   committedQuarters: number;
   token: Token;
+  token2: Token;
   summary: {
     unlockLabel: string;
     eligibilityLabel: string;
@@ -25,6 +26,7 @@ export function ConfirmStep({
   amount,
   committedQuarters,
   token,
+  token2,
   summary,
   connectedWallet,
   onPrevious,

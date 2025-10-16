@@ -8,6 +8,7 @@ import { useAccount } from "wagmi";
 import { toast } from "react-hot-toast";
 import { useTokenBalance } from "~~/components/invest/useTokenBalance";
 import { useDeposit } from "~~/components/invest/useDepositHandler";
+import { useInfra } from "~~/components/invest/useInfraHandler";
 import type { Props as InputStepProps  } from "~~/components/invest/steps/termStep";
 import SelectionStep from "~~/components/invest/steps/selectionStep";
 import { TermStep } from "~~/components/invest/steps/termStep";
@@ -100,12 +101,17 @@ export const InvestmentModal: React.FC<Props> = ({
   const [policyText, setPolicyText] = useState("");
 
   const { address: connectedWallet } = useAccount();
-  const { isProcessing, error, deposit } = useDeposit();
+  const { isProcessing: isDepositProcessing, error: depositError, deposit } = useDeposit();
+  const { isProcessing: isInfraProcessing, error: infraError, infra } = useInfra();
+  const { isProcessing: isInfraBTCProcessing, error: infraBTCerror, infraBTC } = useInfra();
+  const { isProcessing: isDepositBTCProcessing, error: depositBTCerror, depositBTC } = useDeposit();
+  const isAnyProcessing = isDepositProcessing || isDepositBTCProcessing || isInfraProcessing || isInfraBTCProcessing;
   const [userFirstName, setUserFirstName] = useState("");
   const [userLastName, setUserLastName] = useState("");
   const [userEmail, setUserEmail] = useState("");
 
   const [selectedTokenSymbol, setSelectedTokenSymbol] = useState("");
+  const [selectedTokenSymbol2, setSelectedTokenSymbol2] = useState("");
   const [selectedQuarter, setSelectedQuarter] = useState(0);
   const [depositAmount, setDepositAmount] = useState("");
 
@@ -113,6 +119,11 @@ export const InvestmentModal: React.FC<Props> = ({
   const selectedToken: Token | undefined = supportedTokens.find(
     (token) => token.symbol === selectedTokenSymbol
   );
+
+  const selectedToken2: Token | undefined = supportedTokens.find(
+    (token2) => token2.symbol === selectedTokenSymbol2
+  );
+
 
   const balance = useTokenBalance(connectedWallet, selectedToken!);
 
@@ -145,10 +156,36 @@ export const InvestmentModal: React.FC<Props> = ({
       return;
     }
 
+    if (selectedTokenSymbol === "GLB") {
+    // Skip processing for GLB token or show a special prompt
+      toast("Investment Is Not Open.");
+      return;
+    }
+
     console.log("Processing Transaction");
     
     try {
-      const receiptx = await deposit(depositAmount, selectedQuarter, selectedToken, connectedWallet!);
+
+      let receiptx = "";
+
+      if (selectedTokenSymbol === "GLB" && selectedTokenSymbol2 === "BTC") {
+        if (!selectedToken2) {
+          toast.error("Please select a valid token.");
+          return;
+        }
+        const receiptx = await infraBTC(depositAmount, selectedToken2, selectedToken, connectedWallet!);
+      } else if (selectedTokenSymbol === "GLB" && selectedTokenSymbol2 !== "BTC") {
+        if (!selectedToken2) {
+          toast.error("Please select a valid token.");
+          return;
+        }
+        const receiptx = await infra(depositAmount, selectedToken2, selectedToken, connectedWallet!);
+      } else if (selectedTokenSymbol !== "GLB" && selectedTokenSymbol2 === "BTC") {
+        const receiptx = await depositBTC(depositAmount, selectedQuarter, selectedToken, connectedWallet!);
+      } else if (selectedTokenSymbol !== "GLB" && selectedTokenSymbol2 !== "BTC") {
+        const receiptx = await deposit(depositAmount, selectedQuarter, selectedToken, connectedWallet!);
+      }
+
 
       console.log("Transaction Hash:", receiptx);
       console.log("Sending Confirmation");
@@ -167,6 +204,7 @@ export const InvestmentModal: React.FC<Props> = ({
         userLastName,
         connectedWallet,
         tokenSymbol: selectedTokenSymbol,
+        tokenSymbol2: selectedTokenSymbol2,
         amount: depositAmount,
         committedQuarters: selectedQuarter,
         unlockLabel,
@@ -192,12 +230,18 @@ export const InvestmentModal: React.FC<Props> = ({
         const eligibilityQ = computeEligibilityQuarter(now, selectedQuarter);
         const unlockDate = quarterToDate(unlockQ);
         const eligibilityDate = quarterToDate(eligibilityQ);
+
+         const eligibilityLabel =
+        selectedTokenSymbol === "GLB"
+          ? "N/A"
+          : formatQuarterLabel(eligibilityDate);
+
         setSummary({
           unlockQ,
           eligibilityQ,
           multiplier: getMultiplier(now, selectedQuarter),
           unlockLabel: formatQuarterLabel(unlockDate),
-          eligibilityLabel: formatQuarterLabel(eligibilityDate),
+          eligibilityLabel,
         });
       } catch (err) {
         console.error("Error in summary computation:", err);
@@ -236,7 +280,7 @@ export const InvestmentModal: React.FC<Props> = ({
         </div>
       </div>
 
-      <div className="space-y-2 h-auto min-h-[400px] sm:h-[500px] flex flex-col">
+      <div className="space-y-2 h-full h-[min(90vh,auto)] flex flex-col">
         {/* Help toggle button */}
         {/* Conditionally render help or current step */}
         {isHelpMode ? (
@@ -347,8 +391,10 @@ export const InvestmentModal: React.FC<Props> = ({
                 supportedTokens={supportedTokens}
                 selectedTokenSymbol={selectedTokenSymbol}
                 setSelectedTokenSymbol={setSelectedTokenSymbol}
+                selectedTokenSymbol2={selectedTokenSymbol2}
+                setSelectedTokenSymbol2={setSelectedTokenSymbol2}
                 selectedQuarter={selectedQuarter}
-                setSelectedQuarter={setSelectedQuarter}
+                setSelectedQuarter={setSelectedQuarter} 
                 depositAmount={depositAmount}
                 setDepositAmount={setDepositAmount}
                 userFirstName={userFirstName}
@@ -373,13 +419,14 @@ export const InvestmentModal: React.FC<Props> = ({
                 amount={depositAmount}
                 committedQuarters={selectedQuarter}
                 token={selectedToken!}
+                token2={selectedToken2!}
                 summary={summary}
                 connectedWallet={connectedWallet}
                 onPrevious={() => setStep(1)}
                 onConfirm={handleConfirm}
                 onHelpToggle={() => setIsHelpMode(true)}
-                isProcessing={isProcessing}
-                disabled={!connectedWallet || isProcessing}
+                isProcessing={isAnyProcessing}
+                disabled={!connectedWallet || isAnyProcessing}
               />
             )}
             {step === ModalStep.DoneStep && <DoneStep onClose={onClose} />}

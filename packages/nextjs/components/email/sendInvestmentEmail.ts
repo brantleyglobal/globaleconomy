@@ -19,6 +19,7 @@ interface SendInvestmentParams {
   userLastName: string;
   connectedWallet: string;
   tokenSymbol: string;
+  tokenSymbol2: string;
   amount: string;
   committedQuarters: number;
   unlockLabel: string;
@@ -34,6 +35,7 @@ export async function sendInvestmentConfirmation({
   userLastName,
   connectedWallet,
   tokenSymbol,
+  tokenSymbol2,
   amount,
   committedQuarters,
   unlockLabel,
@@ -53,6 +55,7 @@ export async function sendInvestmentConfirmation({
       userAddress: connectedWallet,
       receipt: receipt || "",
       tokenSymbol,
+      tokenSymbol2,
       totalTokenAmount: parseFloat(amount).toFixed(2),
       committedQuarters,
       unlockLabel,

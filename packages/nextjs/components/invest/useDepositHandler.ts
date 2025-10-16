@@ -45,6 +45,8 @@ interface UseDepositResult {
     token: Token,
     userAddress: string
   ) => Promise<string>; // returns tx hash
+
+  depositBTC: (amountStr: string, commmittedQuarters: number, token: Token, userAddress: string) => Promise<string>;
 }
 
 export function useDeposit(): UseDepositResult {
@@ -77,7 +79,6 @@ export function useDeposit(): UseDepositResult {
           generateTermCode(),
         ]);
 
-        // Check if token needs approval (ERC20)
         const isERC20 = token.symbol !== "GBDo" && !!token.address;
 
         if (isERC20) {
@@ -88,12 +89,14 @@ export function useDeposit(): UseDepositResult {
           );
 
           if (allowance.lt(parsedValue)) {
-            const approveTx = await stablecoinContract.approve(deployments.SmartVault, parsedValue);
+            const approveTx = await stablecoinContract.approve(
+              deployments.SmartVault,
+              parsedValue
+            );
             await approveTx.wait();
           }
         }
 
-        // Send deposit transaction
         const tx = await signer.sendTransaction({
           to: deployments.SmartVault,
           value: 0n,
@@ -101,9 +104,7 @@ export function useDeposit(): UseDepositResult {
           gasLimit: ethers.BigNumber.from(2_000_000),
         });
 
-        // Wait for confirmation
         const receipt = await tx.wait();
-
         const now = new Date().toISOString();
 
         const successPayload: VaultPayload = {
@@ -129,8 +130,7 @@ export function useDeposit(): UseDepositResult {
 
         await logVaultCommit(successPayload);
 
-        return tx.hash; // Return transaction hash here to caller
-
+        return tx.hash;
       } catch (e: any) {
         setError(e);
 
@@ -167,5 +167,85 @@ export function useDeposit(): UseDepositResult {
     []
   );
 
-  return { isProcessing, error, deposit };
+  const depositBTC = useCallback(async (amountStr: string, committedQuarters: number, token: Token, userAddress: string) => {
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const res = await fetch("https://your-worker-domain.workers.dev/create-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: amountStr, currency: "USD" }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to create BTCPay invoice");
+      }
+
+      const invoice = await res.json();
+
+      // Open checkout page in new window/tab
+      window.open(invoice.checkoutLink || invoice.url, "_blank");
+
+      // Log invoice created
+      const now = new Date().toISOString();
+      const payload: VaultPayload = {
+        txhash: "",
+        contractaddress: token.address,
+        useraddress: userAddress,
+        depositamount: amountStr,
+        committedquarters: committedQuarters,
+        paymentmethod: "BTC",
+        depositstarttime: now,
+        ispending: 1,
+        isclosed: 0,
+        status: "invoice_created",
+        chainstatus: false,
+        queuedat: now,
+        processedat: null,
+        priority: 0,
+        retrycount: 0,
+        receipthash: "",
+        notes: `Invoice ID: ${invoice.id}`,
+        timestamp: now,
+      };
+
+      await logVaultCommit(payload);
+
+      return invoice.id;
+    } catch (e: any) {
+      setError(e);
+
+      const now = new Date().toISOString();
+      const errorPayload: VaultPayload = {
+        txhash: "",
+        contractaddress: "",
+        useraddress: userAddress,
+        depositamount: amountStr,
+        committedquarters: committedQuarters,
+        paymentmethod: "BTC",
+        depositstarttime: now,
+        ispending: 1,
+        isclosed: 0,
+        status: "failed",
+        chainstatus: false,
+        queuedat: now,
+        processedat: null,
+        priority: 0,
+        retrycount: 0,
+        receipthash: "",
+        notes: e.message ?? "BTCPay payment initiation failed",
+        timestamp: now,
+      };
+
+      await logVaultCommit(errorPayload);
+
+      throw e;
+    } finally {
+      setIsProcessing(false);
+    }
+  }, []);
+
+  return { isProcessing, error, deposit, depositBTC };
 }

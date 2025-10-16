@@ -64,6 +64,13 @@ export const supportedTokens = [
     isNative: false,
   },
   {
+    name: "The Globe",
+    symbol: "GLB",
+    address: deployments.Copian,
+    decimals: 18,
+    isNative: false,
+  },
+  {
     name: "USD Coin",
     symbol: "USDC",
     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
@@ -78,7 +85,7 @@ export const supportedTokens = [
     isNative: false,
   },
   {
-    name: "QCAD Token",
+    name: "QCAD",
     symbol: "QCAD",
     address: "0x4A16BAf414b8e637Ed12019faD5Dd705735DB2e0",
     decimals: 6,
@@ -91,6 +98,13 @@ export const supportedTokens = [
     decimals: 8,
     isNative: false,
   },
+  /*{
+    name: "Bitcoin",
+    symbol: "BTC",
+    address: "0x0000000000000000000000000000000000000000",
+    decimals: 8,
+    isNative: false,
+  },*/
   {
     name: "Wrapped Binance Coin",
     symbol: "WBNB",

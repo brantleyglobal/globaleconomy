@@ -14,9 +14,9 @@ export const ProjectPreview = ({
   pdf: string;
 }) => (
   <div className="bg-black border border-white/10 rounded-xl p-4 space-y-4">
-    <h3 className="text-lg font-semibold text-white">{title}</h3>
-    <img src={image} alt={title} className="rounded-md w-full object-cover" />
-    <p className="text-white/50 text-sm">{description}</p>
+    <h3 className="text-lg font-light text-white">{title}</h3>
+    <img src={image} alt="Coming Soon" className="rounded-md w-full object-cover" />
+    <p className="text-white/50 text-justify text-sm">{description}</p>
     <a
       href={pdf}
       target="_blank"

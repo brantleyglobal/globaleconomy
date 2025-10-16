@@ -141,6 +141,8 @@ export default function HomePageLayout() {
     }
   }, [isLocalNetwork, targetNetwork]);
 
+  console.log("showModal:", showModal);
+
   return (
     <>
       <section
