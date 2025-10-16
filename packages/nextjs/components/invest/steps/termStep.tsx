@@ -75,7 +75,7 @@ export const TermStep: React.FC<Props> = ({
           >
             <option value="" disabled>Select Token</option>
             {supportedTokens
-              .filter(t => !["GBDo", "GBDx", "COPx", "GLB"].includes(t.symbol))
+              .filter(t => !["GBDo", "GBDx", "COPx", "GLB", "TGUSA", "TGMX"].includes(t.symbol))
               .map(t => (
                 <option key={t.symbol} value={t.symbol}>
                   {t.symbol} • {t.name}

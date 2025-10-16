@@ -11,8 +11,10 @@ import { Modal } from "~~/components/common/modal";
 import { DividendRedeemModal } from "~~/components/dividend/redemptionWidget";
 import { GlobalXchangeModal } from "~~/components/xchange/xchangeWidget";
 import { Faucet } from "~~/components/transfer/Faucet";
+import { InvestmentModal } from "~~/components/invest/investmentModal";
 import { GlobalWalletModal } from "~~/components/globalEco/RainbowKitCustomConnectButton/globalWalletConnect";
 import MirrorModeToggle from "~~/components/common/mirrorToggle";
+import dynamic from "next/dynamic";
 
 // Hook to detect mobile viewport
 function useIsMobile(breakpoint = 1024) {
@@ -45,6 +47,7 @@ export const Header = () => {
     faucet: false,
     wallet: false,
     redeem: false,
+    invest: false,
   });
 
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -111,6 +114,12 @@ export const Header = () => {
                 className="text-white hover:text-primary transition"
               >
                 TRANSFER
+              </button>
+              <button
+                onClick={() => setModalState(s => ({ ...s, invest: true }))}
+                className="text-white hover:text-primary transition"
+              >
+                INVEST
               </button>
               {menuLinks.map(({ label, href }) => (
                 <Link
@@ -224,6 +233,12 @@ export const Header = () => {
           openWalletModal={() => setModalState(s => ({ ...s, wallet: true }))}  // fn to open wallet modal
         />
       </Modal>
+
+      <InvestmentModal
+        isOpen={modalState.invest}
+        onClose={() => setModalState(s => ({ ...s, invest: false }))}
+      />
+
     </>
   );
 };

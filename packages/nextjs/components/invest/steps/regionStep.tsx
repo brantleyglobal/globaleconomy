@@ -95,7 +95,7 @@ export const RegionStep: React.FC<Props> = ({
                 Select Venture
               </option>
               {supportedTokens
-                .filter(t => ["GLB"].includes(t.symbol))
+                .filter(t => ["GLB", "TGUSA", "TGMX"].includes(t.symbol))
                 .map(t => (
                   <option key={t.symbol} value={t.symbol}>
                     {t.name}
@@ -109,11 +109,11 @@ export const RegionStep: React.FC<Props> = ({
               value={selectedTokenSymbol}
               onChange={e => setSelectedTokenSymbol(e.target.value)}
             >
-              <option value="" disabled>
+              <option value="" disabled>                                                                                                                  
                 Select Payment Method
               </option>
               {supportedTokens
-                .filter(t => !["GLB", "GBDx", "GBDo", "COPx"].includes(t.symbol))
+                .filter(t => !["GLB", "GBDx", "GBDo"].includes(t.symbol))
                 .map(t => (
                   <option key={t.symbol} value={t.symbol}>
                     {t.name}
