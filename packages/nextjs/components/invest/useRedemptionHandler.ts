@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ethers, ContractReceipt, Contract } from "ethers";
 import smartVaultabi from "~~/lib/contracts/abi/SmartVault.json";
+import infraAbi from "~~/lib/contracts/abi/RegionInfrastructure.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import { erc20Abi } from "viem";
 
@@ -92,6 +93,11 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         "function comingQuarter() view returns (uint16)",
       ];
 
+      const contractaddress =
+        (selectedToken.symbol !== "GLB" && selectedToken.symbol !== "TGUSA" && selectedToken.symbol !== "TGMX")
+          ? deployments.SmartVault
+          : deployments.RegionInfrastructure;
+
       const contract = new ethers.Contract(selectedToken.address, abi, provider)
       const contract2 = new ethers.Contract(selectedToken.address, abi2, provider)
       const unlockQuarterRaw = await contract.unlockQuarter();
@@ -110,28 +116,55 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         const stablecoinContract = new Contract(selectedToken.address, erc20Abi, signer);
         const balanceBefore = await stablecoinContract.balanceOf(signerAddress);
         const vaultContract = new Contract(deployments.SmartVault, smartVaultabi.abi, signer);
-  
-        const allowance = await stablecoinContract.allowance(signerAddress, deployments.SmartVault);
-        console.log("Stablecoin allowance:", allowance);
-        if (allowance < balanceBefore) {
-          console.log("Approving vault to spend stablecoin...");
-          const approveTx = await stablecoinContract.approve(deployments.SmartVault, balanceBefore);
-          await approveTx.wait();
-          console.log("Stablecoin approved");
-        } else {
-          console.log("Stablecoin allowance sufficient");
-        }
-        const tokenTx = await vaultContract.withdraw(selectedToken.address, termCodeStr, balanceBefore);
-        txhash = tokenTx.hash;
-        receipt = await tokenTx.wait();
-        console.log("Token transfer confirmed");
+        const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
+        
+        if( selectedToken.symbol !== "GLB", selectedToken.symbol !== "TGUSA", selectedToken.symbol !== "TGMX" ) {
+          const allowance = await stablecoinContract.allowance(signerAddress, deployments.SmartVault);
+          console.log("Stablecoin allowance:", allowance);
+          if (allowance < balanceBefore) {
+            console.log("Approving vault to spend stablecoin...");
+            const approveTx = await stablecoinContract.approve(deployments.SmartVault, balanceBefore);
+            await approveTx.wait();
+            console.log("Stablecoin approved");
+          } else {
+            console.log("Stablecoin allowance sufficient");
+          }
+          const tokenTx = await vaultContract.withdraw(selectedToken.address, termCodeStr, balanceBefore);
+          txhash = tokenTx.hash;
+          receipt = await tokenTx.wait();
+          console.log("Token transfer confirmed");
 
-        if (receipt && receipt.events) {
-          const payoutEvent = receipt.events.find((e) => e.event === "PayoutMade");
-          if (payoutEvent && payoutEvent.args) {
-            const payoutValue = payoutEvent.args.payout;
-            payoutFormatted = ethers.utils.formatUnits(payoutValue, 18);
-            console.log("Payout value:", payoutFormatted);
+          if (receipt && receipt.events) {
+            const payoutEvent = receipt.events.find((e) => e.event === "PayoutMade");
+            if (payoutEvent && payoutEvent.args) {
+              const payoutValue = payoutEvent.args.payout;
+              payoutFormatted = ethers.utils.formatUnits(payoutValue, 18);
+              console.log("Payout value:", payoutFormatted);
+            }
+          }
+      } else {
+          const allowance = await stablecoinContract.allowance(signerAddress, deployments.RegionInfrastructure);
+          console.log("Stablecoin allowance:", allowance);
+          if (allowance < balanceBefore) {
+            console.log("Approving vault to spend stablecoin...");
+            const approveTx = await stablecoinContract.approve(deployments.RegionInfrastructure, balanceBefore);
+            await approveTx.wait();
+            console.log("Stablecoin approved");
+          } else {
+            console.log("Stablecoin allowance sufficient");
+          }
+          const tokenTx = await infraContract.withdraw(selectedToken.address, termCodeStr, balanceBefore);
+          txhash = tokenTx.hash;
+          receipt = await tokenTx.wait();
+          console.log("Token transfer confirmed");
+
+          if (receipt && receipt.events) {
+            const payoutEvent = receipt.events.find((e) => e.event === "PayoutMade");
+            if (payoutEvent && payoutEvent.args) {
+              const payoutValue = payoutEvent.args.payout;
+              payoutFormatted = ethers.utils.formatUnits(payoutValue, 18);
+              console.log("Payout value:", payoutFormatted);
+            }
           }
         }
       } catch (error) {
@@ -140,7 +173,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
 
       const redemptionPayload = {
         txhash,
-        contractaddress: deployments["SmartVault"],
+        contractaddress: contractaddress,
         useraddress: sender,
         amount: payoutFormatted,
         asset: selectedToken.symbol,

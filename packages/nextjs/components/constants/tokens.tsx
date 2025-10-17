@@ -270,4 +270,25 @@ export const supportedTokens = [
 
 export const dividendTokens = [
   ...generateDividendTokens(),
+  {
+    name: "The Globe",
+    symbol: "GLB",
+    address: deployments.Copian,
+    decimals: 18,
+    isNative: false,
+  },
+  {
+    name: "TRANS-GREENTECH REFINERY & DEPOT MX",
+    symbol: "TGMX",
+    address: deployments.TGMX,
+    decimals: 18,
+    isNative: false,
+  },
+  {
+    name: "TRANS-GREENTECH REFINERY & DEPOT US",
+    symbol: "TGUSA",
+    address: deployments.TGUSA,
+    decimals: 18,
+    isNative: false,
+  },
 ]

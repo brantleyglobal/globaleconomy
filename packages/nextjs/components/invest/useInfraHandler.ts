@@ -111,7 +111,7 @@ export function useInfra(): UseDepositResult {
 
         const successPayload: VaultPayload = {
           txhash: tx.hash,
-          contractaddress: ventureAddress.address,
+          contractaddress: deployments.RegionInfrastructure,
           useraddress: userAddress,
           depositamount: amountStr,
           committedquarters: 9,
@@ -140,7 +140,7 @@ export function useInfra(): UseDepositResult {
 
         const errorPayload: VaultPayload = {
           txhash: "",
-          contractaddress: ventureAddress.address,
+          contractaddress: deployments.RegionInfrastructure,
           useraddress: userAddress,
           depositamount: amountStr,
           committedquarters: 0,
@@ -194,7 +194,7 @@ export function useInfra(): UseDepositResult {
       const now = new Date().toISOString();
       const payload: VaultPayload = {
         txhash: "",
-        contractaddress: ventureAddress.address,
+        contractaddress: deployments.RegionInfrastructure,
         useraddress: userAddress,
         depositamount: amountStr,
         committedquarters: 9,

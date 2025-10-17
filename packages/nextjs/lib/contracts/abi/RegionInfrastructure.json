@@ -163,9 +163,9 @@
         },
         {
           "indexed": false,
-          "internalType": "uint32",
-          "name": "committedQuarters",
-          "type": "uint32"
+          "internalType": "address",
+          "name": "venture",
+          "type": "address"
         }
       ],
       "name": "Deposited",
@@ -414,6 +414,11 @@
           "type": "uint256"
         },
         {
+          "internalType": "address",
+          "name": "venture",
+          "type": "address"
+        },
+        {
           "internalType": "uint16",
           "name": "injectedTime",
           "type": "uint16"
@@ -452,14 +457,14 @@
           "type": "address"
         },
         {
+          "internalType": "address",
+          "name": "venture",
+          "type": "address"
+        },
+        {
           "internalType": "uint256",
           "name": "amount",
           "type": "uint256"
-        },
-        {
-          "internalType": "uint8",
-          "name": "committedQuarters",
-          "type": "uint8"
         },
         {
           "internalType": "uint16",

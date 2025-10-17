@@ -14,31 +14,31 @@ export const projectDetails = {
     image: "/images/usdc-project.jpg",
     pdf: "/assets/The Globe(Web).pdf",
   },
-    BGUSINFRA: {
+    TGUSA: {
     title: "TRANS-GREENTECH US REFINERY & DEPOT | Capital Raise TBA",
-    description: `Service multiple markets, using algae to produce biofuel, valuable feed & nutraceuticals, and fertilizer. 
+    description: `Servicing multiple markets, using algae to produce biofuel, valuable feed & nutraceuticals, and fertilizer. 
       Supported by practices that are environmentally friendly, technology driven, economically profitable, and address several 
       growing concerns. Using reverse water treatment practices, hydro-processing, and CO2 extraction in tandem with today’s automation 
-      & controls and business applications, Trans GreenTech’s operations will cultivate, harvest, and process algae to produce algal oil 
+      & controls and business applications, operations will cultivate, harvest, and process algae to produce algal oil 
       which will be refined and marketed as middle distillate biofuel; and biomass which will be marketed as animal feed products, organic 
       fertilizer, and dietary supplements. Modeled similar to farms producing alternative fuels from the cultivation of crops, Trans GreenTech 
       will develop 70 acres, dedicated to the cultivation, processing, and storage of algal based products with an initial production capability 
-      of over 90,000 tons of quality algal biomass derived products per acre annually. In terms of competition, upon completion, Trans GreenTech 
-      is proposing a production minimum 70,000 bpd. Well over 16 million gallons of biofuel per acre per annum.`,
+      of over 90,000 tons of quality algal biomass derived products per acre annually. In terms of competition, upon completion, Proposing a 
+      production minimum 70,000 bpd. Well over 16 million gallons of biofuel per acre per annum.`,
     image: "/images/eth-project.jpg",
     pdf: "/assets/.Trans Greentech(web)", 
   },
-    BGMXINFRA: {
+    TGMX: {
     title: "TRANS-GREENTECH MX REFINERY & DEPOT | Capital Raise TBA",
-    description: `Service multiple markets, using algae to produce biofuel, valuable feed & nutraceuticals, and fertilizer. 
+    description: `Servicing multiple markets, using algae to produce biofuel, valuable feed & nutraceuticals, and fertilizer. 
       Supported by practices that are environmentally friendly, technology driven, economically profitable, and address several 
       growing concerns. Using reverse water treatment practices, hydro-processing, and CO2 extraction in tandem with today’s automation 
-      & controls and business applications, Trans GreenTech’s operations will cultivate, harvest, and process algae to produce algal oil 
+      & controls and business applications, operations will cultivate, harvest, and process algae to produce algal oil 
       which will be refined and marketed as middle distillate biofuel; and biomass which will be marketed as animal feed products, organic 
       fertilizer, and dietary supplements. Modeled similar to farms producing alternative fuels from the cultivation of crops, Trans GreenTech 
       will develop 70 acres, dedicated to the cultivation, processing, and storage of algal based products with an initial production capability 
-      of over 90,000 tons of quality algal biomass derived products per acre annually. In terms of competition, upon completion, Trans GreenTech 
-      is proposing a production minimum 70,000 bpd. Well over 16 million gallons of biofuel per acre per annum.`,
+      of over 90,000 tons of quality algal biomass derived products per acre annually. In terms of competition, upon completion, Proposing a 
+      production minimum 70,000 bpd. Well over 16 million gallons of biofuel per acre per annum.`,
       image: "/images/usdc-project.jpg",
     pdf: "/assets/.Trans Greentech(web)",
   },

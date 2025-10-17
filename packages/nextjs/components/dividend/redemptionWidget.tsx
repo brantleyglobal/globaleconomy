@@ -206,6 +206,7 @@ export const DividendRedeemModal = ({ openWalletModal }: FaucetProps) => {
             userEmail,
             connectedWallet: address,
             tokenSymbol: selectedToken.symbol,
+            tokenSymbol2: "",
             amount,
             committedQuarters,
             unlockLabel,
