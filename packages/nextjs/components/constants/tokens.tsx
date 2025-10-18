@@ -66,7 +66,7 @@ export const supportedTokens = [
   {
     name: "The Globe",
     symbol: "GLB",
-    address: deployments.Copian,
+    address: deployments.Globe,
     decimals: 18,
     isNative: false,
   },
@@ -273,7 +273,7 @@ export const dividendTokens = [
   {
     name: "The Globe",
     symbol: "GLB",
-    address: deployments.Copian,
+    address: deployments.Globe,
     decimals: 18,
     isNative: false,
   },

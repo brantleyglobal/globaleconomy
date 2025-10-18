@@ -132,6 +132,12 @@ export const Header = () => {
                   {label}
                 </Link>
               ))}
+              <button
+                onClick={() => setModalState(s => ({ ...s, invest: true }))}
+                className="text-white hover:text-primary transition"
+              >
+                INVEST
+              </button>
             </div>
 
             {/* Mobile Menu Toggle */}
@@ -200,6 +206,17 @@ export const Header = () => {
                   </Link>
                 </li>
               ))}
+              <li>
+                <button
+                  onClick={() => {
+                    setModalState(s => ({ ...s, invest: true }));
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left py-1 px-6 hover:text-primary transition"
+                >
+                  INVEST
+                </button>
+              </li>
             </ul>
           </div>
         )}
