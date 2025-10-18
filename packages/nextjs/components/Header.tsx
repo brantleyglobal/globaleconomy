@@ -115,12 +115,6 @@ export const Header = () => {
               >
                 TRANSFER
               </button>
-              <button
-                onClick={() => setModalState(s => ({ ...s, invest: true }))}
-                className="text-white hover:text-primary transition"
-              >
-                INVEST
-              </button>
               {menuLinks.map(({ label, href }) => (
                 <Link
                   key={href}
