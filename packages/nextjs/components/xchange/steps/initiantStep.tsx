@@ -172,7 +172,7 @@ export default function InitiantStep({
                     {supportedTokens.length === 0 ? "-- No Tokens Available --" : "Select Service Token"}
                     </option>
                     {supportedTokens
-                    .filter(t => t.symbol !== "GBDo" && t.symbol !== "GBDx")
+                    .filter(t => t.symbol !== "GBDo" && t.symbol !== "GBDx" && t.symbol !== "GLB" && t.symbol !==  "BGFFS" && t.symbol !== "BGFRS" && t.symbol !== "TGMX" && t.symbol !== "TGUSA" && t.symbol !== "COPx")
                     .map((token) => (
                         <option key={token.symbol} value={token.symbol}>
                         {token.symbol} • {token.name}

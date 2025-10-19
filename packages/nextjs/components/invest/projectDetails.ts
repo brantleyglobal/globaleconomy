@@ -42,7 +42,21 @@ export const projectDetails = {
       image: "/images/usdc-project.jpg",
     pdf: "/assets/.Trans Greentech(web)",
   },
-    BGUSREAL: {
+    BGFFS: {
+    title: "Clean Real Estate Buy to Sell",
+    description: `Real Estate investments equipped with BG Company's clean generator virtually eliminating energy related overhead and holding cost. 
+      1 year (4 quarter) commitment before 2 year redemption period begins. Payouts are pro rata lump sum profits from the sale.`,
+    image: "/images/usdc-project.jpg",
+    pdf: "/assets/mxinfra-project.pdf",
+  },
+    BGFRS: {
+    title: "Clean Real Estate Buy & Hold",
+    description: `Real Estate investments equipped with BG Company's clean generator virtually eliminating energy related overhead and holding cost. 
+      1 year (4 quarter) commitment before 5 year redemption period begins. Payouts are made monthly based on actual rental revenue.`,
+    image: "/images/usdc-project.jpg",
+    pdf: "/assets/mxinfra-project.pdf",
+  },
+    BGRE: {
     title: "Clean Community | Capital Raise TBA",
     description: "Planned Real Estate Developments built around clean energy generation with milestone payouts beginning at venture development completion.",
     image: "/images/usdc-project.jpg",
