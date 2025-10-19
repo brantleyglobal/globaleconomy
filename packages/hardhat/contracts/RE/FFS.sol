@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract Dividend161 is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUPSUpgradeable {
+contract BGFFS is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
@@ -18,7 +18,6 @@ contract Dividend161 is Initializable, ERC20Upgradeable, AccessControlUpgradeabl
 
     uint16 public unlockQuarter;
     uint16 public comingQuarter;
-    uint16 public previousComingQuarter;
     uint256 public credit;
     uint256 private _supply;
 
@@ -30,7 +29,7 @@ contract Dividend161 is Initializable, ERC20Upgradeable, AccessControlUpgradeabl
     function initialize(
         address admin
     ) public initializer {
-        __ERC20_init("Dividend161", "GBD161"); 
+        __ERC20_init("BGFFS", "BGREFFS"); 
         __AccessControl_init();
         __UUPSUpgradeable_init();
 
@@ -78,7 +77,6 @@ contract Dividend161 is Initializable, ERC20Upgradeable, AccessControlUpgradeabl
             locked = !locked;
         } else if ((injectedTime >= comingQuarter) && (locked == false)){
             locked = !locked;
-            previousComingQuarter = comingQuarter;
             uint16 day = injectedTime % 100;
             uint16 quarter = (injectedTime / 100) % 10;
             uint16 year = injectedTime / 1000;
@@ -95,8 +93,8 @@ contract Dividend161 is Initializable, ERC20Upgradeable, AccessControlUpgradeabl
                 day = 1;
             }
 
-            uint16 committedQuarters = 6;
-            uint16 redeemPeriod = 2;
+            uint16 committedQuarters = 4;
+            uint16 redeemPeriod = 8;
 
             uint16 callQuarter = quarter + committedQuarters;
             uint16 newComing = callQuarter + redeemPeriod;
@@ -107,8 +105,16 @@ contract Dividend161 is Initializable, ERC20Upgradeable, AccessControlUpgradeabl
                 unlockQuarter = ((year + 1) * 1000) + ((callQuarter - 4) * 100) + day;
             } else if (callQuarter > 8 && callQuarter <= 12) {
                 unlockQuarter = ((year + 2) * 1000) + ((callQuarter - 8) * 100) + day;
-            } else if (callQuarter > 12) {
-                unlockQuarter = ((year + 3) * 1000) + (callQuarter * 100) + day;
+            } else if (callQuarter > 12 && callQuarter < 16) {
+                unlockQuarter = ((year + 3) * 1000) + ((callQuarter - 12) * 100) + day;
+            } else if (callQuarter > 16 && callQuarter < 20) {
+                unlockQuarter = ((year + 4) * 1000) + ((callQuarter - 16) * 100) + day;
+            } else if (callQuarter > 20 && callQuarter < 24) {
+                unlockQuarter = ((year + 5) * 1000) + ((callQuarter - 20) * 100) + day;
+            } else if (callQuarter > 24 && callQuarter < 28) {
+                unlockQuarter = ((year + 6) * 1000) + ((callQuarter - 24) * 100)  + day;
+            } else if (callQuarter > 28) {
+                unlockQuarter = ((year + 7) * 1000) + ((callQuarter - 28) * 100) + day;
             }
 
             if (newComing < 4 ) {
@@ -117,8 +123,16 @@ contract Dividend161 is Initializable, ERC20Upgradeable, AccessControlUpgradeabl
                 comingQuarter = ((year + 1) * 1000) + ((newComing - 4) * 100) + day;
             } else if (newComing > 8 && newComing <= 12) {
                 comingQuarter = ((year + 2) * 1000) + ((newComing - 8) * 100) + day;
-            } else if (newComing > 12) {
+            } else if (newComing > 12 && newComing < 16) {
                 comingQuarter = ((year + 3) * 1000) + ((newComing - 12) * 100) + day;
+            } else if (newComing > 16 && newComing < 20) {
+                comingQuarter = ((year + 4) * 1000) + ((newComing - 16) * 100) + day;
+            } else if (newComing > 20 && newComing < 24) {
+                comingQuarter = ((year + 5) * 1000) + ((newComing - 20) * 100) + day;
+            } else if (newComing > 24 && newComing < 28) {
+                comingQuarter = ((year + 6) * 1000) + ((newComing - 24) * 100) + day;
+            } else if (newComing > 28) {
+                comingQuarter = ((year + 7) * 1000) + ((newComing - 28) * 100) + day;
             }
         }
     }

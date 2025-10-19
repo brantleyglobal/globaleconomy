@@ -4,6 +4,7 @@ import path from "path";
 import { parseUnits } from "ethers";
 import hre from "hardhat";
 import gbdoxxAbi from "../artifacts/contracts/dividend/Dividend121.sol/Dividend121.json";
+import { regionInfrastructureSol } from "../typechain-types/factories/contracts";
 
 // Deployment Registry
 type DeployedContracts = Record<string, string>;
@@ -190,30 +191,6 @@ async function main() {
     //"0xc71daC923823D748a86D0A3618ABdA2d6dCd6bf4", // INRX
   ]
 
-  const productIds = [
-    120720, 120745, 120770,
-    1207100, 1207200, 1207300,
-    1207400, 1207500, 1207600
-  ]
-
-  const basePrices = [
-    14000, 15000, 16000,
-    43000, 53000, 63000,
-    73000, 80000, 90000
-  ]
-
-  const regionAdditions = [
-    [180, 250, 220, 230, 260, 210, 280, 300],  // for product 120720
-    [180, 250, 220, 230, 260, 210, 280, 300],  // for 120745
-    [180, 250, 220, 230, 260, 210, 280, 300],  // for 120770
-    [450, 650, 600, 620, 700, 580, 750, 800],  // for 1207100
-    [450, 650, 600, 620, 700, 580, 750, 800],  // for 1207200
-    [450, 650, 600, 620, 700, 580, 750, 800],  // for 1207300
-    [450, 650, 600, 620, 700, 580, 750, 800],  // for 1207400
-    [450, 650, 600, 620, 700, 580, 750, 800],  // for 1207500
-    [450, 650, 600, 620, 700, 580, 750, 800],  // for 1207600
-  ]
-
   const UniswapV2Factory = await deployProxy("UniswapV2Factory", deployed, [
     deployer.address,
     deployer.address,
@@ -266,6 +243,66 @@ async function main() {
       console.error(`Failed to grant MINTER_ROLE on token at ${addr}:`, error);
     }
   }
+
+  const globeAddress = await deployProxy("Globe", deployed, [
+    deployer.address,
+  ]);
+
+  const GLOBE = await ethers.getContractAt("Globe", globeAddress);
+
+  const tgusaAddress = await deployProxy("TGUSA", deployed, [
+    deployer.address,
+  ]);
+
+  const TGUSA = await ethers.getContractAt("TGUSA", tgusaAddress);
+
+  const tgmxAddress = await deployProxy("TGMX", deployed, [
+    deployer.address,
+  ]);
+
+  const TGMX = await ethers.getContractAt("TGMX", tgmxAddress);
+
+  const bgffsAddress = await deployProxy("BGFFS", deployed, [
+    deployer.address,
+  ]);
+
+  const BGFFS = await ethers.getContractAt("BGFFS", bgffsAddress);
+
+  const bgfrsAddress = await deployProxy("BGFRS", deployed, [
+    deployer.address,
+  ]);
+
+  const BGFRS = await ethers.getContractAt("BGFRS", bgfrsAddress);
+
+  const ventureAddresses = [
+    globeAddress,
+    tgusaAddress,
+    tgmxAddress,
+    bgffsAddress,
+    bgfrsAddress,
+  ]
+
+  const RegionInfrastructure = await deployProxy("RegionInfrastructure", deployed, [
+    deployer.address,
+    stablecoinAddresses,
+    ventureAddresses,
+    copxAddress,
+  ]);
+
+  await GLOBE.grantRole(await GLOBE.MINTER_ROLE(), RegionInfrastructure);
+  console.log(`RegionalInfra granted MINTER_ROLE on GLOBE`);
+
+  await TGUSA.grantRole(await TGUSA.MINTER_ROLE(), RegionInfrastructure);
+  console.log(`RegionalInfra granted MINTER_ROLE on TGUSA`);
+
+  await TGMX.grantRole(await TGMX.MINTER_ROLE(), RegionInfrastructure);
+  console.log(`RegionalInfra granted MINTER_ROLE on TGMX`);
+
+  await BGFFS.grantRole(await BGFFS.MINTER_ROLE(), RegionInfrastructure);
+  console.log(`RegionalInfra granted MINTER_ROLE on BGFFS`);
+
+  await BGFRS.grantRole(await BGFRS.MINTER_ROLE(), RegionInfrastructure);
+  console.log(`RegionalInfra granted MINTER_ROLE on BGFRS`);
 
   const TransferTracker = await deployProxy("TransferTracker", deployed, [
     deployer.address,

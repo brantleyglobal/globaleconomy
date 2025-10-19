@@ -40,7 +40,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     mapping(address => uint8) public multiplier;
     mapping(address => uint8) public quartersCommitted;
 
-    event Deposited(address indexed user, uint256 amount, uint32 committedQuarters);
+    event Deposited(address indexed user, uint256 amount, address venture);
     event DividendPaid(address indexed user, uint256 amount);
     event RedemptionPaid(address indexed user, uint256 amount);
     event RedemptionFulfilled(address indexed user, uint256 amount, uint256 tokenId);
@@ -175,8 +175,8 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     // Deposit with reentrancy guard
     function deposit(
         address token,
+        address venture,
         uint256 amount,
-        uint8 committedQuarters,
         uint16 injectedTime
     ) external payable nonReentrant {
         lastUpdatedTime = injectedTime;
@@ -243,71 +243,18 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             }
         }
 
-        uint256 startIndex;
-        uint256 endIndex;
-        // Map committed quarter groups to array indices
-        if (committedQuarters == 2) {
-            startIndex = 0; endIndex = 3;
-        } else if (committedQuarters == 3) {
-            startIndex = 4; endIndex = 9;
-        } else if (committedQuarters == 4) {
-            startIndex = 10; endIndex = 15;
-        } else if (committedQuarters == 5) {
-            startIndex = 16; endIndex = 23;
-        } else if (committedQuarters == 6) {
-            startIndex = 23; endIndex = 31;
-        } else if (committedQuarters == 7) {
-            startIndex = 32; endIndex = 40;
-        } else if (committedQuarters == 8) {
-            startIndex = 41; endIndex = 49;
-        }
-
-        bool minted = false;
-
         // Phase 1: Check 15 day window first
-        for (uint256 i = startIndex; i <= endIndex; i++) {
-            GlobalDominionX instance = GlobalDominionX(stakeables[i]);
-            uint16 previousComingQuarter = instance.previousComingQuarter();
-            if (injectedTime >= previousComingQuarter && injectedTime <= previousComingQuarter + 15 && previousComingQuarter != 0) {
-                instance.mint(msg.sender, gbdAmountout);
-                minted = true;
-                uint256 tokenSupply = instance.viewSupply();
-                uint256 supply = (tokenSupply + gbdAmountout);
-                instance.supply(supply);
-                break; // exit loop on first mint
-            }
-        }
-
-        // Phase 2: Only run if not minted yet
-        if (!minted) {
-            uint16 closestComingQuarter = type(uint16).max;
-            uint256 closestIndex = type(uint256).max;
-
-            for (uint256 i = startIndex; i <= endIndex; i++) {
-                GlobalDominionX instance = GlobalDominionX(stakeables[i]);
-                uint16 comingQuarter = instance.comingQuarter();
-                if (comingQuarter > injectedTime && comingQuarter < closestComingQuarter) {
-                    closestComingQuarter = comingQuarter;
-                    closestIndex = i;
-                }
-            }
-
-            if (closestIndex != type(uint256).max) {
-                GlobalDominionX instance = GlobalDominionX(stakeables[closestIndex]);
-                instance.mint(msg.sender, gbdAmountout);
-                minted = true;
-                uint256 tokenSupply = instance.viewSupply();
-                uint256 supply = (tokenSupply + gbdAmountout);
-                instance.supply(supply);
-            }
-        }
+        GlobalDominionX(venture).mint(msg.sender, gbdAmountout);
+        uint256 tokenSupply = GlobalDominionX(venture).viewSupply();
+        uint256 supply = (tokenSupply + gbdAmountout);
+        GlobalDominionX(venture).supply(supply);
 
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         if (fee > 0) {
             IERC20(token).safeTransfer(feeRecipient, fee);
         }
 
-        emit Deposited(msg.sender, gbdAmountout, committedQuarters);
+        emit Deposited(msg.sender, gbdAmountout, venture);
     }
 
     function withdraw(address dividendToken, uint16 injectedTime, uint256 holderBalance) external payable nonReentrant{
@@ -405,29 +352,26 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
 
     function addToDividendPools(
         uint256 poolAmount,
+        address venture,
         uint16 injectedTime
     ) external payable nonReentrant {
-        uint256 length = stakeables.length;
         uint256 totalWeightedMultiplier = 0;
         uint256 totalRedemptions = 0;
 
         IERC20(payoutToken).safeTransferFrom(msg.sender, address(this), poolAmount);
 
         // First pass: identify redemption and eligible tokens, sum multipliers and total redemption amounts
-        for (uint256 i = 0; i < length; i++) {
-            address token = stakeables[i];
-            GlobalDominionX instance = GlobalDominionX(token);
+        GlobalDominionX instance = GlobalDominionX(venture);
 
-            uint16 redemptionEnd = instance.comingQuarter();
-            uint16 redemptionStart = instance.unlockQuarter();
+        uint16 redemptionEnd = instance.comingQuarter();
+        uint16 redemptionStart = instance.unlockQuarter();
 
-            if (injectedTime >= redemptionStart && injectedTime <= redemptionEnd) {
-                // Token in redemption period: sum redemption amounts to subtract later
-                totalRedemptions += vaultSupply[token];
-            } else {
-                // Token eligible for dividend pool
-                totalWeightedMultiplier += multiplier[token];
-            }
+        if (injectedTime >= redemptionStart && injectedTime <= redemptionEnd) {
+            // Token in redemption period: sum redemption amounts to subtract later
+            totalRedemptions += vaultSupply[venture];
+        } else {
+            // Token eligible for dividend pool
+            totalWeightedMultiplier += multiplier[venture];
         }
 
         emit RedemptionFulfilled(msg.sender, totalWeightedMultiplier, totalRedemptions);
@@ -440,28 +384,21 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
 
         // Second pass: distribute adjusted pool amount proportionally to eligible tokens,
         // add redemption amounts directly to pool balances for tokens in redemption.
-        for (uint256 i = 0; i < length; i++) {
-            address token = stakeables[i];
-            GlobalDominionX instance = GlobalDominionX(token);
 
-            uint16 redemptionEnd = instance.comingQuarter();
-            uint16 redemptionStart = instance.unlockQuarter();
-
-            if (injectedTime >= redemptionStart && injectedTime <= redemptionEnd) {
-                // Add redemption amount directly to pool balance for this token
-                uint256 redemptionAmount = vaultSupply[token];
-                if (redemptionAmount > 0) {
-                    tokenPoolBalances[token] += redemptionAmount;
-                    emit PoolBalanceUpdated(token, tokenPoolBalances[token]);
-                }
-            } else {
-                // Allocate proportional share of adjustedPoolAmount based on multiplier
-                uint8 tokenMultiplier = multiplier[token];
-                if (tokenMultiplier > 0) {
-                    uint256 tokenShare = (adjustedPoolAmount * tokenMultiplier) / totalWeightedMultiplier;
-                    tokenPoolBalances[token] += tokenShare;
-                    emit PoolBalanceUpdated(token, tokenPoolBalances[token]);
-                }
+        if (injectedTime >= redemptionStart && injectedTime <= redemptionEnd) {
+            // Add redemption amount directly to pool balance for this token
+            uint256 redemptionAmount = vaultSupply[venture];
+            if (redemptionAmount > 0) {
+                tokenPoolBalances[venture] += redemptionAmount;
+                emit PoolBalanceUpdated(venture, tokenPoolBalances[venture]);
+            }
+        } else {
+            // Allocate proportional share of adjustedPoolAmount based on multiplier
+            uint8 tokenMultiplier = multiplier[venture];
+            if (tokenMultiplier > 0) {
+                uint256 tokenShare = (adjustedPoolAmount * tokenMultiplier) / totalWeightedMultiplier;
+                tokenPoolBalances[venture] += tokenShare;
+                emit PoolBalanceUpdated(venture, tokenPoolBalances[venture]);
             }
         }
     }
@@ -520,7 +457,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
                 multiplier[stakeables[i]] = 160;
                 quartersCommitted[stakeables[i]] = 8;
             } else {
-                multiplier[stakeables[i]] = 100; // default or fallback multiplier if index > 49
+                multiplier[stakeables[i]] = 100;
                 quartersCommitted[stakeables[i]] = 9;
             }
         }

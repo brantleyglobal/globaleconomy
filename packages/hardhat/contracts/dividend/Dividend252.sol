@@ -102,7 +102,7 @@ contract Dividend252 is Initializable, ERC20Upgradeable, AccessControlUpgradeabl
             uint16 newComing = callQuarter + redeemPeriod;
 
             if (callQuarter < 4 ) {
-                comingQuarter = ((year) * 1000) + (newComing * 100) + day;
+                unlockQuarter = ((year) * 1000) + (callQuarter * 100) + day;
             } else if (callQuarter > 4 && callQuarter <= 8) {
                 unlockQuarter = ((year + 1) * 1000) + ((callQuarter - 4) * 100) + day;
             } else if (callQuarter > 8 && callQuarter <= 12) {
