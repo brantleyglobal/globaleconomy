@@ -162,6 +162,18 @@ export const InvestmentModal: React.FC<Props> = ({
       return;
     }
 
+    if (selectedTokenSymbol === "TGMX") {
+    // Skip processing for GLB token or show a special prompt
+      toast("Investment Is Not Open.");
+      return;
+    }
+
+    if (selectedTokenSymbol === "TGUSA") {
+    // Skip processing for GLB token or show a special prompt
+      toast("Investment Is Not Open.");
+      return;
+    }
+
     console.log("Processing Transaction");
     
     try {
@@ -174,7 +186,13 @@ export const InvestmentModal: React.FC<Props> = ({
           return;
         }
         const receiptx = await infraBTC(depositAmount, selectedToken2, selectedToken, connectedWallet!);
-      } else if (selectedTokenSymbol === "GLB" && selectedTokenSymbol2 !== "BTC") {
+      } else if (
+        (selectedTokenSymbol === "BGFFS" && selectedTokenSymbol2 !== "BTC") ||
+        (selectedTokenSymbol === "BGFRS" && selectedTokenSymbol2 !== "BTC")
+        //(selectedTokenSymbol !== "TGMX" && selectedTokenSymbol2 !== "BTC") ||
+        //(selectedTokenSymbol !== "TGUSA" && selectedTokenSymbol2 !== "BTC") ||
+        //(selectedTokenSymbol !== "GLB" && selectedTokenSymbol2 !== "BTC")
+      ) {
         if (!selectedToken2) {
           toast.error("Please select a valid token.");
           return;
@@ -182,7 +200,13 @@ export const InvestmentModal: React.FC<Props> = ({
         const receiptx = await infra(depositAmount, selectedToken2, selectedToken, connectedWallet!);
       } else if (selectedTokenSymbol !== "GLB" && selectedTokenSymbol2 === "BTC") {
         const receiptx = await depositBTC(depositAmount, selectedQuarter, selectedToken, connectedWallet!);
-      } else if (selectedTokenSymbol !== "GLB" && selectedTokenSymbol2 !== "BTC") {
+      } else if (
+        (selectedTokenSymbol !== "BGFFS" && selectedTokenSymbol2 !== "BTC") ||
+        (selectedTokenSymbol !== "BGFRS" && selectedTokenSymbol2 !== "BTC")
+        //(selectedTokenSymbol !== "TGMX" && selectedTokenSymbol2 !== "BTC") ||
+        //(selectedTokenSymbol !== "TGUSA" && selectedTokenSymbol2 !== "BTC") ||
+        //(selectedTokenSymbol !== "GLB" && selectedTokenSymbol2 !== "BTC")
+      ) {
         const receiptx = await deposit(depositAmount, selectedQuarter, selectedToken, connectedWallet!);
       }
 

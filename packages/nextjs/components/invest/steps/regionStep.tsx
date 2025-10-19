@@ -110,10 +110,10 @@ export const RegionStep: React.FC<Props> = ({
               onChange={e => setSelectedTokenSymbol(e.target.value)}
             >
               <option value="" disabled>                                                                                                                  
-                Select Payment Method
+                Select Deposit Method
               </option>
               {supportedTokens
-                .filter(t => !["GLB", "GBDx", "GBDo", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(t.symbol))
+                .filter(t => !["GLB", "GBDx", "GBDo", "COPx", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(t.symbol))
                 .map(t => (
                   <option key={t.symbol} value={t.symbol}>
                     {t.name}

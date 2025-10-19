@@ -169,7 +169,7 @@ export default function InitiantStep({
                     onChange={(e) => setSelectedTokenSymbolS(e.target.value)}
                 >
                     <option value="" disabled>
-                    {supportedTokens.length === 0 ? "-- No Tokens Available --" : "Select Service Token"}
+                    {supportedTokens.length === 0 ? "-- No Tokens Available --" : "Service Payment Method"}
                     </option>
                     {supportedTokens
                     .filter(t => t.symbol !== "GBDo" && t.symbol !== "GBDx" && t.symbol !== "GLB" && t.symbol !==  "BGFFS" && t.symbol !== "BGFRS" && t.symbol !== "TGMX" && t.symbol !== "TGUSA" && t.symbol !== "COPx")

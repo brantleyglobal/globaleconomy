@@ -39,7 +39,7 @@ export const CryptoCardPager = () => {
     DOGE: "BINANCE:DOGEUSDT",
     DOT: "BINANCE:DOTUSDT",
     AVAX: "BINANCE:AVAXUSDT",
-    MATIC: "BINANCE:MATICUSDT",
+    //MATIC: "BINANCE:MATICUSDT",
     LTC: "BINANCE:LTCUSDT",
 
     // Popular coins not yet in your setup
