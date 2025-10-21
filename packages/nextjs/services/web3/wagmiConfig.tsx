@@ -1,3 +1,5 @@
+"use client";
+
 // services/web3/wagmiConfig.ts
 import { wagmiConnectors } from "./wagmiConnectors";
 import { Chain, createClient, fallback, http } from "viem";

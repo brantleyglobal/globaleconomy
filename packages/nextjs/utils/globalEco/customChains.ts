@@ -5,8 +5,8 @@ export const GLOBALCHAIN = defineChain({
   name: "GLOBALCHAIN",
   network: "gbdo",
   nativeCurrency: {
-    name: "GBDO",
-    symbol: "GBDO",
+    name: "GBDo",
+    symbol: "GBDo",
     decimals: 18,
   },
   rpcUrls: {

@@ -23,11 +23,9 @@ export const GlobalWalletModal = ({
   const [connectError, setConnectError] = useState<string | null>(null);
   const isConnecting = status === "pending";
 
-  const isTrustWallet = typeof window !== "undefined" && window.ethereum?.isTrust;
-
   const metamaskConnector = connectors.find(c => c.name === "MetaMask");
+  const trustConnector = connectors.find(c => c.name === "Trust Wallet");
   const injectedConnector = connectors.find(c => c.id === "injected");
-  const trustConnector = connectors.find(c => c.name === "Trust Wallet");  
 
   const switchToGlobalChain = async () => {
     const targetChainId = `0x${GLOBALCHAIN.id.toString(16)}`;
@@ -56,79 +54,77 @@ export const GlobalWalletModal = ({
       setConnectError(null);
       await connect({ connector });
       await switchToGlobalChain();
-
-      // Safe SDK initialization now handled by provider
     } catch (err: any) {
-      setConnectError(err?.message || "Connection failed.");
-      console.error("Wallet connect error:", err);
+      console.error("Wallet connect error:", err, JSON.stringify(err, Object.getOwnPropertyNames(err)));
     }
+
   };
+
+  const isMobile = typeof window !== "undefined" && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-      <div className="relative z-50 bg-base-100 text-base-content border border-base-300 rounded-box shadow-xl w-full max-w-[760px] mx-4 md:mx-0 p-8 pointer-events-auto">
-        <h2 className="text-lg font-light mb-8 text-center">CONNECT YOUR WALLET</h2>
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center">
+      <div className="bg-[#111] text-white rounded-xl shadow-2xl w-full max-w-xl mx-4 p-8">
+        <h2 className="text-2xl font-light text-center mb-6 tracking-wide">CONNECT YOUR WALLET</h2>
 
-        <div className="grid md:grid-cols-[280px_auto] gap-x-20 gap-y-6 items-start">
-          <div className="flex flex-col gap-4 w-full max-w-[280px]">
-            {trustConnector ? (
-              <button
-                className="btn btn-success rounded-md btn-sm font-light w-full"
-                disabled={isConnecting}
-                onClick={() => handleConnectWallet(trustConnector)}
-              >
-                {isConnecting ? "Connecting..." : "Trust Wallet"}
-              </button>
-            ) : (
-              <span className="text-sm text-warning text-center">Trust Wallet not detected</span>
-            )}
-            {metamaskConnector ? (
-              <button
-                className="btn btn-sm font-light rounded-md w-full"
-                style={{ backgroundColor: "#132e17", color: "#b5b7ba" }}
-                disabled={isConnecting}
-                onClick={() => handleConnectWallet(metamaskConnector)}
-              >
-                {isConnecting ? "Connecting..." : "MetaMask"}
-              </button>
-            ) : (
-              <span className="text-sm text-warning text-center">MetaMask not detected</span>
-            )}
-
-            {injectedConnector && (
-              <button
-                className="btn btn-primary rounded-md btn-sm font-light w-full"
-                disabled={isConnecting}
-                onClick={() => handleConnectWallet(injectedConnector)}
-              >
-                {isConnecting ? "Connecting..." : "Injected Wallet"}
-              </button>
-            )}
+        <div className="flex flex-col md:flex-row gap-6">
+          {isMobile && (
+            <p className="text-sm text-yellow-400 text-center mt-2">
+              Please use the MetaMask mobile app’s built-in browser for blockchain transactions.
+            </p>
+          )}
+          {/* Wallet Buttons */}
+          <div className="flex flex-col gap-4 w-full md:w-1/2">
+            {[
+              { connector: trustConnector, label: "Trust Wallet" },
+              { connector: metamaskConnector, label: "MetaMask" },
+              { connector: injectedConnector, label: "Injected Wallet" },
+            ].map(({ connector, label }) => {
+              const isAvailable = !!connector;
+              return (
+                <button
+                  key={label}
+                  className={`w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 border ${
+                    isAvailable
+                      ? "bg-[#1f1f1f] hover:bg-secondary/30 text-white border-none"
+                      : "bg-[#1a1a1a] text-gray-500 border-none cursor-not-allowed"
+                  }`}
+                  disabled={!isAvailable || isConnecting}
+                  onClick={() => isAvailable && handleConnectWallet(connector!)}
+                >
+                  {isConnecting && isAvailable
+                    ? "Connecting..."
+                    : isAvailable
+                    ? label
+                    : `${label} (Not detected)`}
+                </button>
+              );
+            })}
 
             <button
-              className="btn btn-white/20 rounded-md btn-sm font-light w-full"
+              className="w-full py-2 px-4 rounded-lg bg-[#2a2a2a] hover:bg-[#3a3a3a] text-sm font-medium transition-all duration-200 border border-[#444]"
               onClick={onClose}
             >
-              CANCEL
+              Cancel
             </button>
 
             {(connectError || errorMessage) && (
-              <p className="text-sm text-red-500 text-center mt-4">
+              <p className="text-sm text-red-500 text-center mt-2">
                 {connectError || errorMessage}
               </p>
             )}
           </div>
-
-          <div className="bg-[#0a0909] rounded-box px-8 py-6 flex flex-col items-center justify-center w-full max-w-[320px] mx-auto">
+          {/* QR Code Section */}
+          <div className="flex flex-col items-center justify-center w-full md:w-1/2 bg-[#1a1a1a] rounded-lg p-4 border border-[#333] shadow-inner">
             <QRCodeSVG
               value="https://trustwallet.com/download"
-              size={220}
-              bgColor="#0a0909"
+              size={180}
+              bgColor="#1a1a1a"
               fgColor="#ffffff"
             />
-            <span className="mt-4 text-sm text-info text-center">
+            <span className="mt-4 text-xs text-gray-400 text-center">
               Scan to install Trust Wallet Mobile
             </span>
           </div>

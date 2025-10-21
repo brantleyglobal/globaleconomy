@@ -406,7 +406,7 @@ export const InvestmentModal: React.FC<Props> = ({
                     toast.error("Please fill all the investment details.");
                     return;
                   }
-                  setStep(1);
+                  setStep(ModalStep.ConfirmStep);
                 }}
               />
             )} 
@@ -434,7 +434,7 @@ export const InvestmentModal: React.FC<Props> = ({
                     toast.error("Please fill all the investment details.");
                     return;
                   }
-                  setStep(1);
+                  setStep(ModalStep.ConfirmStep);
                 }}
               />
             )}           

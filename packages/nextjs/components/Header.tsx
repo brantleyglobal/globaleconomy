@@ -14,6 +14,7 @@ import { Faucet } from "~~/components/transfer/Faucet";
 import { InvestmentModal } from "~~/components/invest/investmentModal";
 import { GlobalWalletModal } from "~~/components/globalEco/RainbowKitCustomConnectButton/globalWalletConnect";
 import MirrorModeToggle from "~~/components/common/mirrorToggle";
+import { useAccount } from "wagmi";
 import dynamic from "next/dynamic";
 
 // Hook to detect mobile viewport
@@ -61,6 +62,8 @@ export const Header = () => {
   // Mobile wallet connect simplified button
   const openMobileWalletModal = () => setModalState(s => ({ ...s, wallet: true }));
 
+  const { isConnected, address } = useAccount();
+
   return (
     <>
       <header className="sticky top-0 z-50 bg-black shadow-md shadow-white/10">
@@ -82,18 +85,7 @@ export const Header = () => {
           {/* Right: Actions + Page Links */}
           <div className="relative flex items-center gap-4">
             {/* Conditionally render different wallet connect UI based on mobile or desktop */}
-            {isMobile ? (
-              // Mobile simple wallet connect button
-              <button
-                onClick={openMobileWalletModal}
-                className="bg-transparent px-12 py-2 rounded text-white left-0 text-xs font-light hover:bg-secondary/20 transition"
-              >
-                CONNECT WALLET
-              </button>
-            ) : (
-              // Desktop RainbowKit connect button
-              <RainbowKitCustomConnectButton />
-            )}
+            <RainbowKitCustomConnectButton />
 
             {/* Desktop Action Buttons + Page Links */}
             <div className="hidden lg:flex gap-4 text-xs font-light items-center">

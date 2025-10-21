@@ -101,7 +101,7 @@ export const RainbowKitCustomConnectButton = () => {
     return (
       <>
         <button
-            className="btn btn-primary/15 hover:bg-secondary/30 rounded-md btn-sm font-normal w-full sm:w-auto"
+            className="btn btn-primary/15 hover:bg-secondary/30 rounded-md btn-sm font-normal w-full mr-14 sm:w-auto"
             onClick={() => {
             setModalOpen(true);
             setSwitchFailed(false);

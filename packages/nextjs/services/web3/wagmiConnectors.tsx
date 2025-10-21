@@ -1,40 +1,35 @@
-"use client";
-
-import { connectorsForWallets } from "@rainbow-me/rainbowkit";
+import {
+  connectorsForWallets,
+  getDefaultWallets,
+} from "@rainbow-me/rainbowkit";
 import {
   metaMaskWallet,
-  injectedWallet,
   trustWallet,
+  walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
-import { rainbowkitBurnerWallet } from "burner-connector";
-import * as chains from "viem/chains";
 import scaffoldConfig from "~~/scaffold.config";
 
+const { targetNetworks, walletConnectProjectId } = scaffoldConfig;
 
-const { onlyLocalBurnerWallet, targetNetworks } = scaffoldConfig;
+const { wallets } = getDefaultWallets({
+  appName: "globalEco",
+  projectId: walletConnectProjectId,
+  chains: targetNetworks,
+});
 
-const wallets = [
-  trustWallet,
-  metaMaskWallet,
-  injectedWallet,
-  ...(!targetNetworks.some(network => network.id !== (chains.hardhat as chains.Chain).id) || !onlyLocalBurnerWallet
-    ? [rainbowkitBurnerWallet]
-    : []),
-];
-
-/**
- * wagmi connectors for the wagmi context
- */
 export const wagmiConnectors = connectorsForWallets(
   [
     {
-      groupName: "Supported Wallets",
-      wallets,
+      groupName: "Recommended",
+      wallets: [
+        metaMaskWallet,
+        trustWallet,
+        walletConnectWallet,
+      ],
     },
   ],
-
   {
     appName: "globalEco",
-    projectId: scaffoldConfig.walletConnectProjectId,
-  },
+    projectId: walletConnectProjectId,
+  }
 );
