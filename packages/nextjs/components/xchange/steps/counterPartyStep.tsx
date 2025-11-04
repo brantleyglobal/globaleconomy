@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
-import { AddressInput, WalletConnectButton } from "~~/components/globalEco";
+import { AddressInput } from "~~/components/globalEco";
+import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { WalletIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { supportedTokens, Token, dividendTokens } from "~~/components/constants/tokens";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";

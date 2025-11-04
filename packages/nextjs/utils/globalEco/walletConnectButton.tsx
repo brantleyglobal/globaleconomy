@@ -145,6 +145,44 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
 
   };
 
+  useEffect(() => {
+    if (selectedChain === "ethereum") {
+      setBtcWallet(null);
+      setBtcAddress(null);
+    } else if (selectedChain === "bitcoin") {
+      setAccount(null);
+    }
+    console.log(window.xfi?.bitcoin);
+
+  }, [selectedChain]);
+
+  useEffect(() => {
+    const autoConnect = async () => {
+      if (selectedChain === "ethereum" && window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          if (accounts.length > 0) {
+            setAccount(accounts[0]);
+            onConnect?.(accounts[0]);
+          }
+        } catch (err) {
+          console.error("Ethereum auto-connect failed:", err);
+        }
+      } else if (selectedChain === "bitcoin") {
+        try {
+          const wallet = await connectBitcoinWallet();
+          setBtcWallet(wallet);
+          setBtcAddress(wallet.address);
+          onConnect?.(wallet.address);
+        } catch (err) {
+          console.error("Bitcoin auto-connect failed:", err);
+        }
+      }
+    };
+
+    autoConnect();
+  }, [selectedChain]);
+
   const disconnectWallet = () => {
     if (selectedChain === "ethereum") {
       setAccount(null);
@@ -211,44 +249,6 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
       </div>
     );
   }
-
-  useEffect(() => {
-    if (selectedChain === "ethereum") {
-      setBtcWallet(null);
-      setBtcAddress(null);
-    } else if (selectedChain === "bitcoin") {
-      setAccount(null);
-    }
-    console.log(window.xfi?.bitcoin);
-
-  }, [selectedChain]);
-
-  useEffect(() => {
-    const autoConnect = async () => {
-      if (selectedChain === "ethereum" && window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-          if (accounts.length > 0) {
-            setAccount(accounts[0]);
-            onConnect?.(accounts[0]);
-          }
-        } catch (err) {
-          console.error("Ethereum auto-connect failed:", err);
-        }
-      } else if (selectedChain === "bitcoin") {
-        try {
-          const wallet = await connectBitcoinWallet();
-          setBtcWallet(wallet);
-          setBtcAddress(wallet.address);
-          onConnect?.(wallet.address);
-        } catch (err) {
-          console.error("Bitcoin auto-connect failed:", err);
-        }
-      }
-    };
-
-    autoConnect();
-  }, [selectedChain]);
 
   return (
     <div className="relative inline-flex items-center space-x-2 mr-8" ref={dropdownRef}>

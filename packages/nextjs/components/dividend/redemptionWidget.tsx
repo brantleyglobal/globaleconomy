@@ -6,7 +6,7 @@ import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { BanknotesIcon, WalletIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { Token, dividendTokens } from "~~/components/constants/tokens";
-import { ethers, Contract } from "ethers";
+import { ethers, Contract, BrowserProvider } from "ethers";
 import { erc20Abi } from "viem";
 import smartVaultabi from "~~/lib/contracts/abi/SmartVault.json";
 import { toast } from "react-hot-toast";
@@ -134,9 +134,9 @@ export const DividendRedeemModal = ({ openWalletModal }: FaucetProps) => {
           // handle undefined client, e.g., show error or skip
           return;
         }
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const provider = new BrowserProvider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
-        const signer = provider.getSigner();
+        const signer = await provider.getSigner();
         const signerAddress = await signer.getAddress();
         const stablecoinContract = new Contract(selectedToken.address, erc20Abi, signer);
         const tokenBalance = await stablecoinContract.balanceOf(signerAddress);

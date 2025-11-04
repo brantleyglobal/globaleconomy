@@ -1,5 +1,5 @@
 import { useBalance } from "wagmi";
-import { ethers, BigNumber } from "ethers";
+import { BrowserProvider, ethers, toBeHex, formatUnits } from "ethers";
 import type { Address } from "viem";
 
 interface TokenType {
@@ -21,7 +21,7 @@ export function detectWalletClient() {
 export async function switchToChain(chainIdDecimal: number) {
   const wallet = detectWalletClient();
   if (!wallet) throw new Error("No wallet detected");
-  const chainIdHex = ethers.utils.hexValue(chainIdDecimal);
+  const chainIdHex = toBeHex(chainIdDecimal);
 
   try {
     await wallet.request({
@@ -55,7 +55,11 @@ export function useSelectedTokenBalance(
   });
 
   const balanceBigInt = balanceData?.value;
-  const balanceBigNumber = balanceBigInt ? BigNumber.from(balanceBigInt) : undefined;
+  let balanceBigNumber;
+  if (balanceBigInt !== undefined) {
+    const balanceBigNumber = formatUnits(balanceBigInt, 18);
+  }
+
 
   return {
     balanceBigInt,
@@ -71,10 +75,10 @@ export async function getSignerForChain(chainId: number) {
   const wallet = detectWalletClient();
   if (!wallet) throw new Error("No wallet detected");
 
-  const provider = new ethers.providers.Web3Provider(wallet);
+  const provider = new BrowserProvider(wallet);
 
   const network = await provider.getNetwork();
-  if (network.chainId !== chainId) {
+  if (Number(network.chainId) !== chainId) {
     await switchToChain(chainId);
   }
 
