@@ -54,7 +54,7 @@ for middle in {2..8}; do
     
     echo "Creating $filename with quarter=$init_quarter and year=$init_year"
 
-    sed -e "s/GlobalDominionX/$dividend_name/g" \
+    sed -e "s/GlobalDollarX/$dividend_name/g" \
         -e "s/\"GlobalDomnionX\"/\"$dividend_name\"/g" \
         -e "s/\"GBDX\"/\"$token_symbol\"/g" \
         -e "s/COMMITTED_QUARTERS/$middle/g" \
@@ -70,7 +70,7 @@ done
 #filename="${dividend_name}.sol"
 #init_quarter=4
 #init_year=$((currentYear + 1))
-#sed -e "s/GlobalDominionX/$dividend_name/g" \
+#sed -e "s/GlobalDollarX/$dividend_name/g" \
 #    -e "s/\"GlobalDomnionX\"/\"$dividend_name\"/g" \
 #    -e "s/\"GBDX\"/\"$token_symbol\"/g" \
 #    -e "s/COMMITTED_QUARTERS/8/g" \

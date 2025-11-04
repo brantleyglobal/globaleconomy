@@ -96,7 +96,6 @@ npx wrangler pages deploy ./out --project-name globaleco
 git remote set-url origin https://github.com/brantleyglobal/globaleconomy.git
 git add .
 git commit -m "Polished"
-git push -u origin main
 
 git branch ""
 
@@ -125,4 +124,10 @@ npx wrangler d1 execute global-db --file=schema.sql --remote
 wrangler deploy --env production
 
 wrangler init my-worker
+
+## K GEN
+npx quorum-genesis-tool
+
+## Con Call
+ts-node
 

@@ -48,13 +48,20 @@ async function deployProxy( //Uprgrade Functionality Added
     saveDeployment(name, address, registry); // Optional: re-save to confirm
     return address;
   } else {
-    console.log(` Deploying new proxy for ${name}`);
+    console.log(` Deploying new proxy for ${name}...`);
     const proxy = await upgrades.deployProxy(factory, args, {
       kind: "uups",
       initializer,
-      timeout: 600000, // 10 minutes in ms
-      pollingInterval: 15000, // 15 seconds polling
+      timeout: 600000,
+      pollingInterval: 15000,
+      txOverrides: {
+        gasPrice: 0,
+        gasLimit: 8000000,
+      },
     });
+    console.log(` Proxy deployment transaction sent for ${name}`);
+    await proxy.waitForDeployment();
+    console.log(` Proxy deployed for ${name}`);
     await proxy.waitForDeployment();
     const address = await proxy.getAddress();
     saveDeployment(name, address, registry);
@@ -138,21 +145,21 @@ async function main() {
     parseUnits("50000000", 18)
   ]
 
-  const gbdAddress = await deployProxy("GlobalDominion", deployed, [
+  const gbdAddress = await deployProxy("GlobalDollar", deployed, [
     deployer.address,
     preaddr,
     prefnd,
   ]);
 
-  const gbd = await ethers.getContractAt("GlobalDominion", gbdAddress);
+  const gbd = await ethers.getContractAt("GlobalDollar", gbdAddress);
 
-  const gbdoAddress = await deployProxy("GlobalDominionX", deployed, [
+  const gbdoAddress = await deployProxy("GlobalDollarX", deployed, [
     deployer.address,
     preaddr,
     prefnd,
   ]);
 
-  const gbdo = await ethers.getContractAt("GlobalDominionX", gbdoAddress);
+  const gbdo = await ethers.getContractAt("GlobalDollarX", gbdoAddress);
 
   // Token Infrastructure
   const copxAddress = await deployProxy("Copian", deployed, [
@@ -185,7 +192,9 @@ async function main() {
     "0x3231Cb76718CDeF2155FC47b5286d82e6eDA273f", // EURe     19
     "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", // WBTC     20
     "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH     21
-    "0xB8c77482e45F1F44dE1745F52C74426C631bDD52", // BNB
+    "0xB8c77482e45F1F44dE1745F52C74426C631bDD52", // BNB      22
+    "0x00000000000000000000000000000000000000b0", //BTC       23
+    "0x00000000000000000000000000000000000000E0", //ETH       24
     //"0x00006100F7090010005F1bd7aE6122c3C2CF0090", // AUDT
     //"0x05BBeD16620B352A7F889E23E3Cf427D1D379FFE", // NGNT
     //"0xc71daC923823D748a86D0A3618ABdA2d6dCd6bf4", // INRX
@@ -208,6 +217,11 @@ async function main() {
   await GlobalSwapFactory.initialize(deployer.address, stablecoinAddresses);
 
   const AssetPurchase = await deployProxy("AssetPurchase", deployed, [
+    deployer.address,
+    stablecoinAddresses,
+  ]);
+
+  const AcquisitionGateway = await deployProxy("AcquisitionGateway", deployed, [
     deployer.address,
     stablecoinAddresses,
   ]);

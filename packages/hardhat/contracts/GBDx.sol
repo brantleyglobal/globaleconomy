@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract GlobalDominionX is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUPSUpgradeable {
+contract GlobalDollarX is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
@@ -32,7 +32,7 @@ contract GlobalDominionX is Initializable, ERC20Upgradeable, AccessControlUpgrad
         address[] calldata recipients,
         uint256[] calldata amounts
     ) public initializer {
-        __ERC20_init("GlobalDominionX", "GBDx"); 
+        __ERC20_init("GBDX", "GBDx"); 
         __AccessControl_init();
         __UUPSUpgradeable_init();
 

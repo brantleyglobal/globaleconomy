@@ -7,6 +7,7 @@ require("solidity-coverage");
 require("hardhat-deploy");
 require("hardhat-deploy-ethers");
 require("@typechain/hardhat");
+require("hardhat-contract-sizer");
 
 const fs = require("fs");
 const { Wallet } = require("ethers");
@@ -40,6 +41,12 @@ module.exports = {
       },
       evmVersion: "cancun",
     },
+  },
+  contractSizer: {
+    alphaSort: true,
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict: true,
   },
   defaultNetwork: "GLOBALCHAIN",
   networks: {

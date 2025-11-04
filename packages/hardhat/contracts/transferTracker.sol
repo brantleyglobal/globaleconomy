@@ -15,14 +15,9 @@ contract TransferTracker is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     address public feeRecipient;
 
     mapping(address => mapping(address => mapping(address => uint256))) private transferDetails;
+    mapping(address => uint256) public nonces;
 
-    event TransferRecorded(
-        address indexed sender,
-        address indexed recipient,
-        address indexed token,
-        uint128 amount,
-        uint64 timestamp
-    );
+    event TransferRecorded(address indexed from, address indexed to, uint256 amount, uint256 nonce, bytes additionalData);
 
     /// @notice Initializes the contract with owner and optional stablecoin whitelist
     function initialize(address _owner) public initializer {
@@ -42,28 +37,30 @@ contract TransferTracker is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function Transfer(
         address token,
         address recipient,
-        uint128 amount
+        uint128 amount,
+        bytes calldata additionalData
     ) external payable {
-        require(token == address(0), "Only native token supported");
+        //require(token == address(0), "Only native token supported");
         require(recipient != address(0), "Invalid recipient");
         require(amount > 0, "Amount must be greater than zero");
         
-        uint256 netAmount = (amount * MAX_BPS) / (feeBasisPoints + MAX_BPS);
-        uint256 fee = amount - netAmount;
+        //uint256 netAmount = (amount * MAX_BPS) / (feeBasisPoints + MAX_BPS);
+        //uint256 fee = amount - netAmount;
 
         transferDetails[msg.sender][recipient][token] += amount;
 
 
-        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+        //IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
         // Transfer fee to feeRecipient if applicable
-        if (fee > 0) {
+        /*if (fee > 0) {
             IERC20(token).safeTransfer(feeRecipient, fee);
-        }
+        }*/
 
-        IERC20(token).safeTransfer(recipient, netAmount);
+        //IERC20(token).safeTransfer(recipient, netAmount);
+        uint256 currentNonce = nonces[msg.sender]++;
 
-        emit TransferRecorded(msg.sender, recipient, token, amount, uint64(block.timestamp));
+        emit TransferRecorded(msg.sender, recipient, amount, currentNonce, additionalData);
     }
 
     /// @notice Returns a specific transfer by index

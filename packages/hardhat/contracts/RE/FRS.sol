@@ -29,7 +29,7 @@ contract BGFRS is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUP
     function initialize(
         address admin
     ) public initializer {
-        __ERC20_init("BGFRS", "BGREFRS"); 
+        __ERC20_init("BGFRS", "BGFRS"); 
         __AccessControl_init();
         __UUPSUpgradeable_init();
 
@@ -81,11 +81,12 @@ contract BGFRS is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUP
             uint16 quarter = (injectedTime / 100) % 10;
             uint16 year = injectedTime / 1000;
 
-            if (day > 16) {
+            if (day > 120) {
                 day = 1;
                 if ((quarter + 1) > 4) {
                     quarter = 1;
                     year += 1;
+                    revert("contract not open");
                 } else {
                     quarter += 1;
                 }

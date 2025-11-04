@@ -11,14 +11,14 @@ export interface Token {
 export const supportedTokens = [
 
   {
-    name: "Global Dominion",
+    name: "Global Dollar",
     symbol: "GBDo",
     address: "0x0000000000000000000000000000000000000000",
     decimals: 18,
     isNative: true,
   },
   {
-    name: "Global Dominion",
+    name: "Global Dollar",
     symbol: "GBDx",
     address: "0xdE8200d454DfD32Ae694705648Efa53750101aBc",
     decimals: 18,

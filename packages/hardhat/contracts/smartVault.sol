@@ -13,7 +13,27 @@ import "./COPx.sol";
 contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
-    GlobalDominionX public stakeablecoins;
+    GlobalDollarX public stakeablecoins;
+
+    struct Deposit {
+        uint256 timestamp;
+        address user;
+        address token;
+        address dividend;
+        uint8 quartersCommitted;
+        uint256 amountin;
+        uint256 amountout;  
+    }
+
+    struct Withdraw {
+        uint256 timestamp;
+        address user;
+        address token;
+        address dividend;
+        uint8 quartersCommitted;
+        uint256 amountin;
+        uint256 amountout; 
+    }
 
     address public payoutToken;
     address public payoutAddress;
@@ -31,6 +51,8 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     uint16 public lastUpdatedTime;
     uint256 public depositFeeBps;
     uint256 public totalWithdrawn;
+    uint256[] public depositTimestamps;
+    uint256[] public withdrawTimestamps;
 
     // Mapping for quick stablecoin whitelist check
     mapping(address => bool) private stablecoinWhitelistMap;
@@ -39,11 +61,14 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     mapping(address => uint256) public vaultSupply;
     mapping(address => uint8) public multiplier;
     mapping(address => uint8) public quartersCommitted;
+    mapping(uint256 => Deposit) public depositsByTimestamp;
+    mapping(uint256 => Withdraw) public withdrawByTimestamp;
 
-    event Deposited(address indexed user, uint256 amount, uint32 committedQuarters);
+    event Deposited(address indexed user, uint256 amountOut, uint256 amountIn, uint256 fee, uint32 committedQuarters);
     event DividendPaid(address indexed user, uint256 amount);
     event RedemptionPaid(address indexed user, uint256 amount);
-    event RedemptionFulfilled(address indexed user, uint256 amount, uint256 tokenId);
+    event RedemptionFulfilled(address indexed user, address indexed payoutToken, uint256 amount, uint256 tokenId);
+    event PoolAdjustment(address indexed user, uint256 totalWeightedMultiplier, uint256 totalToRedeem);
     event CapitalSpent(address indexed recipient, uint256 amount, string reason);
     event AddressChecked(address dividendToken, address payoutToken, uint16 unlockQ);
     event StakeableAddress(address indexed addr);
@@ -51,6 +76,10 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     event PoolBalanceUpdated(address indexed token, uint256 newBalance);
     event PayoutAddressUpdated(address indexed oldAddress, address indexed newAddress);
     event FundsWithdrawn(address indexed token, address indexed to, uint256 amount);
+    event WithdrawInRange( uint256 timestamp, address indexed user, address token, address dividend, uint8 quartersCommitted, uint256 amountin, uint256 amountout);
+    event DepositInRange( uint256 timestamp, address indexed user, address token, address dividend, uint8 quartersCommitted, uint256 amountin, uint256 amountout);
+    event DepositTimestamp( uint256 timestamp, address indexed user, address token, address dividend, uint8 quartersCommitted, uint256 amountin, uint256 amountout);
+    event WithdrawTimestamp( uint256 timestamp, address indexed user, address token, address dividend, uint8 quartersCommitted, uint256 amountin, uint256 amountout);
 
     uint256 constant DECIMALS = 1e18;
     uint256 constant GBDr = 1030000000000000000;
@@ -77,7 +106,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     uint256 constant RATE_0073 = 73000000000000000;   // 0.0073 * 1e18
     uint256 constant RATE_058 = 580000000000000000;   // 0.58 * 1e18 (adjust if needed)
     uint256 constant RATE_062 = 620000000000000000;   // 0.62 * 1e18 (adjust if needed)
-    uint256 constant RATE_100000 = 100000000000000000000000;   // 100_000 * 1e18 (adjust if needed)
+    uint256 constant RATE_100000 = 100000000000000000000000;   // 105_000 * 1e18 (adjust if needed)
     uint256 constant RATE_16000 = 16000000000000000000000;   // 16_000 * 1e18 (adjust if needed)
     uint256 constant RATE_600 = 600000000000000000000;   // 600 * 1e18 (adjust if needed)
 
@@ -163,7 +192,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             address addr = stakeables[i];
             //emit StakeableAddress(addr);
 
-            try GlobalDominionX(addr).update(_injectedTime) {
+            try GlobalDollarX(addr).update(_injectedTime) {
                 // success
             } catch Error(string memory reason) {
                 emit UpdateFailed(addr, i, reason);
@@ -228,10 +257,10 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
                     } else if (i == 18) {
                         maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_030) / DECIMALS;
                         minRate = (((netAmount * DECIMALS) / GBDr) * RATE_033) / DECIMALS;
-                    } else if (i == 20) {
+                    } else if (i == 20 || i == 23) {
                         maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_100000) / DECIMALS;
                         minRate = (((netAmount * DECIMALS) / GBDr) * RATE_100000) / DECIMALS;
-                    } else if (i == 21) {
+                    } else if (i == 21 || i == 24) {
                         maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_16000) / DECIMALS;
                         minRate = (((netAmount * DECIMALS) / GBDr) * RATE_16000) / DECIMALS;
                     } else if (i == 22) {
@@ -268,13 +297,16 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
         bool minted = false;
 
+        address mintedTokenAddress;
+
         // Phase 1: Check 15 day window first
         for (uint256 i = startIndex; i <= endIndex; i++) {
-            GlobalDominionX instance = GlobalDominionX(stakeables[i]);
+            GlobalDollarX instance = GlobalDollarX(stakeables[i]);
             uint16 previousComingQuarter = instance.previousComingQuarter();
             if (injectedTime >= previousComingQuarter && injectedTime <= previousComingQuarter + 15 && previousComingQuarter != 0) {
                 instance.mint(msg.sender, gbdAmountout);
                 minted = true;
+                mintedTokenAddress = stakeables[i]; // capture the address
                 uint256 tokenSupply = instance.viewSupply();
                 uint256 supply = (tokenSupply + gbdAmountout);
                 instance.supply(supply);
@@ -288,7 +320,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             uint256 closestIndex = type(uint256).max;
 
             for (uint256 i = startIndex; i <= endIndex; i++) {
-                GlobalDominionX instance = GlobalDominionX(stakeables[i]);
+                GlobalDollarX instance = GlobalDollarX(stakeables[i]);
                 uint16 comingQuarter = instance.comingQuarter();
                 if (comingQuarter > injectedTime && comingQuarter < closestComingQuarter) {
                     closestComingQuarter = comingQuarter;
@@ -297,21 +329,21 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             }
 
             if (closestIndex != type(uint256).max) {
-                GlobalDominionX instance = GlobalDominionX(stakeables[closestIndex]);
+                GlobalDollarX instance = GlobalDollarX(stakeables[closestIndex]);
                 instance.mint(msg.sender, gbdAmountout);
                 minted = true;
+                mintedTokenAddress = stakeables[closestIndex];
                 uint256 tokenSupply = instance.viewSupply();
                 uint256 supply = (tokenSupply + gbdAmountout);
                 instance.supply(supply);
             }
         }
 
-        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-        if (fee > 0) {
-            IERC20(token).safeTransfer(feeRecipient, fee);
-        }
+        uint256 ts = block.timestamp;
+        depositsByTimestamp[ts] = Deposit(ts, msg.sender, token, mintedTokenAddress, committedQuarters, amount, gbdAmountout);
+        depositTimestamps.push(ts);
 
-        emit Deposited(msg.sender, gbdAmountout, committedQuarters);
+        emit Deposited(msg.sender, gbdAmountout, amount, fee, committedQuarters);
     }
 
     function withdraw(address dividendToken, uint16 injectedTime, uint256 holderBalance) external payable nonReentrant{
@@ -320,8 +352,8 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         calldates(injectedTime);
 
         //*****Quarter Check ******/
-        uint16 quarterCheck = GlobalDominionX(dividendToken).unlockQuarter();
-        uint16 redemptionEnd = GlobalDominionX(dividendToken).comingQuarter();
+        uint16 quarterCheck = GlobalDollarX(dividendToken).unlockQuarter();
+        uint16 redemptionEnd = GlobalDollarX(dividendToken).comingQuarter();
 
         uint256 stableAmountOut = 0;
         
@@ -377,21 +409,21 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             }
         }
 
-        uint256 totalSupply = GlobalDominionX(dividendToken).viewSupply();
+        uint256 totalSupply = GlobalDollarX(dividendToken).viewSupply();
         uint256 test = 5000 * 1e18;
         tokenPoolBalances[dividendToken] += test;
         uint256 poolBalance = tokenPoolBalances[dividendToken];
 
         uint256 payout = ((stableAmountOut * (poolBalance)) / (totalSupply)) + stableAmountOut;
-
-        IERC20(dividendToken).safeTransferFrom(msg.sender, address(this), holderBalance);
+        uint8 place = 0;
 
         vaultSupply[dividendToken] += holderBalance;
+        
+        uint256 ts = block.timestamp;
+        withdrawByTimestamp[ts] = Withdraw(ts, msg.sender, payoutToken, dividendToken, place, holderBalance, stableAmountOut);
+        withdrawTimestamps.push(ts);
 
-        // Transfer the underlying asset to the user
-        IERC20(payoutToken).safeTransfer(msg.sender, payout);
-
-        emit RedemptionFulfilled(msg.sender, stableAmountOut, holderBalance);
+        emit RedemptionFulfilled(msg.sender, payoutToken, payout, holderBalance);
         emit AddressChecked(dividendToken, payoutToken, quarterCheck);
     }
 
@@ -399,7 +431,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         uint256 totalSupply = 0;
         for (uint256 i = 0; i < stakeables.length; i++) {
             if (stakeables[i] == token) {
-                GlobalDominionX instance = GlobalDominionX(stakeables[i]);
+                GlobalDollarX instance = GlobalDollarX(stakeables[i]);
                 uint256 supply = instance.viewSupply();
                 totalSupply += supply;
             }
@@ -415,12 +447,12 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         uint256 totalWeightedMultiplier = 0;
         uint256 totalRedemptions = 0;
 
-        IERC20(payoutToken).safeTransferFrom(msg.sender, address(this), poolAmount);
+        //IERC20(payoutToken).safeTransferFrom(msg.sender, address(this), poolAmount);
 
         // First pass: identify redemption and eligible tokens, sum multipliers and total redemption amounts
         for (uint256 i = 0; i < length; i++) {
             address token = stakeables[i];
-            GlobalDominionX instance = GlobalDominionX(token);
+            GlobalDollarX instance = GlobalDollarX(token);
 
             uint16 redemptionEnd = instance.comingQuarter();
             uint16 redemptionStart = instance.unlockQuarter();
@@ -434,7 +466,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             }
         }
 
-        emit RedemptionFulfilled(msg.sender, totalWeightedMultiplier, totalRedemptions);
+        emit PoolAdjustment(msg.sender, totalWeightedMultiplier, totalRedemptions);
 
         require(totalWeightedMultiplier > 0 || totalRedemptions > 0, "No tokens eligible or no redemptions");
 
@@ -446,7 +478,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         // add redemption amounts directly to pool balances for tokens in redemption.
         for (uint256 i = 0; i < length; i++) {
             address token = stakeables[i];
-            GlobalDominionX instance = GlobalDominionX(token);
+            GlobalDollarX instance = GlobalDollarX(token);
 
             uint16 redemptionEnd = instance.comingQuarter();
             uint16 redemptionStart = instance.unlockQuarter();
@@ -478,16 +510,16 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             address addr = stakeables[i];
             //emit StakeableAddress(addr);
 
-            uint16 redemptionEnd = GlobalDominionX(addr).comingQuarter();
+            uint16 redemptionEnd = GlobalDollarX(addr).comingQuarter();
             if (_injectedTime >= redemptionEnd) {
                 purgeAmount += tokenPoolBalances[addr];
                 tokenPoolBalances[addr] = 0;
                 uint256 deduct = vaultSupply[addr];
-                uint256 updatedSupply = GlobalDominionX(addr).viewSupply() - deduct;
-                GlobalDominionX(addr).supply(updatedSupply);
+                uint256 updatedSupply = GlobalDollarX(addr).viewSupply() - deduct;
+                GlobalDollarX(addr).supply(updatedSupply);
             }
 
-            try GlobalDominionX(addr).update(_injectedTime) {
+            try GlobalDollarX(addr).update(_injectedTime) {
                 // success
             } catch Error(string memory reason) {
                 emit UpdateFailed(addr, i, reason);
@@ -537,7 +569,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             if (!stablecoinWhitelistMap[token]) continue;
             uint256 tokenBalance = IERC20(token).balanceOf(address(this));
             if (tokenBalance > 0) {
-                IERC20(token).safeTransfer(payoutAddress, tokenBalance);
+                //IERC20(token).safeTransfer(payoutAddress, tokenBalance);
                 totalWithdrawn += tokenBalance;
                 emit FundsWithdrawn(token, payoutAddress, tokenBalance);
             }
@@ -547,7 +579,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     function toDate(address dividendToken, uint256 _holderBalance) public view returns (uint256) {
         
         uint256 poolBalance = tokenPoolBalances[dividendToken];
-        uint256 totalSupply = GlobalDominionX(dividendToken).viewSupply();
+        uint256 totalSupply = GlobalDollarX(dividendToken).viewSupply();
 
         uint256 stableAmountOut = 0;
         uint256 decimals = 1e18;
@@ -568,7 +600,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
         for (uint256 i = 0; i < length; i++) {
             address token = stakeables[i];
-            GlobalDominionX instance = GlobalDominionX(token);
+            GlobalDollarX instance = GlobalDollarX(token);
 
             uint16 redemptionStart = instance.unlockQuarter();
             uint16 redemptionEnd = instance.comingQuarter();
@@ -580,6 +612,36 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         }
 
         return totalSupply; // Returns sum of supply for all eligible tokens
+    }
+
+    function getDeposit(uint256 timestamp) public {
+        Deposit memory d = depositsByTimestamp[timestamp];
+        emit DepositTimestamp(d.timestamp, d.user, d.token, d.dividend, d.quartersCommitted, d.amountin, d.amountout);
+    }
+
+    function getWithdraw(uint256 timestamp) public {
+        Withdraw memory w = withdrawByTimestamp[timestamp];
+        emit WithdrawTimestamp(w.timestamp, w.user, w.token, w.dividend, w.quartersCommitted, w.amountin, w.amountout);
+    }
+
+    function getDepositsInRange(uint256 startTs, uint256 endTs) public {
+        for (uint256 i = 0; i < depositTimestamps.length; i++) {
+            uint256 ts = depositTimestamps[i];
+            if (ts >= startTs && ts <= endTs) {
+                Deposit memory w = depositsByTimestamp[ts];
+                emit DepositInRange(w.timestamp, w.user, w.token, w.dividend, w.quartersCommitted, w.amountin, w.amountout);
+            }
+        }
+    }
+
+    function getWithdrawInRange(uint256 startTs, uint256 endTs) public {
+        for (uint256 i = 0; i < withdrawTimestamps.length; i++) {
+            uint256 ts = withdrawTimestamps[i];
+            if (ts >= startTs && ts <= endTs) {
+                Withdraw memory w = withdrawByTimestamp[ts];
+                emit WithdrawInRange(w.timestamp, w.user, w.token, w.dividend, w.quartersCommitted, w.amountin, w.amountout);
+            }
+        }
     }
 
     uint256[50] __gap;

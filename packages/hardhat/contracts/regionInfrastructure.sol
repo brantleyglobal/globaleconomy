@@ -13,7 +13,25 @@ import "./COPx.sol";
 contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
-    GlobalDominionX public stakeablecoins;
+    GlobalDollarX public stakeablecoins;
+
+    struct Deposit {
+        uint256 timestamp;
+        address user;
+        address token;
+        address venture;
+        uint256 amountin;
+        uint256 amountout;  
+    }
+
+    struct Withdraw {
+        uint256 timestamp;
+        address user;
+        address token;
+        address venture;
+        uint256 amountin;
+        uint256 amountout; 
+    }
 
     address public payoutToken;
     address public payoutAddress;
@@ -31,6 +49,9 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     uint16 public lastUpdatedTime;
     uint256 public depositFeeBps;
     uint256 public totalWithdrawn;
+    uint256[] public depositTimestamps;
+    uint256[] public withdrawTimestamps;
+
 
     // Mapping for quick stablecoin whitelist check
     mapping(address => bool) private stablecoinWhitelistMap;
@@ -39,11 +60,14 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     mapping(address => uint256) public vaultSupply;
     mapping(address => uint8) public multiplier;
     mapping(address => uint8) public quartersCommitted;
+    mapping(uint256 => Deposit) public depositsByTimestamp;
+    mapping(uint256 => Withdraw) public withdrawByTimestamp;
 
-    event Deposited(address indexed user, uint256 amount, address venture);
+    event Deposited(address indexed user, uint256 amountOut, uint256 amountIn, uint256 fee, uint32 committedQuarters);
     event DividendPaid(address indexed user, uint256 amount);
     event RedemptionPaid(address indexed user, uint256 amount);
-    event RedemptionFulfilled(address indexed user, uint256 amount, uint256 tokenId);
+    event RedemptionFulfilled(address indexed user, address indexed payoutToken, uint256 amount, uint256 tokenId);
+    event PoolAdjustment(address indexed user, uint256 totalWeightedMultiplier, uint256 totalToRedeem);
     event CapitalSpent(address indexed recipient, uint256 amount, string reason);
     event AddressChecked(address dividendToken, address payoutToken, uint16 unlockQ);
     event StakeableAddress(address indexed addr);
@@ -51,6 +75,12 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     event PoolBalanceUpdated(address indexed token, uint256 newBalance);
     event PayoutAddressUpdated(address indexed oldAddress, address indexed newAddress);
     event FundsWithdrawn(address indexed token, address indexed to, uint256 amount);
+    event Purge(address indexed token, uint256 amount);
+    event WithdrawInRange( uint256 timestamp, address indexed user, address token, address venture, uint256 amountin, uint256 amountout);
+    event DepositInRange( uint256 timestamp, address indexed user, address token, address venture, uint256 amountin, uint256 amountout);
+    event DepositTimestamp( uint256 timestamp, address indexed user, address token, address venture, uint256 amountin, uint256 amountout);
+    event WithdrawTimestamp( uint256 timestamp, address indexed user, address token, address venture, uint256 amountin, uint256 amountout);
+
 
     uint256 constant DECIMALS = 1e18;
     uint256 constant GBDr = 1030000000000000000;
@@ -162,7 +192,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             address addr = stakeables[i];
             //emit StakeableAddress(addr);
 
-            try GlobalDominionX(addr).update(_injectedTime) {
+            try GlobalDollarX(addr).update(_injectedTime) {
                 // success
             } catch Error(string memory reason) {
                 emit UpdateFailed(addr, i, reason);
@@ -186,75 +216,88 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         uint256 fee = (amount * depositFeeBps) / 10000;
         uint256 netAmount = amount - fee;
         uint256 gbdAmountout = 0;
+        uint8 committedQuarters;
+
+        for (uint256 i = 0; i < stakeables.length; i++) {
+            if (stakeables[i] == venture) {
+                if (i == 3 || i == 4){
+                    committedQuarters = 4;
+                }else{
+                    committedQuarters = 12;
+                }
+
+                break; // Exit loop once stable is matched and processed
+
+            }
+        }
         
         for (uint256 i = 0; i < stablecoins.length; i++) {
             if (stablecoins[i] == token) {
                 uint256 minRate;
-                    uint256 maxRate;
-                    if (i == 1 || i == 3 || i == 5 || i == 9 || i == 11 || i == 12 || i == 13) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_098) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_102) / DECIMALS;
-                    } else if (i == 14) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_065) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_069) / DECIMALS;
-                    } else if (i == 2) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_072) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_076) / DECIMALS;
-                    } else if (i == 4 || i == 19) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_108) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_112) / DECIMALS;
-                    } else if (i == 6) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_097) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_100) / DECIMALS;
-                    } else if (i == 7) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_0065) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_0073) / DECIMALS;
-                    } else if (i == 8) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_058) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_062) / DECIMALS;
-                    } else if (i == 10) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_074) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_076) / DECIMALS;
-                    } else if (i == 15) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_054) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_064) / DECIMALS;
-                    } else if (i == 16) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_019) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_021) / DECIMALS;
-                    } else if (i == 17) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_120) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_130) / DECIMALS;
-                    } else if (i == 18) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_030) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_033) / DECIMALS;
-                    } else if (i == 20) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_100000) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_100000) / DECIMALS;
-                    } else if (i == 21) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_16000) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_16000) / DECIMALS;
-                    }
+                uint256 maxRate;
+                if (i == 1 || i == 3 || i == 5 || i == 9 || i == 11 || i == 12 || i == 13) {
+                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_098) / DECIMALS;
+                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_102) / DECIMALS;
+                } else if (i == 14) {
+                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_065) / DECIMALS;
+                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_069) / DECIMALS;
+                } else if (i == 2) {
+                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_072) / DECIMALS;
+                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_076) / DECIMALS;
+                } else if (i == 4 || i == 19) {
+                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_108) / DECIMALS;
+                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_112) / DECIMALS;
+                } else if (i == 6) {
+                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_097) / DECIMALS;
+                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_100) / DECIMALS;
+                } else if (i == 7) {
+                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_0065) / DECIMALS;
+                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_0073) / DECIMALS;
+                } else if (i == 8) {
+                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_058) / DECIMALS;
+                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_062) / DECIMALS;
+                } else if (i == 10) {
+                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_074) / DECIMALS;
+                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_076) / DECIMALS;
+                } else if (i == 15) {
+                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_054) / DECIMALS;
+                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_064) / DECIMALS;
+                } else if (i == 16) {
+                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_019) / DECIMALS;
+                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_021) / DECIMALS;
+                } else if (i == 17) {
+                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_120) / DECIMALS;
+                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_130) / DECIMALS;
+                } else if (i == 18) {
+                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_030) / DECIMALS;
+                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_033) / DECIMALS;
+                } else if (i == 20) {
+                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_100000) / DECIMALS;
+                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_100000) / DECIMALS;
+                } else if (i == 21) {
+                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_16000) / DECIMALS;
+                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_16000) / DECIMALS;
+                }
 
-                    if (gbdAmountout < minRate || gbdAmountout > maxRate) {
-                        gbdAmountout = minRate;
-                    }
+                if (gbdAmountout < minRate || gbdAmountout > maxRate) {
+                    gbdAmountout = minRate;
+                }
 
-                    break; // Exit loop once stable is matched and processed
+                break; // Exit loop once stable is matched and processed
             }
         }
 
         // Phase 1: Check 15 day window first
-        GlobalDominionX(venture).mint(msg.sender, gbdAmountout);
-        uint256 tokenSupply = GlobalDominionX(venture).viewSupply();
+        GlobalDollarX(venture).mint(msg.sender, gbdAmountout);
+        uint256 tokenSupply = GlobalDollarX(venture).viewSupply();
         uint256 supply = (tokenSupply + gbdAmountout);
-        GlobalDominionX(venture).supply(supply);
+        GlobalDollarX(venture).supply(supply);
 
-        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-        if (fee > 0) {
-            IERC20(token).safeTransfer(feeRecipient, fee);
-        }
+        uint256 ts = block.timestamp;
+        depositsByTimestamp[ts] = Deposit(ts, msg.sender, payoutToken, venture, amount, gbdAmountout);
+        depositTimestamps.push(ts);
 
-        emit Deposited(msg.sender, gbdAmountout, venture);
+        emit Deposited(msg.sender, gbdAmountout, amount, fee, committedQuarters);
     }
 
     function withdraw(address dividendToken, uint16 injectedTime, uint256 holderBalance) external payable nonReentrant{
@@ -263,8 +306,8 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         calldates(injectedTime);
 
         //*****Quarter Check ******/
-        uint16 quarterCheck = GlobalDominionX(dividendToken).unlockQuarter();
-        uint16 redemptionEnd = GlobalDominionX(dividendToken).comingQuarter();
+        uint16 quarterCheck = GlobalDollarX(dividendToken).unlockQuarter();
+        uint16 redemptionEnd = GlobalDollarX(dividendToken).comingQuarter();
 
         uint256 stableAmountOut = 0;
         
@@ -320,21 +363,20 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             }
         }
 
-        uint256 totalSupply = GlobalDominionX(dividendToken).viewSupply();
+        uint256 totalSupply = GlobalDollarX(dividendToken).viewSupply();
         uint256 test = 5000 * 1e18;
         tokenPoolBalances[dividendToken] += test;
         uint256 poolBalance = tokenPoolBalances[dividendToken];
 
         uint256 payout = ((stableAmountOut * (poolBalance)) / (totalSupply)) + stableAmountOut;
 
-        IERC20(dividendToken).safeTransferFrom(msg.sender, address(this), holderBalance);
-
         vaultSupply[dividendToken] += holderBalance;
 
-        // Transfer the underlying asset to the user
-        IERC20(payoutToken).safeTransfer(msg.sender, payout);
+        uint256 ts = block.timestamp;
+        withdrawByTimestamp[ts] = Withdraw(ts, msg.sender, payoutToken, dividendToken, holderBalance, payout);
+        withdrawTimestamps.push(ts);
 
-        emit RedemptionFulfilled(msg.sender, stableAmountOut, holderBalance);
+        emit RedemptionFulfilled(msg.sender, payoutToken, payout, holderBalance);
         emit AddressChecked(dividendToken, payoutToken, quarterCheck);
     }
 
@@ -342,7 +384,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         uint256 totalSupply = 0;
         for (uint256 i = 0; i < stakeables.length; i++) {
             if (stakeables[i] == token) {
-                GlobalDominionX instance = GlobalDominionX(stakeables[i]);
+                GlobalDollarX instance = GlobalDollarX(stakeables[i]);
                 uint256 supply = instance.viewSupply();
                 totalSupply += supply;
             }
@@ -358,10 +400,10 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         uint256 totalWeightedMultiplier = 0;
         uint256 totalRedemptions = 0;
 
-        IERC20(payoutToken).safeTransferFrom(msg.sender, address(this), poolAmount);
+        //IERC20(payoutToken).safeTransferFrom(msg.sender, address(this), poolAmount);
 
         // First pass: identify redemption and eligible tokens, sum multipliers and total redemption amounts
-        GlobalDominionX instance = GlobalDominionX(venture);
+        GlobalDollarX instance = GlobalDollarX(venture);
 
         uint16 redemptionEnd = instance.comingQuarter();
         uint16 redemptionStart = instance.unlockQuarter();
@@ -374,7 +416,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             totalWeightedMultiplier += multiplier[venture];
         }
 
-        emit RedemptionFulfilled(msg.sender, totalWeightedMultiplier, totalRedemptions);
+        emit PoolAdjustment(msg.sender, totalWeightedMultiplier, totalRedemptions);
 
         require(totalWeightedMultiplier > 0 || totalRedemptions > 0, "No tokens eligible or no redemptions");
 
@@ -411,16 +453,16 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             address addr = stakeables[i];
             //emit StakeableAddress(addr);
 
-            uint16 redemptionEnd = GlobalDominionX(addr).comingQuarter();
+            uint16 redemptionEnd = GlobalDollarX(addr).comingQuarter();
             if (_injectedTime >= redemptionEnd) {
                 purgeAmount += tokenPoolBalances[addr];
                 tokenPoolBalances[addr] = 0;
                 uint256 deduct = vaultSupply[addr];
-                uint256 updatedSupply = GlobalDominionX(addr).viewSupply() - deduct;
-                GlobalDominionX(addr).supply(updatedSupply);
+                uint256 updatedSupply = GlobalDollarX(addr).viewSupply() - deduct;
+                GlobalDollarX(addr).supply(updatedSupply);
             }
 
-            try GlobalDominionX(addr).update(_injectedTime) {
+            try GlobalDollarX(addr).update(_injectedTime) {
                 // success
             } catch Error(string memory reason) {
                 emit UpdateFailed(addr, i, reason);
@@ -429,7 +471,8 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             }
         }
 
-        IERC20(payoutToken).safeTransfer(feeRecipient, purgeAmount);
+        //IERC20(payoutToken).safeTransfer(feeRecipient, purgeAmount);
+        emit Purge(payoutToken, purgeAmount);
 
     }
 
@@ -470,7 +513,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             if (!stablecoinWhitelistMap[token]) continue;
             uint256 tokenBalance = IERC20(token).balanceOf(address(this));
             if (tokenBalance > 0) {
-                IERC20(token).safeTransfer(payoutAddress, tokenBalance);
+                //IERC20(token).safeTransfer(payoutAddress, tokenBalance);
                 totalWithdrawn += tokenBalance;
                 emit FundsWithdrawn(token, payoutAddress, tokenBalance);
             }
@@ -480,7 +523,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     function toDate(address dividendToken, uint256 _holderBalance) public view returns (uint256) {
         
         uint256 poolBalance = tokenPoolBalances[dividendToken];
-        uint256 totalSupply = GlobalDominionX(dividendToken).viewSupply();
+        uint256 totalSupply = GlobalDollarX(dividendToken).viewSupply();
 
         uint256 stableAmountOut = 0;
         uint256 decimals = 1e18;
@@ -501,7 +544,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
 
         for (uint256 i = 0; i < length; i++) {
             address token = stakeables[i];
-            GlobalDominionX instance = GlobalDominionX(token);
+            GlobalDollarX instance = GlobalDollarX(token);
 
             uint16 redemptionStart = instance.unlockQuarter();
             uint16 redemptionEnd = instance.comingQuarter();
@@ -513,6 +556,36 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         }
 
         return totalSupply; // Returns sum of supply for all eligible tokens
+    }
+
+    function getDeposit(uint256 timestamp) public {
+        Deposit memory d = depositsByTimestamp[timestamp];
+        emit DepositTimestamp(d.timestamp, d.user, d.token, d.venture, d.amountin, d.amountout);
+    }
+
+    function getWithdraw(uint256 timestamp) public {
+        Withdraw memory w = withdrawByTimestamp[timestamp];
+        emit WithdrawTimestamp(w.timestamp, w.user, w.token, w.venture, w.amountin, w.amountout);
+    }
+
+    function getDepositsInRange(uint256 startTs, uint256 endTs) public {
+        for (uint256 i = 0; i < depositTimestamps.length; i++) {
+            uint256 ts = depositTimestamps[i];
+            if (ts >= startTs && ts <= endTs) {
+                Deposit memory w = depositsByTimestamp[ts];
+                emit DepositInRange(w.timestamp, w.user, w.token, w.venture, w.amountin, w.amountout);
+            }
+        }
+    }
+
+    function getWithdrawInRange(uint256 startTs, uint256 endTs) public {
+        for (uint256 i = 0; i < withdrawTimestamps.length; i++) {
+            uint256 ts = withdrawTimestamps[i];
+            if (ts >= startTs && ts <= endTs) {
+                Withdraw memory w = withdrawByTimestamp[ts];
+                emit WithdrawInRange(w.timestamp, w.user, w.token, w.venture, w.amountin, w.amountout);
+            }
+        }
     }
 
     uint256[50] __gap;

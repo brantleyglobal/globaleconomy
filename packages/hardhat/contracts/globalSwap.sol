@@ -18,9 +18,9 @@ contract GlobalSwap is Initializable {
     bool public partyBDeposited;
     bool public completed;
 
-    event SwapJoined(address indexed partyB);
-    event SwapCompleted();
-    event Refund(address indexed party, uint256 amountA, uint256 amountB);
+    event SwapJoined(address indexed party, address indexed token, uint256 amount);
+    event SwapCompleted(address indexed partyA, address indexed partyB, address tokenA, address tokenB, uint256 amountA, uint256 amountB);
+    event Refund(address indexed party, address token, uint256 amount);
 
     function initialize(
         address _partyA,
@@ -47,30 +47,38 @@ contract GlobalSwap is Initializable {
     function deposit() external {
         require(msg.sender == partyA || msg.sender == partyB, "Only partyA or partyB can join");
         require(!completed, "Swap already completed");
+        address token;
+        uint256 amount;
 
         if (msg.sender == partyA) {
             require(!partyADeposited, "Party A already deposited");
             // partyA can deposit anytime before completion
-            IERC20(tokenA).safeTransferFrom(partyA, address(this), amountA);
+            //IERC20(tokenA).safeTransferFrom(partyA, address(this), amountA);
+            token = tokenA;
+            amount = amountA;
             partyADeposited = true;
 
             // If partyB already deposited, complete swap
             if (partyBDeposited) {
                 _completeSwap();
+                emit SwapCompleted(partyA, partyB, tokenA, tokenB, amountA, amountB);
             }
         } else {
             require(!partyBDeposited, "Party B already deposited");
             // partyB can deposit anytime before completion
-            IERC20(tokenB).safeTransferFrom(partyB, address(this), amountB);
+            //IERC20(tokenB).safeTransferFrom(partyB, address(this), amountB);
+            token = tokenB;
+            amount = amountB;
             partyBDeposited = true;
 
             // If partyA already deposited, complete swap
             if (partyADeposited) {
                 _completeSwap();
+                emit SwapCompleted(partyA, partyB, tokenA, tokenB, amountA, amountB);
             }
         }
 
-        emit SwapJoined(msg.sender);
+        emit SwapJoined(msg.sender, token, amount);
     }
 
     function _completeSwap() internal {
@@ -80,25 +88,29 @@ contract GlobalSwap is Initializable {
         completed = true;
 
         // Transfer tokens atomically
-        IERC20(tokenA).safeTransfer(partyB, amountA);
-        IERC20(tokenB).safeTransfer(partyA, amountB);
-
-        emit SwapCompleted();
+        //IERC20(tokenA).safeTransfer(partyB, amountA);
+        //IERC20(tokenB).safeTransfer(partyA, amountB);
     }
 
     function refund() external {
         require(!completed, "Swap already completed");
 
         completed = true;
+        address token;
+        uint256 amount;
 
-        if (partyADeposited) {
-            IERC20(tokenA).safeTransfer(partyA, amountA);
+        if (partyADeposited && (msg.sender == partyA)) {
+            //IERC20(tokenA).safeTransfer(partyA, amountA);
+            token = tokenA;
+            amount = amountA;
         }
-        if (partyBDeposited) {
-            IERC20(tokenB).safeTransfer(partyB, amountB);
+        if (partyBDeposited && (msg.sender == partyB)) {
+            //IERC20(tokenB).safeTransfer(partyB, amountB);
+            token = tokenB;
+            amount = amountB;
         }
 
-        emit Refund(msg.sender, amountA, amountB);
+        emit Refund(msg.sender, token, amount);
     }
 
 }

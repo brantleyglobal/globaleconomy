@@ -10,8 +10,7 @@ import "solidity-coverage";
 import "hardhat-deploy";
 import "hardhat-deploy-ethers";
 import "@typechain/hardhat";
-
-
+//import "hardhat-contract-sizer";
 import * as fs from "fs";
 import { Wallet } from "ethers";
 import { task } from "hardhat/config";
@@ -48,6 +47,12 @@ const config: HardhatUserConfig = {
       },
     },
   },
+  /*contractSizer: {
+    alphaSort: true,
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict: true,
+  },*/
 
   typechain: {
     outDir: "typechain-types",
@@ -62,7 +67,7 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {},
     GLOBALCHAIN: {
-      url: process.env.CUSTOM_RPC || "http://192.168.32.128:8545",
+      url: "http://10.100.100.20:8545",
       accounts: [deployerPrivateKey],
       chainId: 3503995874081207,
     },

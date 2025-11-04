@@ -10,10 +10,20 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
+    struct Purchase {
+        uint256 timestamp;
+        address user;
+        address token;
+        uint64 id;
+        uint32 quantity;
+        uint256 amount;
+        uint256 rate;
+    }
     // --- Storage ---
     uint256 public feeBasisPoints;
     uint256 public totalWithdrawn;
     uint256 internal constant MAX_BPS = 10000;
+    uint256[] public purchaseTimestamps;
 
     address public feeRecipient;
     address public payoutAddress;
@@ -24,21 +34,15 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
     // Mapping from user address => productId => quantity
     mapping(address => mapping(uint64 => mapping(uint8 => uint32))) private userAssetQuantities;
     mapping(uint32 => mapping(uint8 => uint256)) public accumBase;
+    mapping(uint256 => Purchase) public purchasesByTimestamp;
 
     // --- Events ---
     event AssetAdded(uint64 indexed id);
     event PayoutAddressUpdated(address indexed oldAddress, address indexed newAddress);
     event FundsWithdrawn(address indexed token, address indexed to, uint256 amount);
-    event PurchaseMade(
-        address indexed buyer,
-        uint64 assetId,
-        uint32 quantity,
-        uint256 rate,
-        uint256 baseAmount,
-        uint256 fee
-    );
-
+    event PurchaseMade(address indexed buyer, uint64 assetId, uint32 quantity, uint256 rate, uint256 baseAmount, uint256 fee);
     event DebugPurchase(uint32 productId, uint256 base);
+    event PurchaseTimestamp( uint256 timestamp, address indexed user, address token, uint64 id, uint32 quantity, uint256 amount, uint256 rate);
 
     uint256 constant DECIMALS = 1e18;
     uint256 constant GBDr = 1030000000000000000;
@@ -65,6 +69,9 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
     uint256 constant RATE_0073 = 73000000000000000;   // 0.0073 * 1e18
     uint256 constant RATE_058 = 580000000000000000;   // 0.58 * 1e18 (adjust if needed)
     uint256 constant RATE_062 = 620000000000000000;   // 0.62 * 1e18 (adjust if needed)
+    uint256 constant RATE_100000 = 100000000000000000000000;   // 105_000 * 1e18 (adjust if needed)
+    uint256 constant RATE_16000 = 16000000000000000000000;   // 16_000 * 1e18 (adjust if needed)
+    uint256 constant RATE_600 = 600000000000000000000;   // 600 * 1e18 (adjust if needed)
 
     modifier onlyPoolManager() {
         require(msg.sender == poolManagerAddress, "Not authorized");
@@ -172,6 +179,15 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
                 } else if (i == 18) {
                     maxRate = (((baseAmount * DECIMALS) / RATE_030) * GBDr) / DECIMALS;
                     minRate = (((baseAmount * DECIMALS) / RATE_033) * GBDr) / DECIMALS;
+                } else if (i == 20 || i == 23) {
+                    maxRate = (((baseAmount * DECIMALS) / RATE_100000) * GBDr) / DECIMALS;
+                    minRate = (((baseAmount * DECIMALS) / RATE_100000) * GBDr) / DECIMALS;
+                } else if (i == 21 || i == 24) {
+                    maxRate = (((baseAmount * DECIMALS) / RATE_16000) * GBDr) / DECIMALS;
+                    minRate = (((baseAmount * DECIMALS) / RATE_16000) * GBDr) / DECIMALS;
+                } else if (i == 22) {
+                    maxRate = (((baseAmount * DECIMALS) / RATE_600) * GBDr) / DECIMALS;
+                    minRate = (((baseAmount * DECIMALS) / RATE_600) * GBDr) / DECIMALS;
                 }
 
                 if (total < minRate || total > maxRate) {
@@ -185,15 +201,11 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         // Calculate total payment, fee, and net amount
         uint256 fee = (total * feeBasisPoints) / MAX_BPS;
 
-        // Transfer total from buyer to contract
-        IERC20(stable).safeTransferFrom(msg.sender, address(this), total);
+        uint256 ts = block.timestamp;
+        purchasesByTimestamp[ts] = Purchase(ts, msg.sender, stable, productId, quantity, total, rate);
+        purchaseTimestamps.push(ts);
 
-        // Transfer fee to feeRecipient if applicable
-        if (fee > 0) {
-            IERC20(stable).safeTransfer(feeRecipient, fee);
-        }
-
-        emit PurchaseMade(buyer, productId, quantity, rate, baseAmount, fee);
+        emit PurchaseMade(buyer, productId, quantity, rate, total, fee);
         emit AssetAdded(productId);
     }
 
@@ -208,7 +220,6 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
             if (!stablecoinWhitelistMap[token]) continue;
             uint256 tokenBalance = IERC20(token).balanceOf(address(this));
             if (tokenBalance > 0) {
-                IERC20(token).safeTransfer(payoutAddress, tokenBalance);
                 totalWithdrawn += tokenBalance;
                 emit FundsWithdrawn(token, payoutAddress, tokenBalance);
             }
@@ -312,6 +323,21 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
     // Helper to set mapping
     function _setBaseAmount(uint32 productId, uint8 region, uint256 baseAmount) internal {
         accumBase[productId][region] = baseAmount;
+    }
+
+    function getPurchase(uint256 timestamp) public {
+        Purchase memory w = purchasesByTimestamp[timestamp];
+        emit PurchaseTimestamp(w.timestamp, w.user, w.token, w.id, w.quantity, w.amount, w.rate);
+    }
+
+    function getPurchasesInRange(uint256 startTs, uint256 endTs) public {
+        for (uint256 i = 0; i < purchaseTimestamps.length; i++) {
+            uint256 ts = purchaseTimestamps[i];
+            if (ts >= startTs && ts <= endTs) {
+                Purchase memory w = purchasesByTimestamp[ts];
+                emit PurchaseTimestamp(w.timestamp, w.user, w.token, w.id, w.quantity, w.amount, w.rate);
+            }
+        }
     }
 
     // --- Upgrade Authorization ---

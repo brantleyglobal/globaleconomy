@@ -14,7 +14,7 @@ contract GlobalSwapFactory is Initializable {
     address public feeRecipient;
     mapping(address => bool) private stablecoinWhitelistMap;
 
-    event SwapCreated(address swapAddress, address partyA, address partyB);
+    event SwapCreated(address swapAddress, address partyA, address partyB, address tokenA, uint256 amountA, address tokenB, uint256 amountB, uint256 fee);
 
     function initialize(address _owner, address[] memory initialStables) public initializer {
         implementation = address(new GlobalSwap());
@@ -91,7 +91,7 @@ contract GlobalSwapFactory is Initializable {
             }
         }
         
-        IERC20(stable).safeTransferFrom(msg.sender, feeRecipient, fee);
-        emit SwapCreated(address(swap), msg.sender, partyB);
+        //IERC20(stable).safeTransferFrom(msg.sender, feeRecipient, fee);
+        emit SwapCreated(address(swap), msg.sender, partyB, tokenA, amountA, tokenB, amountB, fee);
     }
 }

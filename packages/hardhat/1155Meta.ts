@@ -13,7 +13,7 @@ const client = new Web3Storage({ token: WEB3_STORAGE_TOKEN });
 const tokens = [
   {
     id: 1,
-    name: "Global Dominion",
+    name: "Global Dollar",
     description: "Dividend Backed Termed Token",
     image: "https://brantley-global.com/global.png",
     attributes: [
