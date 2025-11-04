@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import type { Transaction } from "~~/components/transactions/transactions";
 import { PurchaseTable } from "./tabs/purchaseTable";
+import { GBDoTable } from "./tabs/GBDoTable";
 import { XchangeTable } from "./tabs/xchangeTable";
 import { XchangeDepositTable } from "./tabs/xchangeDepositTable";
 import { XchangeRefundTable } from "./tabs/xchangeRefundTable";
@@ -11,22 +12,23 @@ import { VaultTable } from "./tabs/vaultTable";
 import { TransferTable } from "./tabs/transfersTable"
 import { DividendTable } from "./tabs/dividendTable"
 
-const tabs = ["PURCHASES", "ASSETXCHANGE",  "XDEPOSITS", "XREFUNDS", "TRANSFERS", "VAULT", "DIVIDENDS"];
+const tabs = ["PRODUCT PURCHASES", "GBDo PURCHASES", "XCHANGE CONTRACTS",  "XCHANGE DEPOSITS", "XCHANGE REFUNDS", "TRANSFERS", "VAULT DEPOSITS", "DIVIDEND PAYOUTS"];
 
-type TabKey = "PURCHASES" | "ASSETXCHANGE" | "XDEPOSITS" | "XREFUNDS" | "TRANSFERS" | "VAULT" | "DIVIDENDS";
+type TabKey = "PRODUCT PURCHASES" | "GBDo PURCHASES" | "XCHANGE CONTRACTS" | "XCHANGE DEPOSITS" | "XCHANGE REFUNDS" | "TRANSFERS" | "VAULT DEPOSITS" | "DIVIDEND PAYOUTS";
 
 export const TransactionTabs = () => {
   const { address: userAddress, isConnected } = useAccount();
 
-  const [activeTab, setActiveTab] = useState<TabKey>("PURCHASES");
+  const [activeTab, setActiveTab] = useState<TabKey>("PRODUCT PURCHASES");
   const [data, setData] = useState<Record<TabKey, Transaction[]>>({
-    PURCHASES: [],
-    ASSETXCHANGE: [],
-    XDEPOSITS: [],
-    XREFUNDS: [],
+    "GBDo PURCHASES": [],
+    "PRODUCT PURCHASES": [],
+    "XCHANGE CONTRACTS": [],
+    "XCHANGE DEPOSITS": [],
+    "XCHANGE REFUNDS": [],
     TRANSFERS: [],
-    VAULT: [],
-    DIVIDENDS: [],
+    "VAULT DEPOSITS": [],
+    "DIVIDEND PAYOUTS": [],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,13 +45,14 @@ export const TransactionTabs = () => {
 
     try {
       const endpointMap = {
-        PURCHASES: "getPurchase",
-        ASSETXCHANGE: "getSwap",
-        XDEPOSITS: "getSwap",
-        XREFUNDS: "getSwap",
+        "PRODUCT PURCHASES": "getPurchase",
+        "GBDo PURCHASES": "getAcquisition",
+        "XCHANGE CONTRACTS": "getSwap",
+        "XCHANGE DEPOSITS": "getSwap",
+        "XCHANGE REFUNDS": "getSwap",
         TRANSFERS: "getTransfer",
-        VAULT: "getVault",
-        DIVIDENDS: "getRedemption",
+        "VAULT DEPOSITS": "getVault",
+        "DIVIDEND PAYOUTS": "getRedemption",
       };
 
       const res = await fetch("https://gateway.brantley-global.com", {
@@ -67,13 +70,14 @@ export const TransactionTabs = () => {
       });
 
       const responseKeyMap: Record<TabKey, string> = {
-        PURCHASES: "purchases",
-        ASSETXCHANGE: "swaps",
-        XDEPOSITS: "swaps",
-        XREFUNDS: "swaps",
+        "PRODUCT PURCHASES": "purchases",
+        "GBDo PURCHASES": "acquistions",
+        "XCHANGE CONTRACTS": "swaps",
+        "XCHANGE DEPOSITS": "swaps",
+        "XCHANGE REFUNDS": "swaps",
         TRANSFERS: "transfers",
-        VAULT: "vault",
-        DIVIDENDS: "redemptions",
+        "VAULT DEPOSITS": "vault",
+        "DIVIDEND PAYOUTS": "redemptions",
       };
 
       const json = await res.json();
@@ -97,15 +101,17 @@ export const TransactionTabs = () => {
     if (error) return <div className="text-red-500">{error}</div>;
 
     switch (activeTab) {
-      case "PURCHASES": return <PurchaseTable transactions={data.PURCHASES} />;
+      case "PRODUCT PURCHASES": return <PurchaseTable transactions={data["PRODUCT PURCHASES"]} />;
+      case "GBDo PURCHASES": return <GBDoTable transactions={data["GBDo PURCHASES"]} />;
+      case "XCHANGE CONTRACTS": return <XchangeTable transactions={data["XCHANGE CONTRACTS"]} />;
+      case "XCHANGE DEPOSITS": return <XchangeDepositTable transactions={data["XCHANGE DEPOSITS"]} />;
+      case "XCHANGE REFUNDS": return <XchangeRefundTable transactions={data["XCHANGE REFUNDS"]} />;
       case "TRANSFERS": return <TransferTable transactions={data.TRANSFERS} />;
-      case "ASSETXCHANGE": return <XchangeTable transactions={data.ASSETXCHANGE} />;
-      case "XDEPOSITS": return <XchangeDepositTable transactions={data.XDEPOSITS} />;
-      case "XREFUNDS": return <XchangeRefundTable transactions={data.XREFUNDS} />;
-      case "VAULT": return <VaultTable transactions={data.VAULT} />;
-      case "DIVIDENDS": return <DividendTable transactions={data.DIVIDENDS} />;
+      case "VAULT DEPOSITS": return <VaultTable transactions={data["VAULT DEPOSITS"]} />;
+      case "DIVIDEND PAYOUTS": return <DividendTable transactions={data["DIVIDEND PAYOUTS"]} />;
       default: return null;
     }
+
   };
 
   return (

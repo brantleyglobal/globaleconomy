@@ -3,12 +3,18 @@ import { useAccount } from "wagmi";
 import { Address } from "viem";
 import { useDirectTokenBalances } from "./directBalances";
 import { TokenBalanceRow } from "./balanceRow";
+import { usePublicClient } from "wagmi";
 
 export function TokenBalancesPanel() {
   const { address: userAddress } = useAccount();
   const hexAddress = userAddress?.startsWith("0x") ? (userAddress as Address) : undefined;
-  const { balances } = useDirectTokenBalances(hexAddress);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+
+  const ethPublicClient = usePublicClient({ chainId: 1 });
+  const polyPublicClient = usePublicClient({ chainId: 137 });
+  const myChainPublicClient = usePublicClient({ chainId: 3503995874081207 });
+
+  const { balances } = useDirectTokenBalances(hexAddress, myChainPublicClient, ethPublicClient, polyPublicClient);
 
   const handleExpandToggle = (index: number) => {
     setExpandedIndex(prevIndex => (prevIndex === index ? null : index));

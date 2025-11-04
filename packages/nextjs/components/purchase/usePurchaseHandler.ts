@@ -2,12 +2,10 @@
 
 import { Interface } from "@ethersproject/abi";
 import { toast } from "react-hot-toast";
-import { parseUnits } from "@ethersproject/units";
-import { hexlify } from "ethers/lib/utils";
-import { ethers, Contract } from "ethers";
+import { ethers, Contract, parseUnits, BrowserProvider, isAddress, formatUnits } from "ethers";
 import assetPurchaseAbi from "~~/lib/contracts/abi/AssetPurchase.json";
 import deployments from "~~/lib/contracts/deployments.json";
-import { loadStripe } from "@stripe/stripe-js";
+import { loadStripe, Stripe } from "@stripe/stripe-js";
 import erc20Abi from '@openzeppelin/contracts/build/contracts/ERC20.json';
 import type { ShippingInfo } from "~~/components/purchase/useCheckoutStore";
 import { useCheckoutStore } from "~~/components/purchase/useCheckoutStore";
@@ -15,6 +13,8 @@ import { shippingRates, Region, ShippingCategory } from "~~/components/shipping/
 import { supportedCountries } from "~~/components/shipping/supportedCountries";
 import { sendPurchaseEmail } from "~~/components/email/sendPurchaseEmail"
 import { getExchangeRates } from "~~/lib/exchangeRates";
+import { Address } from "viem";
+import { useSelectedTokenBalance } from "~~/lib/chainHelper";
 
 type Hex = `0x${string}`;
 
@@ -43,11 +43,8 @@ interface InitiateParams {
   shippingInfo: ShippingInfo;
 }
 
-async function resolveHex(input: string | ethers.BytesLike | Promise<ethers.BytesLike>): Promise<Hex> {
-  const resolved = await Promise.resolve(input);
-  const hex = typeof resolved === "string" ? resolved : hexlify(resolved);
-  if (!hex.startsWith("0x")) throw new Error("Resolved value is not a valid hex string");
-  return hex as Hex;
+interface BitcoinWallet {
+  sendTransaction: (to: string, amount: number) => Promise<string>;
 }
 
 export async function handleStripeReturn(): Promise<{
@@ -157,9 +154,6 @@ function mapCountryToRegion(countryCode: string): Region {
 }
 
 async function initiateStripeCheckout(params: InitiateParams) {
-  const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-  if (!stripe) throw new Error("Stripe failed to load");
-
   const getShippingRate = (region: Region, category: ShippingCategory) => {
     return shippingRates.find(
       (rate) => rate.region === region && rate.category === category
@@ -188,7 +182,6 @@ async function initiateStripeCheckout(params: InitiateParams) {
       product: params.checkoutAsset.name,
       assetId: params.checkoutAsset.id,
       quantity: params.quantity,
-      //amount: Math.round(parseFloat(params.estimatedTotal) * 100),
       amount: totalAmountCents,
     },
   });
@@ -209,12 +202,186 @@ async function initiateStripeCheckout(params: InitiateParams) {
   }
 
   const session = await response.json();
-  if (!session?.sessionId) {
+  if (!session?.url) {
     console.error("Unexpected response:", session);
     throw new Error("Failed to create Stripe session");
   }
 
-  await stripe.redirectToCheckout({ sessionId: session.sessionId });
+  // Redirect using window.location.href
+  window.location.href = session.url;
+}
+
+async function sendTransferOnTargetChain(recipient: string, tamount: bigint, selectedToken: { address?: string, decimals?: number, symbol?: string }, btcWallet?: BitcoinWallet) {
+  if (!selectedToken.address) throw new Error("Token address required");
+
+  const myChainSupportedTokenAddresses = new Set<Address>([
+    deployments.Copian,
+    deployments.GlobalDollarX,
+    deployments.GlobalDollar,
+    deployments.BGFFS,
+    deployments.BGFRS,
+    deployments.TGMX,
+    deployments.TGUSA,
+    deployments.Globe,
+  ]);
+
+  const polyAddresses = new Set<Address>([
+    "0x5C067C80C00eCd2345b05E83A3e758eF799C40B5",
+  ]);
+
+  const isOnMyChain = myChainSupportedTokenAddresses.has(selectedToken.address as Address);
+  const isOnPoly = polyAddresses.has(selectedToken.address as Address);
+  const isBitcoin = selectedToken.symbol === "BTC";
+  const isOnEthChain = !isOnMyChain && !isOnPoly && !isBitcoin;
+
+
+  let selectedTokenChainId: number;
+  let chain: "global" | "polygon" | "ethereum" | "bitcoin";
+  if (isBitcoin) {
+    selectedTokenChainId = 0; // optional placeholder
+    chain = "bitcoin";
+  } else if (isOnMyChain) {
+    selectedTokenChainId = 3503995874081207;
+    chain = "global";
+  } else if (isOnPoly) {
+    selectedTokenChainId = 137;
+    chain = "polygon";
+  } else {
+    selectedTokenChainId = 1;
+    chain = "ethereum";
+  }
+
+  console.log("checking3");
+
+  // Validate recipient and amount
+  const to = recipient;
+  const amount = tamount;
+
+  let receipt;
+
+  // Helper to await the chainChanged event matching the target network
+  async function waitForChainChanged(expectedChainIdHex: string): Promise<void> {
+    const start = Date.now();
+
+    while (true) {
+      if (!window.ethereum) {
+        throw new Error("No Ethereum provider found. Please install MetaMask.");
+      }
+      const currentChainId = await window.ethereum.request({ method: "eth_chainId" });
+
+      if (currentChainId === expectedChainIdHex) {
+        return;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 250)); // Poll every 250ms
+    }
+  }
+
+  async function waitForBitcoinReady(timeoutMs = 10000): Promise<void> {
+    const start = Date.now();
+
+    while (true) {
+      if (!window.xfi || !window.xfi.bitcoin) {
+        throw new Error("XDEFI Bitcoin provider not found. Please install or enable XDEFI Wallet.");
+      }
+
+      try {
+        const address = await window.xfi.bitcoin.getAddress();
+        if (address) {
+          return; // Wallet is ready
+        }
+      } catch (err) {
+        // Wallet not ready yet — keep polling
+      }
+
+      if (Date.now() - start > timeoutMs) {
+        throw new Error("Timeout waiting for XDEFI Bitcoin wallet to become ready.");
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 250)); // Poll every 250ms
+    }
+  }
+
+  if (chain === "bitcoin") {
+    if (!btcWallet) throw new Error("Bitcoin wallet not connected");
+
+    const humanAmount = formatUnits(tamount, 18);
+    const sats = parseUnits(humanAmount, 8);
+    await waitForBitcoinReady();
+    const txid = await btcWallet.sendTransaction(recipient, Number(sats));
+    console.log("Bitcoin TXID:", txid);
+    return txid;
+  } else {
+
+    if (!isAddress(to)) throw new Error("Invalid recipient address");
+    if (!amount) throw new Error("Amount missing");
+
+    const hexChainId = "0x" + selectedTokenChainId.toString(16);
+
+    if (!window.ethereum) throw new Error("MetaMask not detected");
+
+    const currentChainId = await window.ethereum.request({ method: "eth_chainId" });
+    if (currentChainId !== hexChainId) {
+      try {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: hexChainId }],
+        });
+        await waitForChainChanged(hexChainId);
+      } catch (switchError: any) {
+        if (switchError.code === 4902) {
+          throw new Error("Requested chain is not available in MetaMask. Please add it manually.");
+        } else {
+          throw switchError;
+        }
+      }
+    }
+
+    console.log(selectedTokenChainId);
+
+    // Continue with contract, amount formatting and sending as you currently do:
+    const provider = new BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const network = await provider.getNetwork();
+
+    if (Number(network.chainId) !== selectedTokenChainId) {
+      console.log(`MetaMask is connected to the wrong network: ${network.chainId}`);
+    }
+
+    const tokenContract = new ethers.Contract(selectedToken.address, erc20Abi.abi, signer);
+
+    const humanReadable = formatUnits(amount, 18);
+    const amountBN = parseUnits(humanReadable, selectedToken.decimals);
+    
+    const tx = await tokenContract.transfer(to, amountBN, { gasLimit: 50_000 } );
+    receipt = await tx.wait();
+    console.log("Status:", receipt.status ? "Success" : "Failed");
+  }
+  selectedTokenChainId = 3503995874081207;
+
+  const resethexChainId = "0x" + selectedTokenChainId.toString(16);
+  const homeChainId = 3503995874081207;
+  const homeHexChainId = "0x" + homeChainId.toString(16);
+
+
+  const resetChainId = await window.ethereum.request({ method: "eth_chainId" });
+  if (resetChainId !== homeHexChainId) {
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: resethexChainId }],
+      });
+      await waitForChainChanged(resethexChainId);
+    } catch (switchError: any) {
+      if (switchError.code === 4902) {
+        throw new Error("Requested chain is not available in MetaMask. Please add it manually.");
+      } else {
+        throw switchError;
+      }
+    }
+  }    
+
+  return receipt.transactionHash;
 }
 
 async function handleCryptoPurchase(params: InitiateParams) {
@@ -234,8 +401,16 @@ async function handleCryptoPurchase(params: InitiateParams) {
 
   try {
     // Step 1: Encode calldata for asset purchase
+    const btcWallet: BitcoinWallet = {
+      sendTransaction: async (to, amount) => {
+        if (!window.xfi?.bitcoin) {
+          throw new Error("XDEFI Bitcoin wallet not available");
+        }
+        return await window.xfi.bitcoin.sendTransaction(to, amount);
+      },
+    };
     const iface = new Interface(assetPurchaseAbi.abi);
-    const isERC20 = selectedToken.symbol !== "GBDO" && !!selectedToken.address;
+    const isERC20 = selectedToken.symbol !== "GBDo" && !!selectedToken.address;
     const parsedValue = parseUnits(value, 18);
     const dbval = new Intl.NumberFormat('en-US', {
       style: 'decimal',
@@ -282,52 +457,44 @@ async function handleCryptoPurchase(params: InitiateParams) {
     const totalTokenAmountFloat = totalCost * exchangeRateFloat;
 
     // Convert to ethers.BigNumber assuming 18 decimals (full precision)
-    const totalTokenAmount = ethers.utils.parseUnits(totalTokenAmountFloat.toFixed(18), 18);
+    const totalTokenAmount = parseUnits(totalTokenAmountFloat.toString(), 18);
 
     // Also parse with limited 2 decimals (for display rounding / testing)
-    const totalTokenAmountF = ethers.utils.parseUnits(totalTokenAmountFloat.toFixed(2), 18);
+    const totalTokenAmountF = parseUnits(totalTokenAmountFloat.toFixed(2), selectedToken.decimals);
 
-    const exchangeRate = ethers.utils.parseUnits(exchangeRateFloat.toFixed(18), 18);
+    const exchangeRate = parseUnits(exchangeRateFloat.toFixed(18), selectedToken.decimals);
 
     // Format totalTokenAmountF back to float for display
-    const totalTokenAmountNumber = parseFloat(ethers.utils.formatUnits(totalTokenAmountF, 18));
+    const totalTokenAmountNumber = parseFloat(formatUnits(totalTokenAmountF, 18));
 
     const totalTokenAmountDisplay = totalTokenAmountNumber.toFixed(2);
     console.log("totalTokenAmountDisplay (string with 2 decimals):", totalTokenAmountDisplay);
 
+    let callAddress;
+    if (selectedToken.symbol === "ETH") {
+      callAddress = 0x00000000000000000000000000000000000000E0
+    } else if (selectedToken.symbol === "BTC"){
+      callAddress = 0x00000000000000000000000000000000000000b0;
+    } else {
+      callAddress = selectedToken.address;
+    }
+
     const calldata = iface.encodeFunctionData("purchase", [
       userAddress,
-      selectedToken.address,
+      callAddress,
       checkoutAsset.id,
       totalTokenAmount,
-      ethers.BigNumber.from(quantity),
+      BigInt(quantity),
       exchangeRate,
       region,
     ]);
 
     console.log("Total Amount:", totalTokenAmountFloat);
-
-    // Step 2: Connect to wallet
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    const signer = provider.getSigner();
-    const signerAddress = await signer.getAddress();
-    console.log("Connected wallet:", signerAddress);
-
+    
     if (!selectedToken.address) {
       throw new Error("Token address is undefined");
     }
 
-    const stablecoinContract = new Contract(selectedToken.address, erc20Abi.abi, signer);
-    
-    console.log("Approving vault to spend stablecoin...");
-    const approveTx = await stablecoinContract.approve(deployments.AssetPurchase, totalTokenAmount);
-    await approveTx.wait();
-    console.log("Stablecoin approved");
-
-    const eventFragment = assetPurchaseAbi.abi.find((frag: any) => frag.name === "PurchaseMade" && frag.type === "event");
-
-    const formattedAmount = totalTokenAmountNumber?.toString();
     const parsedConfig = JSON.parse(configuration);
     const selectedVariations = parsedConfig?.system?.selectedVariations ?? {};
     const customizeKey = parsedConfig?.system?.customizeGroupKey;
@@ -353,24 +520,69 @@ async function handleCryptoPurchase(params: InitiateParams) {
     
     const serializedConfig = JSON.stringify(formattedConfig);
 
+    let holdingWalletAddress;
+    if (selectedToken.symbol === "BTC"){
+      holdingWalletAddress = process.env.NEXT_PUBLIC_BITCOLLECTOR_ADDRESS!;
+    } else {        
+      holdingWalletAddress = process.env.NEXT_PUBLIC_COLLECTOR_ADDRESS!;
+    }
+
+    /*************** CROSS CHAIN TRANSFER CALL ***************/
+    const txHashOnTarget = await sendTransferOnTargetChain(holdingWalletAddress, totalTokenAmount, {
+      address: selectedToken.address!,
+      decimals: selectedToken.decimals,
+      symbol: selectedToken.symbol,
+    });
+
+    // Step 2: Connect to wallet
+    if (!window.ethereum) {
+      throw new Error("No Ethereum provider found. Please install MetaMask.");
+    }
+    const provider = new BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    const signer = await provider.getSigner();
+    const signerAddress = await signer.getAddress();
+    console.log("Connected wallet:", signerAddress);
+
+    /*************** SOURCE CHAIN TRANSFER CALL ***************/
+
     // Step 3: Send transaction directly to contract
     const tx = await signer.sendTransaction({
       to: deployments.AssetPurchase,
       value: 0n,
       data: calldata,
-      gasLimit: ethers.BigNumber.from(100_000),
+      gasLimit: 1_500_000n,
     });
 
     console.log("Transaction sent:", tx.hash);
 
     const receipt = await tx.wait();
-    console.log("Transaction confirmed in block:", receipt.blockNumber);
+    console.log("Transaction confirmed in block:", receipt?.blockNumber);
+
+    let amountToSend;
+    if (!receipt) {
+      throw new Error("No Receipt Generated");
+    }
+    for (const log of receipt.logs) {
+      try {
+        const mutableTopics = [...log.topics];
+        const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
+        if (parsed.name === "PurchaseMade") {
+          amountToSend = parsed.args.baseAmount ?? parsed.args[0];
+          break;
+        }
+      } catch {
+        // Ignore error for non-matching logs
+      }
+    }
+
+    console.log(`Token transferred on chain for ${selectedToken.symbol}`);
 
     // Step 5: Log purchase to backend
     const purchasePayload = {
       contractaddress: deployments.AssetPurchase.toString(),
       txhash: tx.hash,
-      receipthash: receipt.blockHash,
+      receipthash: receipt?.blockHash,
       useraddress: userAddress,
       asset: checkoutAsset.id,
       amount: totalTokenAmountDisplay,
@@ -443,15 +655,18 @@ async function handleCryptoPurchase(params: InitiateParams) {
           .join(" / ");
       }
 
-      const purchaseMadeEvents = receipt.logs
-        .map(log => {
-          try {
-            return iface.parseLog(log);
-          } catch {
-            return null;
-          }
-        })
-        .filter(parsed => parsed && parsed.name === "PurchaseMade");
+      const purchaseMadeEvents = receipt?.logs
+      .map(log => {
+        try {
+          return iface.parseLog({
+            topics: [...log.topics],
+            data: log.data,
+          });
+        } catch {
+          return null;
+        }
+      })
+      .filter(parsed => parsed && parsed.name === "PurchaseMade");
 
       await sendPurchaseEmail({
         firstname,

@@ -5,7 +5,7 @@ import { useAccount, useWriteContract } from "wagmi";
 import { createPublicClient, http } from "viem";
 import React, { useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import { useCheckoutStore } from "~~/components/purchase/useCheckoutStore";
-import { ethers } from "ethers";
+import { ethers, BrowserProvider } from "ethers";
 import { supportedTokens } from "../constants/tokens";
 import { StablecoinRate, getExchangeRates } from "~~/lib/exchangeRates";
 import { GLOBALCHAIN } from "~~/utils/globalEco/customChains";
@@ -107,11 +107,11 @@ const CheckoutModalBase = (
     loadLegalDocs();
   }, []);
 
- const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null);
+ const [provider, setProvider] = useState<BrowserProvider | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.ethereum) {
-      const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
+      const web3Provider = new BrowserProvider(window.ethereum);
       setProvider(web3Provider);
     } else {
       console.warn("No Ethereum provider found");
@@ -241,7 +241,7 @@ const CheckoutModalBase = (
 
     // Determine token rate
     const effectiveSymbol = method === "cash" ? "USDC" : tokenSymbol;
-    const tokenRate = effectiveSymbol === "GBDO"
+    const tokenRate = effectiveSymbol === "GBDo"
       ? 1
       : exchangeData.rates.find(r => r.symbol === effectiveSymbol)?.rate ?? 1;
 
@@ -309,11 +309,11 @@ const CheckoutModalBase = (
       console.log("Starting New Checkout Session...");
     }
     // Fresh purchase flow — full calculation and contract initiation
-    let provider: ethers.providers.Web3Provider | null = null;
+    let provider: BrowserProvider | null = null;
 
     if (paymentMethod !== "cash") {
       if (window.ethereum) {
-        provider = new ethers.providers.Web3Provider(window.ethereum);
+        provider = new BrowserProvider(window.ethereum);
       } else {
         toast.error("Wallet not connected or provider missing.");
         return;
@@ -364,7 +364,7 @@ const CheckoutModalBase = (
 
       const serializedConfig = JSON.stringify(configuration);
 
-      const tokenRate = exchangeData.rates.find(r => r.symbol === "GBDO")?.rate ?? 1;
+      const tokenRate = exchangeData.rates.find(r => r.symbol === "GBDo")?.rate ?? 1;
 
       setField("estimatedTotal", total.toFixed(2));
       setField("asset", checkoutAsset);

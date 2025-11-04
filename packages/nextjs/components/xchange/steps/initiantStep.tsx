@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AddressInput } from "~~/components/globalEco";
-import { supportedTokens, Token } from "~~/components/constants/tokens";
+import { supportedTokens, Token, dividendTokens } from "~~/components/constants/tokens";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import type { Address } from "viem";
 import { getAddress } from "viem";
@@ -50,6 +50,15 @@ export default function InitiantStep({
     const [emailError, setEmailError] = useState("");
     const [addressError, setAddressError] = useState("");
     const [localRecipient, setLocalRecipient] = useState(recipient ?? "");
+
+    const mergedTokens = [
+        ...supportedTokens,
+        ...dividendTokens.filter(
+            dividend => !supportedTokens.some(
+            supported => supported.symbol === dividend.symbol
+            )
+        ),
+    ];
 
     // Ref to hold debounce timer
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -142,9 +151,9 @@ export default function InitiantStep({
                     onChange={(e) => setSelectedTokenSymbol(e.target.value)}
                 >
                     <option value="" disabled>
-                    {supportedTokens.length === 0 ? "-- No Tokens Available --" : "Initiant Token to Deposit"}
+                    {mergedTokens.length === 0 ? "-- No Tokens Available --" : "Initiant Token to Deposit"}
                     </option>
-                    {supportedTokens
+                    {mergedTokens
                     .filter(t => t.symbol !== "GBDo" && t.symbol !== "GBDx" && t.symbol !== "COPx")
                     .map((token) => (
                         <option key={token.symbol} value={token.symbol}>

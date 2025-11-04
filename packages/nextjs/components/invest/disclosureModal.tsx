@@ -28,14 +28,14 @@ export const DisclosureModal: React.FC<Props> = ({ isOpen, onClose, sections }) 
           ✕
         </button>
 
-        <h2 className="text-lg font-light mb-4">Investment Disclosure</h2>
+        <h2 className="text-lg font-light mb-4">INVESTMENT DISCLOSURE</h2>
 
         {/* Mobile Dropdown */}
         <div className="md:hidden mb-4">
           <select
             value={activeTab}
             onChange={(e) => setActiveTab(e.target.value)}
-            className="select rounded-md bg-[#09120b] w-full text-info-600 mb-4 outline-none hover:bg-white/10 border-none focus:ring-0 focus:outline-none"
+            className="select rounded-md bg-[#09120b] w-full text-info-600 mb-4outline-none hover:bg-white/10 border-none focus:ring-0 focus:outline-none"
           >
             {sections.map(sec => (
               <option key={sec.id} value={sec.id}>
@@ -44,7 +44,8 @@ export const DisclosureModal: React.FC<Props> = ({ isOpen, onClose, sections }) 
             ))}
           </select>
         </div>
-        <div className="hidden md:flex space-x-4 border-b border-white/20 mb-4 overflow-x-auto">
+        {/* Desktop Tabs */}
+        <div className="hidden md:flex text-xs space-x-4 border-b border-white/20 mb-4 overflow-x-auto">
           {sections.map(sec => (
             <button
               key={sec.id}

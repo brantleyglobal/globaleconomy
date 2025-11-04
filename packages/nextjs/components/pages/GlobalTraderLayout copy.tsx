@@ -32,7 +32,7 @@ const InvestmentModal = dynamic(() =>
 );
 
 const GlobalWalletModal = dynamic(() =>
-  import("~~/components/globalEco/RainbowKitCustomConnectButton/globalWalletConnect").then(mod => mod.GlobalWalletModal),
+  import("~~/components/globalEco/WalletConnectButton/globalWalletConnect").then(mod => mod.GlobalWalletModal),
   { ssr: false }
 );
 
@@ -65,7 +65,7 @@ export default function GlobalTraderLayout() {
       id: "overview",
       label: "Overview",
       content: `
-        <p>Global Dominion (GBDO) operates an asset-backed ecosystem in which investments are directly tied to products and services within the platform. By investing in Global Dominion, participants are supporting the underlying economy of the ecosystem.</p>
+        <p>Global Dollar (GBDO) operates an asset-backed ecosystem in which investments are directly tied to products and services within the platform. By investing in Global Dollar, participants are supporting the underlying economy of the ecosystem.</p>
         <p>The system offers dividend payouts based on the chosen investment cycle, with a minimum term of two quarters (6 months). If an investor initiates their deposit after the 15th day of a quarter, the investor's term will not begin until the following quarter. At the end of each term, investors receive any earned dividends and their original investment amount.</p>
       `,
     },
@@ -110,7 +110,7 @@ export default function GlobalTraderLayout() {
       id: "risks",
       label: "Risk Disclosure",
       content: `
-        <p>While the Global Dominion model is designed with real-world asset backing and operational safeguards, investing in this ecosystem involves risks regardless of how minimal they may be.</p>
+        <p>While the Global Dollar model is designed with real-world asset backing and operational safeguards, investing in this ecosystem involves risks regardless of how minimal they may be.</p>
         <p>Due to unforeseen market turns, liquidity constraints, or internal disruptions, there may be delays in capital return, reductions in payout, or—in extreme circumstances—a complete loss of invested capital.</p>
         <p>In situations where funds cannot be returned at maturity, settlements will be processed as promptly as possible, with complete transparency and consistent communication.</p>
       `,
@@ -119,11 +119,11 @@ export default function GlobalTraderLayout() {
       id: "legal",
       label: "Legal Notice",
       content: `
-        <p>Global Dominion is not registered as a securities issuer under any national jurisdiction. Investments are made at the discretion of the participant and do not constitute a regulated financial product.</p>
+        <p>Global Dollar is not registered as a securities issuer under any national jurisdiction. Investments are made at the discretion of the participant and do not constitute a regulated financial product.</p>
         <p>Dividend payouts are not guaranteed and are subject to the performance of the underlying ecosystem and prevailing market conditions. The market value of GBDO tokens may fluctuate independently of dividend performance or redemption schedules.</p>
         <p>Investors are responsible for understanding and complying with any tax obligations arising from dividends, token trades, or redemptions.</p>
-        <p>Global Dominion reserves the right to delay or modify payout schedules in the event of force majeure, including but not limited to natural disasters, cyberattacks, or systemic market failures.</p>
-        <p>Investors are strongly encouraged to assess their personal risk tolerance and consult a financial advisor before participating in the Global Dominion ecosystem.</p>
+        <p>Global Dollar reserves the right to delay or modify payout schedules in the event of force majeure, including but not limited to natural disasters, cyberattacks, or systemic market failures.</p>
+        <p>Investors are strongly encouraged to assess their personal risk tolerance and consult a financial advisor before participating in the Global Dollar ecosystem.</p>
       `,
     },
   ];

@@ -1,5 +1,4 @@
 // app/layout.tsx (server)
-import "@rainbow-me/rainbowkit/styles.css";
 import "../styles/globals.css";
 import ClientProviders from "~~/components/clientProviders";
 import { Toaster } from "react-hot-toast";

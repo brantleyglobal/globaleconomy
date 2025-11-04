@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Address as AddressType, getContract } from "viem";
 import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { BanknotesIcon, WalletIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
-import { RainbowKitCustomConnectButton } from "~~/components/globalEco";
+import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { Token, dividendTokens } from "~~/components/constants/tokens";
 import { ethers, Contract } from "ethers";
 import { erc20Abi } from "viem";
@@ -320,7 +320,7 @@ export const DividendRedeemModal = ({ openWalletModal }: FaucetProps) => {
             {/* Amount and Recipient inputs can be added here if needed */}
             <div className="flex flex-col sm:flex-row relative justify-between items-center gap-4 mt-6 pt-4 border-t w-full">
               <div className="flex flex-col items-start sm:flex-row sm:items-center w-full sm:gap-2">
-                <RainbowKitCustomConnectButton />
+                <WalletConnectButton />
                 {!address && (
                   <>
                     <button

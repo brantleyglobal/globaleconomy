@@ -11,7 +11,7 @@ import DepositOrRefundStep from "~~/components/xchange/steps/depositRefundStep";
 import ReviewStep from "~~/components/xchange/steps/ReviewStep";
 import HelpStep from "~~/components/xchange/steps/helpStep";
 import { DoneStep } from "~~/components/xchange/steps/doneStep";
-import { useConnectModal } from '@rainbow-me/rainbowkit';
+//import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { useAccount } from "wagmi";
 
 enum ModalStep {
@@ -68,7 +68,7 @@ export const GlobalXchangeModal = ({ isOpen, onClose }: GlobalXchangeModalProps)
   const { address, isConnected } = useAccount();
 
   // RainbowKit modal control hook
-  const { openConnectModal } = useConnectModal();
+  //const { openConnectModal } = useConnectModal();
 
   // Centralized disable logic for steps, adjust validation logic per your needs:
   const isCounterPartyStepDisabled = 
@@ -307,7 +307,7 @@ export const GlobalXchangeModal = ({ isOpen, onClose }: GlobalXchangeModalProps)
               onBack={returnFromReview}
               isConnected={isConnected}
               walletAddress={address}
-              openWalletModal={openConnectModal}
+              //openWalletModal={openConnectModal}
               reviewType={userAction ?? "newContract"}
               isRefundSelected={isRefundSelected}
               isNewContractSelected={isNewContractSelected}

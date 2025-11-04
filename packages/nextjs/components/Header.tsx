@@ -5,17 +5,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
-import { RainbowKitCustomConnectButton } from "~~/components/globalEco";
+import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/globalEco";
 import { Modal } from "~~/components/common/modal";
 import { DividendRedeemModal } from "~~/components/dividend/redemptionWidget";
 import { GlobalXchangeModal } from "~~/components/xchange/xchangeWidget";
 import { Faucet } from "~~/components/transfer/Faucet";
 import { InvestmentModal } from "~~/components/invest/investmentModal";
-import { GlobalWalletModal } from "~~/components/globalEco/RainbowKitCustomConnectButton/globalWalletConnect";
+import { AcquireModal } from "~~/components/acquire/acquireModal";
 import MirrorModeToggle from "~~/components/common/mirrorToggle";
 import { useAccount } from "wagmi";
 import dynamic from "next/dynamic";
+import { useAutoAddTokens } from "~~/lib/symbolHelper";
 
 // Hook to detect mobile viewport
 function useIsMobile(breakpoint = 1024) {
@@ -37,6 +38,7 @@ const menuLinks = [
 ];
 
 export const Header = () => {
+  useAutoAddTokens();
   const pathname = usePathname();
   const { targetNetwork } = useTargetNetwork();
   const isDashboard = pathname?.startsWith("/dashboard") || pathname === "/";
@@ -49,6 +51,7 @@ export const Header = () => {
     wallet: false,
     redeem: false,
     invest: false,
+    acquire: false
   });
 
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -85,15 +88,21 @@ export const Header = () => {
           {/* Right: Actions + Page Links */}
           <div className="relative flex items-center gap-4">
             {/* Conditionally render different wallet connect UI based on mobile or desktop */}
-            <RainbowKitCustomConnectButton />
+            <WalletConnectButton />
 
             {/* Desktop Action Buttons + Page Links */}
             <div className="hidden lg:flex gap-4 text-xs font-light items-center">
               <button
+                onClick={() => setModalState(s => ({ ...s, acquire: true }))}
+                className="text-white hover:text-primary transition"
+              >
+                ACQUIRE GBDo
+              </button>
+              <button
                 onClick={() => setModalState(s => ({ ...s, swap: true }))}
                 className="text-white hover:text-primary transition"
               >
-                ASSETXCHANGE
+                ASSET XCHANGE
               </button>
               <button
                 onClick={() => setModalState(s => ({ ...s, redeem: true }))}
@@ -149,12 +158,23 @@ export const Header = () => {
               <li>
                 <button
                   onClick={() => {
+                    setModalState(s => ({ ...s, acquire: true }));
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left py-1 px-6 hover:text-primary transition"
+                >
+                  ACQUIRE GBDo
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
                     setModalState(s => ({ ...s, swap: true }));
                     setMobileMenuOpen(false);
                   }}
                   className="w-full text-left py-1 px-6 hover:text-primary transition"
                 >
-                  ASSETXCHANGE
+                  ASSET XCHANGE
                 </button>
               </li>
               <li>
@@ -216,10 +236,6 @@ export const Header = () => {
         <Faucet openWalletModal={() => setModalState({ ...modalState, wallet: true })} />
       </Modal>
 
-      <GlobalWalletModal
-        isOpen={modalState.wallet}
-        onClose={() => setModalState(s => ({ ...s, wallet: false }))}
-      />
       <Modal
         isOpen={modalState.redeem}
         onClose={() => setModalState(s => ({ ...s, redeem: false }))}
@@ -240,6 +256,11 @@ export const Header = () => {
       <InvestmentModal
         isOpen={modalState.invest}
         onClose={() => setModalState(s => ({ ...s, invest: false }))}
+      />
+
+      <AcquireModal
+        isOpen={modalState.acquire}
+        onClose={() => setModalState(s => ({ ...s, acquire: false }))}
       />
 
     </>

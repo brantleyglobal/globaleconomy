@@ -32,7 +32,7 @@ const InvestmentModal = dynamic(() =>
 );
 
 const GlobalWalletModal = dynamic(() =>
-  import("~~/components/globalEco/RainbowKitCustomConnectButton/globalWalletConnect").then(mod => mod.GlobalWalletModal),
+  import("~~/utils/globalEco/walletConnectButton").then(mod => mod.WalletConnectButton),
   { ssr: false }
 );
 
@@ -63,15 +63,15 @@ export default function HomePageLayout() {
   const disclosureSections = [
     {
       id: "overview",
-      label: "Overview",
+      label: "OVERVIEW",
       content: `
-        <p>Global Dominion (GBDO) operates an asset-backed ecosystem in which investments are directly tied to products and services within the platform. By investing in Global Dominion, participants are supporting the underlying economy of the ecosystem.</p>
+        <p>Global Dollar (GBDo) operates an asset-backed ecosystem in which investments are directly tied to products and services within the platform. By investing in Global Dollar, participants are supporting the underlying economy of the ecosystem.</p>
         <p>The system offers dividend payouts based on the chosen investment cycle, with a minimum term of two quarters (6 months). If an investor initiates their deposit after the 15th day of a quarter, the investor's term will not begin until the following quarter. At the end of each term, investors receive any earned dividends and their original investment amount.</p>
       `,
     },
     {
       id: "redemption",
-      label: "Redemptions",
+      label: "REDEMPTIONS",
       content: `
         <p>If funds are not redeemed within the redemption period of 6 months immediately following the close of their selected term, dividends will be forfeited and added to the pool of the following term cycle.</p>
         <p>While all investor’s tokens are redeemable, if an investor fails to redeem their tokens by the associated redemption period, the investor's tokens will automatically lock into the sequential cycle, and the original selected term will apply.</p>
@@ -79,15 +79,15 @@ export default function HomePageLayout() {
     },
     {
       id: "dividends",
-      label: "Term Dividend Tokens",
+      label: "TERM DIVIDENDS",
       content: `
-        <p>All dividend tokens are free to trade like any ERC20 token, and the associated call date of tokens can be found on the Dashboard within the "Balances" panel.</p>
+        <p>All term investors are issued dividend tokens that are free to trade like any ERC20 token, and the associated call date of tokens can be found on the Dashboard within the "Balances" panel.</p>
         <p>All investments and payouts are subject to defined grace periods, which account for processing timelines and potential delays due to operational or market conditions.</p>
       `,
     },
     {
       "id": "property",
-      "label": "Regional Ventures",
+      "label": "REGIONAL VENTURES",
       "content": `
         <p>All venture-backed tokens represent fractional ownership in real estate projects, business startups, and other ventures. These tokens are freely tradable like any ERC-20 tokens.</p>
         <p>The associated call or maturity dates, investment terms, and operational periods can be found on the Dashboard within the "Balances" panel.</p>
@@ -99,7 +99,7 @@ export default function HomePageLayout() {
     },
     {
       "id": "speculative",
-      "label": "Speculative Trading",
+      "label": "SPECULATIVE TRADING",
       "content": `
         <p>All speculative tokens are paired and traded like any other crypto/fiat currency pair.</p>
         <p>The associated call data, and investment terms can be found on the Trading Dashboard.</p>
@@ -108,22 +108,22 @@ export default function HomePageLayout() {
     },
     {
       id: "risks",
-      label: "Risk Disclosure",
+      label: "RISK DISCLOSURE",
       content: `
-        <p>While the Global Dominion model is designed with real-world asset backing and operational safeguards, investing in this ecosystem involves risks regardless of how minimal they may be.</p>
+        <p>While the Global Dollar model is designed with real-world asset backing and operational safeguards, investing in this ecosystem involves risks regardless of how minimal they may be.</p>
         <p>Due to unforeseen market turns, liquidity constraints, or internal disruptions, there may be delays in capital return, reductions in payout, or—in extreme circumstances—a complete loss of invested capital.</p>
         <p>In situations where funds cannot be returned at maturity, settlements will be processed as promptly as possible, with complete transparency and consistent communication.</p>
       `,
     },
     {
       id: "legal",
-      label: "Legal Notice",
+      label: "LEGAL NOTICE",
       content: `
-        <p>Global Dominion is not registered as a securities issuer under any national jurisdiction. Investments are made at the discretion of the participant and do not constitute a regulated financial product.</p>
+        <p>Global Dollar is not registered as a securities issuer under any national jurisdiction. Investments are made at the discretion of the participant and do not constitute a regulated financial product.</p>
         <p>Dividend payouts are not guaranteed and are subject to the performance of the underlying ecosystem and prevailing market conditions. The market value of GBDO tokens may fluctuate independently of dividend performance or redemption schedules.</p>
         <p>Investors are responsible for understanding and complying with any tax obligations arising from dividends, token trades, or redemptions.</p>
-        <p>Global Dominion reserves the right to delay or modify payout schedules in the event of force majeure, including but not limited to natural disasters, cyberattacks, or systemic market failures.</p>
-        <p>Investors are strongly encouraged to assess their personal risk tolerance and consult a financial advisor before participating in the Global Dominion ecosystem.</p>
+        <p>Global Dollar reserves the right to delay or modify payout schedules in the event of force majeure, including but not limited to natural disasters, cyberattacks, or systemic market failures.</p>
+        <p>Investors are strongly encouraged to assess their personal risk tolerance and consult a financial advisor before participating in the Global Dollar ecosystem.</p>
       `,
     },
   ];
@@ -261,11 +261,6 @@ export default function HomePageLayout() {
           isOpen={showDisclosureModal}
           onClose={() => setShowDisclosureModal(false)}
           sections={disclosureSections}
-        />
-
-        <GlobalWalletModal
-          isOpen={walletModalOpen}
-          onClose={() => setWalletModalOpen(false)}
         />
       </div>
     </>

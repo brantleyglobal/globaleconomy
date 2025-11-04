@@ -13,7 +13,7 @@ export default function SelectionStep({ userAction, setUserAction, onHelpToggle,
     <>
       <div className="flex flex-col space-y-2">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-light text-primary">XCHANGE SELECTION</h3>
+          <h3 className="text-xl font-light text-primary">INVESTMENT SELECTION</h3>
           <button
             onClick={onHelpToggle}
             aria-label="Toggle help"

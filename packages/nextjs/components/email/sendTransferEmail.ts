@@ -47,13 +47,13 @@ export async function sendTransferConfirmation({
   };
 
     try {
-    const response = await fetch("https://email.brantley-global.com", {
+      const response = await fetch("https://email.brantley-global.com", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
       },
-      body: JSON.stringify(payload),
+        body: JSON.stringify(payload),
     });
 
     const result = await response.json();

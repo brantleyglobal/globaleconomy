@@ -3,7 +3,7 @@
 import React from "react";
 import { useCheckoutStore } from "~~/components/purchase/useCheckoutStore";
 import { supportedTokens } from "~~/components/constants/tokens";
-import { RainbowKitCustomConnectButton } from "~~/components/globalEco";
+import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { WalletIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { useState } from "react";
 import { useAccount } from "wagmi";
@@ -35,44 +35,40 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
         </div>
         <div className="flex flex-col justify-between h-full rounded-xl"> 
           {/* Native Token */}
-          {/*<div className={`rounded-lg p-4 bg-black/60 border border-secondary/30 hover:border-secondary transition-all`}>
-            <label className="flex items-start gap-4 cursor-pointer">
-              <input
-                type="radio"
-                name="paymentMethod"
-                checked={paymentMethod === "native"}
-                onChange={() => setField("paymentMethod", "native")}
-                className="radio radio-secondary mt-1"
-              />
+          <div className={`max-h-[300px] sm:max-h-[300px] max-h-[200px] overflow-y-auto rounded-lg border border-secondary/30 transition-all`}>
+            <button
+              onClick={() => setField("paymentMethod", "native")}
+              className={`w-full block rounded-lg px-4 pt-4 pb-2 bg-black/40 hover:bg-secondary/10 transition-colors text-left ${
+                paymentMethod === "native" ? "bg-secondary/20" : ""
+              }`}
+            >
               <div>
-                <h4 className="flex items-center gap-2 text-md font-semibold text-white">
-                  <img src="/globalw.png" alt="GBDO Symbol" className="w-4 h-4" />
-                  Global Dominion (GBDO)
+                <h4 className="flex items-center gap-2 text-md mt-2 font-semibold text-white">
+                  <img src="/globalw.png" alt="GBDo Symbol" className="w-4 h-4" />
+                  Global Dollar (GBDo)
                 </h4>
-                <p className="text-xs text-white mt-1">Requires wallet connection.</p>
+                <p className="text-xs text-white mt-4">Requires wallet connection.</p>
               </div>
-            </label>
-          </div>*/}
+            </button>
+          </div>
 
           {/* Stablecoin */}
-          <div
-            className={`max-h-[300px] sm:max-h-[300px] max-h-[200px] overflow-y-auto rounded-lg border border-secondary/30 transition-all`}
-          >
+          <div className={`max-h-[300px] sm:max-h-[300px] max-h-[200px] mt-4 overflow-y-auto rounded-lg border border-secondary/30 transition-all`}>
             <button
               onClick={() => setField("paymentMethod", "stable")}
-              className={`w-full block rounded-lg p-8 bg-black/40 hover:bg-secondary/10 transition-colors text-left ${
+              className={`w-full block rounded-lg p-4 bg-black/40 hover:bg-secondary/10 transition-colors text-left ${
                 paymentMethod === "stable" ? "bg-secondary/20" : ""
               }`}
             >
               <div className="w-full">
                 <h4 className="text-md font-light mt-2 text-white">STABLECOIN</h4>
-                <p className="text-xs text-white mt-6">
+                <p className="text-xs text-white mt-">
                   Includes routing fee of 0.25%. Wallet required.
                 </p>
                 {/* Token Selector */}
                 <select
                   disabled={paymentMethod !== "stable"}
-                  className="select rounded-md bg-black w-full text-info-600 mb-4 outline-none hover:bg-white/10 border-none focus:ring-0 focus:outline-none"
+                  className="select rounded-md bg-black w-full text-info-600 outline-none hover:bg-white/10 border-none focus:ring-0 focus:outline-none"
                   value={selectedTokenSymbol}
                   onChange={(e) => {
                     const symbol = e.target.value;
@@ -97,11 +93,11 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
 
           {/* Cash via Stripe */}
           <div
-            className={`max-h-[300px] sm:max-h-[300px] max-h-[200px] mt-6 overflow-y-auto rounded-lg border border-secondary/30 transition-all`}
+            className={`max-h-[300px] sm:max-h-[300px] max-h-[200px] mt-4 overflow-y-auto rounded-lg border border-secondary/30 transition-all`}
           >
             <button
               onClick={() => setField("paymentMethod", "cash")}
-              className={`w-full block rounded-lg p-8 bg-black/40 hover:bg-secondary/10 transition-colors text-left ${
+              className={`w-full block rounded-lg p-4 bg-black/40 hover:bg-secondary/10 transition-colors text-left ${
                 paymentMethod === "cash" ? "bg-secondary/20" : ""
               }`}
             >
@@ -119,7 +115,7 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6 p-4 mt-4 border-t bg-transparent w-full">
           {/* Left side: wallet connect button */}
           <div className="bottom-0 w-full sm:w-auto flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
-            <RainbowKitCustomConnectButton />
+            <WalletConnectButton />
             {paymentMethod !== "cash" && !isConnected && (
               <div className="relative inline-block">
                 <button

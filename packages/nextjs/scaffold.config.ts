@@ -31,7 +31,7 @@ const scaffoldConfig = {
   // If you want to use a different RPC for a specific network, you can add it here.
   // The key is the chain ID, and the value is the HTTP RPC URL
   rpcOverrides: {
-    [GLOBALCHAIN.id as number]: "https://rpc.brantley-global.com",
+    [GLOBALCHAIN.id as number]: "https://live.brantley-global.com",
   },
 
 

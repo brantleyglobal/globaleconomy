@@ -6,7 +6,7 @@ import { useCheckoutStore } from "~~/components/purchase/useCheckoutStore";
 import { DModal } from "~~/components/common/descriptionModal";
 import { Modal } from "~~/components/common/modal";
 import { StablecoinRate } from "~~/lib/exchangeRates";
-import { GlobalWalletModal } from "~~/components/globalEco/RainbowKitCustomConnectButton/globalWalletConnect";
+import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 
 type AssetVariation = { label: string; apriceInGBDO: bigint; };
 
@@ -292,7 +292,7 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
 
       {/* Wallet Modal — render independently */}
       {walletModalOpen && (
-        <GlobalWalletModal
+        <WalletConnectButton
           isOpen={walletModalOpen}
           onClose={() => setWalletModalOpen(false)}
         />

@@ -15,6 +15,10 @@ export interface Transaction {
   quantity?: number;
   amount?: number;
 
+  // GBDo
+  stablein?: number;
+  gbdout?: number;
+  
   // Xchange
   selectedtokena?: string;
   initiator: string;

@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { formatUnits } from "viem";
 import { useDisplayUsdMode } from "~~/hooks/globalEco/useDisplayUsdMode";
 import { getContract } from "viem";
-import { ethers } from "ethers";
+import { BrowserProvider, ethers } from "ethers";
 import { supportedTokens, dividendTokens } from "~~/components/constants/tokens";
 
 
@@ -34,7 +34,7 @@ export const TokenBalanceRow = ({
         const abi = [
           "function unlockQuarter() view returns (uint16)",
         ];
-        const provider = new ethers.providers.Web3Provider((window as any).ethereum);
+        const provider = new BrowserProvider((window as any).ethereum);
         await provider.send("eth_requestAccounts", []);
         const contract = new ethers.Contract(tokenAddress, abi, provider);
         const unlockQuarterRaw = await contract.unlockQuarter();

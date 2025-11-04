@@ -4,4 +4,4 @@ export * from "./BlockieAvatar";
 export * from "../transfer/Faucet";
 export * from "./FaucetButton";
 export * from "./Input";
-export * from "./RainbowKitCustomConnectButton";
+//export * from "./WalletConnectButton";

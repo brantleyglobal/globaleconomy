@@ -43,16 +43,16 @@ const generateDividendTokens = (): Token[] => {
 export const supportedTokens = [
 
   {
-    name: "Global Dominion",
+    name: "Global Dollar",
     symbol: "GBDo",
     address: "0x0000000000000000000000000000000000000000",
     decimals: 18,
     isNative: true,
   },
   {
-    name: "Global DominionX",
+    name: "Global DollarX",
     symbol: "GBDx",
-    address: deployments.GlobalDominionX,
+    address: deployments.GlobalDollarX,
     decimals: 18,
     isNative: false,
   },
@@ -126,13 +126,13 @@ export const supportedTokens = [
     decimals: 8,
     isNative: false,
   },
-  /*{
+  {
     name: "Bitcoin",
     symbol: "BTC",
-    address: "0x0000000000000000000000000000000000000000",
+    address: "0x00000000000000000000000000000000000000b0",
     decimals: 8,
     isNative: false,
-  },*/
+  },
   {
     name: "Wrapped Binance Coin",
     symbol: "WBNB",
@@ -175,13 +175,13 @@ export const supportedTokens = [
     decimals: 18,
     isNative: false,
   },
-  {
+  /*{
     name: "Moneta Mexicana",
     symbol: "MMXN",
     address: "0x6B9f031D718dDed0d681C20cb754F97b3BB81b78",
     decimals: 18,
     isNative: false,
-  },
+  },*/
   {
     name: "PayPal USD",
     symbol: "PYUSD",
@@ -270,6 +270,13 @@ export const supportedTokens = [
     name: "Monerium Euro",
     symbol: "EURe",
     address: "0x3231Cb76718CDeF2155FC47b5286d82e6eDA273f",
+    decimals: 18,
+    isNative: false,
+  },
+  {
+    name: "Ethtereum",
+    symbol: "ETH",
+    address: "0x00000000000000000000000000000000000000E0",
     decimals: 18,
     isNative: false,
   },

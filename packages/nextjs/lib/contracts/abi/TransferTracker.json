@@ -1,5 +1,5 @@
 {
-    "abi": [
+  "abi": [
     {
       "inputs": [
         {
@@ -65,17 +65,6 @@
       "type": "error"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        }
-      ],
-      "name": "SafeERC20FailedOperation",
-      "type": "error"
-    },
-    {
       "inputs": [],
       "name": "UUPSUnauthorizedCallContext",
       "type": "error"
@@ -129,32 +118,32 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "sender",
+          "name": "from",
           "type": "address"
         },
         {
           "indexed": true,
           "internalType": "address",
-          "name": "recipient",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "token",
+          "name": "to",
           "type": "address"
         },
         {
           "indexed": false,
-          "internalType": "uint128",
+          "internalType": "uint256",
           "name": "amount",
-          "type": "uint128"
+          "type": "uint256"
         },
         {
           "indexed": false,
-          "internalType": "uint64",
-          "name": "timestamp",
-          "type": "uint64"
+          "internalType": "uint256",
+          "name": "nonce",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes",
+          "name": "additionalData",
+          "type": "bytes"
         }
       ],
       "name": "TransferRecorded",
@@ -189,6 +178,11 @@
           "internalType": "uint128",
           "name": "amount",
           "type": "uint128"
+        },
+        {
+          "internalType": "bytes",
+          "name": "additionalData",
+          "type": "bytes"
         }
       ],
       "name": "Transfer",
@@ -275,6 +269,25 @@
       "name": "initialize",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "nonces",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {

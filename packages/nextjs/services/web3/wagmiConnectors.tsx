@@ -1,35 +1,23 @@
-import {
-  connectorsForWallets,
-  getDefaultWallets,
-} from "@rainbow-me/rainbowkit";
-import {
-  metaMaskWallet,
-  trustWallet,
-  walletConnectWallet,
-} from "@rainbow-me/rainbowkit/wallets";
+// wagmiConfig.ts
+
+import { createConfig, http } from "wagmi";
+import { metaMask, walletConnect, injected } from "wagmi/connectors";
 import scaffoldConfig from "~~/scaffold.config";
 
 const { targetNetworks, walletConnectProjectId } = scaffoldConfig;
 
-const { wallets } = getDefaultWallets({
-  appName: "globalEco",
-  projectId: walletConnectProjectId,
+export const wagmiConfig = createConfig({
   chains: targetNetworks,
-});
-
-export const wagmiConnectors = connectorsForWallets(
-  [
-    {
-      groupName: "Recommended",
-      wallets: [
-        metaMaskWallet,
-        trustWallet,
-        walletConnectWallet,
-      ],
-    },
+  connectors: [
+    metaMask(),
+    injected(), // Covers Trust Wallet, Brave, etc.
+    walletConnect({
+      projectId: walletConnectProjectId,
+      showQrModal: true,
+    }),
   ],
-  {
-    appName: "globalEco",
-    projectId: walletConnectProjectId,
-  }
-);
+  transports: targetNetworks.reduce((acc, chain) => {
+    acc[chain.id] = http();
+    return acc;
+  }, {} as Record<number, ReturnType<typeof http>>),
+});

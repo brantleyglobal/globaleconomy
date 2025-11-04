@@ -8,7 +8,7 @@ export function useTokenBalance(userAddress: string | undefined, token: Token) {
 
   useEffect(() => {
     // Exit early if no userAddress, avoids unnecessary calls
-    if (!userAddress) {
+    if (!userAddress || !token) {
       setBalance(null);
       return;
     }
@@ -20,11 +20,11 @@ export function useTokenBalance(userAddress: string | undefined, token: Token) {
           transport: http(),
         });
 
-        if (token.isNative) {
-          // Non-null assertion userAddress! safe here because checked above
+        if (token?.isNative) {
           const nativeBalance = await publicClient.getBalance({ address: userAddress! });
           setBalance(nativeBalance);
-        } else if (token.address) {
+        }
+        else if (token.address) {
           const erc20Balance = await publicClient.readContract({
             address: token.address,
             abi: erc20Abi,

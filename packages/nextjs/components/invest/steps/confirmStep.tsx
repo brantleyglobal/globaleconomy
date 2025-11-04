@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Token } from "~~/components/constants/tokens";
-import { RainbowKitCustomConnectButton } from "~~/components/globalEco";
+import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { WalletIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
 type Props = {
@@ -93,7 +93,7 @@ export function ConfirmStep({
         {/* Wallet connect section and buttons */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 py-4 border-t bg-transparent w-full">
           <div className="w-full sm:w-auto flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
-            <RainbowKitCustomConnectButton />
+            <WalletConnectButton />
             {!connectedWallet && (
               <div className="relative inline-block">
                 <button

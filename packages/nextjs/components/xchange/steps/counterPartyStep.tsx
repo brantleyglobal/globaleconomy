@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
-import { AddressInput, RainbowKitCustomConnectButton } from "~~/components/globalEco";
+import { AddressInput, WalletConnectButton } from "~~/components/globalEco";
 import { WalletIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
-import { supportedTokens, Token } from "~~/components/constants/tokens";
+import { supportedTokens, Token, dividendTokens } from "~~/components/constants/tokens";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import type { Address } from "viem";
 import { getAddress } from "viem";
@@ -53,6 +53,15 @@ export default function CounterPartyStep({
     const [addressError, setAddressError] = useState("");
     const [localRecipient2, setLocalRecipient2] = useState(recipient2 ?? "");
     const isEditingAddress = useRef(false);
+
+    const mergedTokens = [
+        ...supportedTokens,
+        ...dividendTokens.filter(
+            dividend => !supportedTokens.some(
+            supported => supported.symbol === dividend.symbol
+            )
+        ),
+    ];
 
     // Ref to hold debounce timer
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -136,9 +145,9 @@ export default function CounterPartyStep({
                 onChange={(e) => setSelectedTokenSymbol2(e.target.value)}
             >
                 <option value="" disabled>
-                {supportedTokens.length === 0 ? "-- No Tokens Available --" : "CounterParty Token to Deposit"}
+                {mergedTokens.length === 0 ? "-- No Tokens Available --" : "CounterParty Token to Deposit"}
                 </option>
-                {supportedTokens
+                {mergedTokens
                 .filter(t => t.symbol !== "GBDo" && t.symbol !== "GBDx" && t.symbol !== "COPx")
                 .map((token) => (
                     <option key={token.symbol} value={token.symbol}>
@@ -190,7 +199,7 @@ export default function CounterPartyStep({
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6 p-4 mt-4 border-t bg-transparent w-full">
             {/* Left side: wallet connect button */}
             <div className="bottom-0 w-full sm:w-auto flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
-            <RainbowKitCustomConnectButton />
+            <WalletConnectButton />
             {!isConnected && (
                 <div className="relative inline-block">
                 <button

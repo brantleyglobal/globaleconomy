@@ -11,10 +11,16 @@ export const GLOBALCHAIN = defineChain({
   },
   rpcUrls: {
     default: {
-      http: ["https://rpc.brantley-global.com"],
+      http: [
+        "https://rpc.brantley-global.com",
+        //"https://live.brantley-global.com",
+      ],
     },
     public: {
-      http: ["https://rpc.brantley-global.com"],
+      http: [
+        "https://rpc.brantley-global.com",
+        //"https://live.brantley-global.com",
+      ],
     },
   },
   blockExplorers: {

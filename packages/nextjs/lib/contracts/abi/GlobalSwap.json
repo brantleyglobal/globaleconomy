@@ -11,17 +11,6 @@
       "type": "error"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        }
-      ],
-      "name": "SafeERC20FailedOperation",
-      "type": "error"
-    },
-    {
       "anonymous": false,
       "inputs": [
         {
@@ -45,6 +34,49 @@
         },
         {
           "indexed": false,
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Refund",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "partyA",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "partyB",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "tokenA",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "tokenB",
+          "type": "address"
+        },
+        {
+          "indexed": false,
           "internalType": "uint256",
           "name": "amountA",
           "type": "uint256"
@@ -56,12 +88,6 @@
           "type": "uint256"
         }
       ],
-      "name": "Refund",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [],
       "name": "SwapCompleted",
       "type": "event"
     },
@@ -71,8 +97,20 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "partyB",
+          "name": "party",
           "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
         }
       ],
       "name": "SwapJoined",
@@ -158,13 +196,6 @@
         }
       ],
       "name": "initialize",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "joinSwap",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { AddressInput, RainbowKitCustomConnectButton } from "~~/components/globalEco";
+import { AddressInput, WalletConnectButton } from "~~/components/globalEco";
 import { WalletIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { supportedTokens } from "~~/components/constants/tokens";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
@@ -210,7 +210,7 @@ export default function DepositOrRefundStep({
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6 p-4 mt-4 border-t bg-transparent w-full">
             {/* Left side: wallet connect button */}
             <div className="bottom-0 w-full sm:w-auto flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
-            <RainbowKitCustomConnectButton />
+            <WalletConnectButton />
             {!isConnected && (
                 <div className="relative inline-block">
                 <button

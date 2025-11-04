@@ -2,12 +2,10 @@
 import React, { useRef, useState } from "react";
 import dynamic from "next/dynamic"; // Add this if it's missing
 
-
 const Modal = dynamic(() =>
   import("~~/components/common/modal").then(mod => mod.Modal),
   { ssr: false }
 );
-
 
 type EmailModalProps = {
   isOpen: boolean;
@@ -15,8 +13,10 @@ type EmailModalProps = {
 };
 
 export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose }) => {
-   const formRef = useRef<HTMLFormElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSent, setIsSent] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +25,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose }) => {
       setIsSubmitting(false);
       return;
     }
+
     const formData = new FormData(formRef.current);
     const from_firstname = formData.get("from_firstname") as string;
     const from_lastname = formData.get("from_lastname") as string;
@@ -33,10 +34,12 @@ export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose }) => {
     const message = formData.get("message") as string;
     
     try {
-      const res = await fetch("/api/email", {
+      setIsSent(false);
+      const response = await fetch("https://email.brantley-global.com", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
         },
         body: JSON.stringify({
           jsonrpc: "2.0",
@@ -52,13 +55,19 @@ export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose }) => {
           id: Date.now(),
         }),
       });
-      if (!res.ok) throw new Error("Failed to send email");
-      alert("Message sent successfully!");
-      onClose();
-    } catch (error: any) {
-      console.error("Email send error:", error);
-      alert("Failed to send message, please try again.");
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Email API returned error:", result);
+        throw new Error(result?.error?.message || "Failed to send email");
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Email dispatch error:", error);
+      throw error;
     } finally {
+      setIsSent(true);
       setIsSubmitting(false);
     }
   };
@@ -110,7 +119,12 @@ export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose }) => {
           disabled={isSubmitting}
           className="w-full py-3 bg-white/5 text-white rounded hover:bg-secondary/30 transition"
         >
-          {isSubmitting ? "Sending..." : "SEND MESSAGE"}
+          {isSubmitting
+            ? "Sending..."
+            : isSent
+            ? "Email Submitted !"
+            : "Send Email"
+          }
         </button>
       </form>
     </Modal>

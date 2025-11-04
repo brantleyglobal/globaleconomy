@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Bytes } from "ethers";
 import { Modal } from "~~/components/common/modal";
 import { Token, supportedTokens } from "~~/components/constants/tokens";
 import { useAccount } from "wagmi";
@@ -103,9 +102,7 @@ export const InvestmentModal: React.FC<Props> = ({
   const { address: connectedWallet } = useAccount();
   const { isProcessing: isDepositProcessing, error: depositError, deposit } = useDeposit();
   const { isProcessing: isInfraProcessing, error: infraError, infra } = useInfra();
-  const { isProcessing: isInfraBTCProcessing, error: infraBTCerror, infraBTC } = useInfra();
-  const { isProcessing: isDepositBTCProcessing, error: depositBTCerror, depositBTC } = useDeposit();
-  const isAnyProcessing = isDepositProcessing || isDepositBTCProcessing || isInfraProcessing || isInfraBTCProcessing;
+  const isAnyProcessing = isDepositProcessing || isInfraProcessing;
   const [userFirstName, setUserFirstName] = useState("");
   const [userLastName, setUserLastName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -180,36 +177,21 @@ export const InvestmentModal: React.FC<Props> = ({
 
       let receiptx = "";
 
-      if (selectedTokenSymbol === "GLB" && selectedTokenSymbol2 === "BTC") {
-        if (!selectedToken2) {
-          toast.error("Please select a valid token.");
-          return;
-        }
-        const receiptx = await infraBTC(depositAmount, selectedToken2, selectedToken, connectedWallet!);
-      } else if (
-        (selectedTokenSymbol === "BGFFS" && selectedTokenSymbol2 !== "BTC") ||
-        (selectedTokenSymbol === "BGFRS" && selectedTokenSymbol2 !== "BTC")
-        //(selectedTokenSymbol !== "TGMX" && selectedTokenSymbol2 !== "BTC") ||
-        //(selectedTokenSymbol !== "TGUSA" && selectedTokenSymbol2 !== "BTC") ||
-        //(selectedTokenSymbol !== "GLB" && selectedTokenSymbol2 !== "BTC")
+      if (
+        (selectedTokenSymbol === "BGFFS") ||
+        (selectedTokenSymbol === "BGFRS") ||
+        (selectedTokenSymbol === "TGMX") ||
+        (selectedTokenSymbol === "TGUSA") ||
+        (selectedTokenSymbol === "GLB")
       ) {
         if (!selectedToken2) {
           toast.error("Please select a valid token.");
           return;
         }
         const receiptx = await infra(depositAmount, selectedToken2, selectedToken, connectedWallet!);
-      } else if (selectedTokenSymbol !== "GLB" && selectedTokenSymbol2 === "BTC") {
-        const receiptx = await depositBTC(depositAmount, selectedQuarter, selectedToken, connectedWallet!);
-      } else if (
-        (selectedTokenSymbol !== "BGFFS" && selectedTokenSymbol2 !== "BTC") ||
-        (selectedTokenSymbol !== "BGFRS" && selectedTokenSymbol2 !== "BTC")
-        //(selectedTokenSymbol !== "TGMX" && selectedTokenSymbol2 !== "BTC") ||
-        //(selectedTokenSymbol !== "TGUSA" && selectedTokenSymbol2 !== "BTC") ||
-        //(selectedTokenSymbol !== "GLB" && selectedTokenSymbol2 !== "BTC")
-      ) {
+      } else {
         const receiptx = await deposit(depositAmount, selectedQuarter, selectedToken, connectedWallet!);
       }
-
 
       console.log("Transaction Hash:", receiptx);
       console.log("Sending Confirmation");

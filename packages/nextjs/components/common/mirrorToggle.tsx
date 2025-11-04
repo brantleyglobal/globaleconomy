@@ -5,7 +5,7 @@ export default function MirrorModeToggle() {
   const pathname = usePathname();
 
   const isDashboard = pathname?.startsWith("/dashboard");
-  const isStorefront = pathname?.startsWith("/");
+  const isStorefront = pathname === "/";
 
   return (
     <section className="hover:bg-transparent z-1 relative bg-transparent active:!bg-transparent">

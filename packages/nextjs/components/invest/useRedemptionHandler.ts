@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ethers, ContractReceipt, Contract } from "ethers";
+import { ethers, Contract, BrowserProvider } from "ethers";
 import smartVaultabi from "~~/lib/contracts/abi/SmartVault.json";
 import infraAbi from "~~/lib/contracts/abi/RegionInfrastructure.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import { erc20Abi } from "viem";
+import { Address } from "viem";
+import { sendReconciliation } from "~~/lib/reconciliatonHelper";
+import { Interface } from "@ethersproject/abi";
 
 interface TokenType {
   address?: string;
@@ -36,70 +39,48 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
   const [loading, setLoading] = useState(false);
 
   const send = async () => {
+    setLoading(true);
     const processedAt = new Date().toISOString();
 
-    if (!sender || !chainId || selectedToken.decimals == null) {
+    if (!sender || !chainId || !selectedToken.decimals) {
       openWalletModal?.();
-      return;
+      setLoading(false);
+      return { success: false, error: "Missing sender, chainId or token decimals" };
     }
 
-    let txhash = "";
-    let receipt: ContractReceipt | null = null;
-    let payoutFormatted = ""; 
-
     try {
-
-      // Setup
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      // Connect provider & signer from injected wallet (Metamask etc)
+      if (!window.ethereum) {
+        throw new Error("No Ethereum provider found. Please install MetaMask.");
+      }
+      const provider = new BrowserProvider(window.ethereum);
       await provider.send("eth_requestAccounts", []);
-      const signer = provider.getSigner();
+      const signer = await provider.getSigner();
       const signerAddress = await signer.getAddress();
-      console.log("Connected wallet:", signerAddress);
 
-      const network = await provider.getNetwork();
-      console.log("Connected to chain:", network.chainId);
-
-      // Determine if it's an ERC-20 token
+      // Determine if token is ERC20 (symbol not GBDO and address exists)
       const isERC20 = selectedToken.symbol !== "GBDO" && !!selectedToken.address;
-      
+
+      // Calculate current financial quarter term code (YYQDD format)
       const date = new Date();
-      const year = date.getFullYear() % 100;  // last two digits
-      const month = date.getMonth();           // 0-based
-      const quarter = Math.floor(month / 3) + 1;
-
-      // Get start date of quarter
-      const quarterStartMonth = (quarter - 1) * 3;
-      const quarterStartDate = new Date(date.getFullYear(), quarterStartMonth, 1);
-
-      // Calculate day difference (1-based)
-      const msPerDay = 1000 * 60 * 60 * 24;
-      const diffInMs = date.getTime() - quarterStartDate.getTime();
-      const day = Math.floor(diffInMs / msPerDay) + 1;
-
-      // day is between 1 and ~91 depending on the quarter length (Jan-Mar, Apr-Jun, Jul-Sep, Oct-Dec)
-
-      const dayPadded = day.toString().padStart(2, '0');
-      const termCodeStr = `${year}${quarter}${dayPadded}`;
+      const year = date.getFullYear() % 100;
+      const quarter = Math.floor(date.getMonth() / 3) + 1;
+      const day = String(Math.floor((date.getTime() - new Date(date.getFullYear(), (quarter - 1) * 3, 1).getTime()) / 86400000) + 1).padStart(2, "0");
+      const termCodeStr = `${year}${quarter}${day}`;
 
       if (!selectedToken.address) {
-        throw new Error("Token address is missing");
+        throw new Error("Token address missing");
       }
 
-      const abi = [
-        "function unlockQuarter() view returns (uint16)",
-      ];
+      // Define ABIs for term queries
+      const termAbi = ["function unlockQuarter() view returns (uint16)", "function comingQuarter() view returns (uint16)"];
 
-      const abi2 = [
-        "function comingQuarter() view returns (uint16)",
-      ];
+      // Select vault or infrastructure contract address based on token symbol
+      const contractAddress = ["GLB", "TGUSA", "TGMX"].includes(selectedToken.symbol!) ? deployments.RegionInfrastructure : deployments.SmartVault;
 
-      const contractaddress =
-        (selectedToken.symbol !== "GLB" && selectedToken.symbol !== "TGUSA" && selectedToken.symbol !== "TGMX")
-          ? deployments.SmartVault
-          : deployments.RegionInfrastructure;
-
-      const contract = new ethers.Contract(selectedToken.address, abi, provider)
-      const contract2 = new ethers.Contract(selectedToken.address, abi2, provider)
+      // Contracts for term queries
+      const contract = new ethers.Contract(selectedToken.address, termAbi[0], provider);
+      const contract2 = new ethers.Contract(selectedToken.address, termAbi[1], provider);
       const unlockQuarterRaw = await contract.unlockQuarter();
       const comingQuarterRaw = await contract2.comingQuarter();
 
@@ -107,75 +88,90 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
       const unlockQuarterNum = Number(unlockQuarterRaw);
       const comingQuarterNum = Number(comingQuarterRaw);
 
-      try {
-
-        if (termCodeNum <= unlockQuarterNum || unlockQuarterNum >= comingQuarterNum) {
-          throw new Error("Withdrawal not allowed. Term conditions not met.");
-          console.log("Withdrawal not allowed: Term conditions not met.");
-        }
-        const stablecoinContract = new Contract(selectedToken.address, erc20Abi, signer);
-        const balanceBefore = await stablecoinContract.balanceOf(signerAddress);
-        const vaultContract = new Contract(deployments.SmartVault, smartVaultabi.abi, signer);
-        const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
-        
-        if( selectedToken.symbol !== "GLB", selectedToken.symbol !== "TGUSA", selectedToken.symbol !== "TGMX" ) {
-          const allowance = await stablecoinContract.allowance(signerAddress, deployments.SmartVault);
-          console.log("Stablecoin allowance:", allowance);
-          if (allowance < balanceBefore) {
-            console.log("Approving vault to spend stablecoin...");
-            const approveTx = await stablecoinContract.approve(deployments.SmartVault, balanceBefore);
-            await approveTx.wait();
-            console.log("Stablecoin approved");
-          } else {
-            console.log("Stablecoin allowance sufficient");
-          }
-          const tokenTx = await vaultContract.withdraw(selectedToken.address, termCodeStr, balanceBefore);
-          txhash = tokenTx.hash;
-          receipt = await tokenTx.wait();
-          console.log("Token transfer confirmed");
-
-          if (receipt && receipt.events) {
-            const payoutEvent = receipt.events.find((e) => e.event === "PayoutMade");
-            if (payoutEvent && payoutEvent.args) {
-              const payoutValue = payoutEvent.args.payout;
-              payoutFormatted = ethers.utils.formatUnits(payoutValue, 18);
-              console.log("Payout value:", payoutFormatted);
-            }
-          }
-      } else {
-          const allowance = await stablecoinContract.allowance(signerAddress, deployments.RegionInfrastructure);
-          console.log("Stablecoin allowance:", allowance);
-          if (allowance < balanceBefore) {
-            console.log("Approving vault to spend stablecoin...");
-            const approveTx = await stablecoinContract.approve(deployments.RegionInfrastructure, balanceBefore);
-            await approveTx.wait();
-            console.log("Stablecoin approved");
-          } else {
-            console.log("Stablecoin allowance sufficient");
-          }
-          const tokenTx = await infraContract.withdraw(selectedToken.address, termCodeStr, balanceBefore);
-          txhash = tokenTx.hash;
-          receipt = await tokenTx.wait();
-          console.log("Token transfer confirmed");
-
-          if (receipt && receipt.events) {
-            const payoutEvent = receipt.events.find((e) => e.event === "PayoutMade");
-            if (payoutEvent && payoutEvent.args) {
-              const payoutValue = payoutEvent.args.payout;
-              payoutFormatted = ethers.utils.formatUnits(payoutValue, 18);
-              console.log("Payout value:", payoutFormatted);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Token transfer failed:", error);
+      if (termCodeNum <= unlockQuarterNum || unlockQuarterNum >= comingQuarterNum) {
+        throw new Error("Withdrawal not allowed. Term conditions not met.");
       }
 
+      // Setup contracts for withdrawal
+      const stablecoinContract = new Contract(selectedToken.address, erc20Abi, signer);
+      const balanceBefore = await stablecoinContract.balanceOf(signerAddress);
+      const vaultContract = new Contract(deployments.SmartVault, smartVaultabi.abi, signer);
+      const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
+
+      let tokenTx, receipt;
+
+      if (!["GLB", "TGUSA", "TGMX"].includes(selectedToken.symbol!)) {
+        tokenTx = await vaultContract.withdraw(selectedToken.address, termCodeStr, balanceBefore);
+        receipt = await tokenTx.wait();
+      } else {
+        tokenTx = await infraContract.withdraw(selectedToken.address, termCodeStr, balanceBefore);
+        receipt = await tokenTx.wait();
+      }
+
+      if (!receipt) throw new Error("Transaction receipt is null");
+
+      // Parse RedemptionFulfilled event logs to get amount to send
+      const iface = new Interface(infraAbi.abi);
+      let amountToSend: bigint | undefined;
+
+      for (const log of receipt.logs) {
+        try {
+          const parsed = iface.parseLog({ topics: [...log.topics], data: log.data });
+          if (parsed.name === "RedemptionFulfilled") {
+            amountToSend = parsed.args.amount ?? parsed.args[0];
+            break;
+          }
+        } catch { /* ignore non-matching logs */ }
+      }
+
+      if (!amountToSend) throw new Error("RedemptionFulfilled event not found");
+
+      // Identify token chain and prepare reconciliation call
+      const myChainAddresses = new Set<Address>([
+        deployments.Copian,
+        deployments.GlobalDollarX,
+        deployments.GlobalDollar,
+        deployments.BGFFS,
+        deployments.BGFRS,
+        deployments.TGMX,
+        deployments.TGUSA,
+        deployments.Globe,
+      ]);
+
+      const polyAddresses = new Set<Address>([
+        "0x5C067C80C00eCd2345b05E83A3e758eF799C40B5",
+      ]);
+
+      const isOnMyChain = myChainAddresses.has(selectedToken.address as Address);
+      const isOnPoly = polyAddresses.has(selectedToken.address as Address);
+      const isBitcoin = selectedToken.symbol === "BTC";
+      const isOnEthChain = !isOnMyChain && !isOnPoly && !isBitcoin;
+
+      let signerForTransfer: string;
+
+      if (isOnMyChain) signerForTransfer = "global";
+      else if (isOnPoly) signerForTransfer = "polygon";
+      else if (isBitcoin) signerForTransfer = "bitcoin";
+      else if (isOnEthChain) signerForTransfer = "ethereum";
+      else throw new Error("Unsupported token chain");
+
+      // Call reconciliation endpoint asynchronously
+      sendReconciliation({
+        apiKey: process.env.NEXT_PUBLIC_API_SECRET!,
+        to: signerAddress,
+        amount: amountToSend.toString(),
+        tokenAddress: selectedToken.address,
+        chain: signerForTransfer,
+      }).then(({ txHash, status }) => {
+        console.log(`Redemption sent! Tx: ${txHash}, Status: ${status}`);
+      }).catch(console.error);
+
+      // Prepare payload for redemption logging
       const redemptionPayload = {
-        txhash,
-        contractaddress: contractaddress,
+        txhash: tokenTx.hash,
+        contractaddress: contractAddress,
         useraddress: sender,
-        amount: payoutFormatted,
+        amount: amountToSend.toString(),
         asset: selectedToken.symbol,
         status: "accepted",
         chainstatus: true,
@@ -183,41 +179,39 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         processedat: null,
         priority: 0,
         retrycount: 0,
-        receipthash: receipt?.blockHash ?? "",
+        receipthash: receipt.blockHash,
         notes: "Transfer Successful",
         timestamp: new Date().toISOString(),
       };
 
-      //console.log("Transfer Payload:", transferPayload);
-
+      // Log redemption to backend
       try {
         const res = await fetch("https://gateway.brantley-global.com", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-api-key": process.env.NEXT_PUBLIC_API_SECRET! // optional, if your Worker requires it
+            "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
           },
           body: JSON.stringify({
             jsonrpc: "2.0",
             id: "redemptions",
             method: "redeemToken",
-            params: redemptionPayload
+            params: redemptionPayload,
           }),
         });
-
-        const contentType = res.headers.get("Content-Type") ?? "";
-        if (res.ok && contentType.includes("application/json")) {
-          const result = await res.json();
+        if (res.ok) {
+          await res.json();
         }
-      } catch (nestedErr: any) {
-        console.error("Error reporting failed:", nestedErr);
+      } catch (nestedErr) {
+        console.error("Error reporting redemption:", nestedErr);
       }
 
+      setLoading(false);
       return {
         success: true,
-        txHash: txhash,
-        receiptHash: "",
-        amount: "",
+        txHash: tokenTx.hash,
+        receiptHash: receipt.blockHash,
+        amount: amountToSend.toString(),
         token: selectedToken.symbol ?? "unknown",
         status: "queued",
       };
@@ -246,24 +240,23 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-api-key": process.env.NEXT_PUBLIC_API_SECRET! // optional, if your Worker requires it
+            "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
           },
           body: JSON.stringify({
             jsonrpc: "2.0",
             id: "redemptions",
             method: "redeemToken",
-            params: errorPayload
+            params: errorPayload,
           }),
         });
-
-        const contentType = res.headers.get("Content-Type") ?? "";
-        if (res.ok && contentType.includes("application/json")) {
-          const result = await res.json();
+        if (res.ok) {
+          await res.json();
         }
       } catch (nestedErr: any) {
-        console.error("Error reporting failed:", nestedErr);
+        console.error("Error reporting failed redemption:", nestedErr);
       }
 
+      setLoading(false);
       return { success: false, error: err.message ?? "Unknown error" };
     }
   };

@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { supportedTokens } from "~~/components/constants/tokens";
-import { JsonRpcProvider } from "@ethersproject/providers";
+import { JsonRpcProvider } from "ethers";
 
 // Chainlink Aggregator ABI
 const aggregatorAbi = [
@@ -404,5 +404,3 @@ export async function getExchangeRates(): Promise<{
     lastUpdated: lastUpdated ?? Date.now()
   };
 }
-
-

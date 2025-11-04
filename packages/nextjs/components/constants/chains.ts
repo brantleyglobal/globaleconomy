@@ -13,7 +13,8 @@ export const supportedChains: Chain[] = [
     },
     rpcUrls: {
       default: {
-        http: ["https://ethereum-rpc.publicnode.com"],      },
+        http: ["https://ethereum-rpc.publicnode.com"],
+      },
     },
     blockExplorers: {
       default: {
@@ -48,13 +49,16 @@ export const supportedChains: Chain[] = [
     id: 3503995874081207,
     name: "GLOBALCHAIN",
     nativeCurrency: {
-      name: "GBDO",
-      symbol: "GBDO",
+      name: "GBDo",
+      symbol: "GBDo",
       decimals: 18,
     },
     rpcUrls: {
       default: {
-        http: ["https://rpc.brantley-global.com"],
+        http: [
+          "https://rpc.brantley-global.com",
+          //"https://live.brantley-global.com",
+        ],
       },
     },
     blockExplorers: {
