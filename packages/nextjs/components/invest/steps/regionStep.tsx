@@ -129,6 +129,9 @@ export const RegionStep: React.FC<Props> = ({
                   </option>
                 ))}
             </select>
+            <p className="text-xs text-justify text-white mt-">
+              Includes routing fee of 0.25%. Non-Stablecoin purchases are not based live conversion rates in an effort to protect products on this platform from volatility. Users are encouraged to convert to Stablecoin for investment and energy related product purchases on this platform.
+            </p>
           </div>
           {details ? <ProjectPreview {...details} /> : null}
           <div>
