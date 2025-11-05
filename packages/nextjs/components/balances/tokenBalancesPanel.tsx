@@ -9,12 +9,18 @@ export function TokenBalancesPanel() {
   const { address: userAddress } = useAccount();
   const hexAddress = userAddress?.startsWith("0x") ? (userAddress as Address) : undefined;
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  console.log("useradd: ", userAddress);
 
   const ethPublicClient = usePublicClient({ chainId: 1 });
   const polyPublicClient = usePublicClient({ chainId: 137 });
   const myChainPublicClient = usePublicClient({ chainId: 3503995874081207 });
 
-  const { balances } = useDirectTokenBalances(hexAddress, myChainPublicClient, ethPublicClient, polyPublicClient);
+  const { balances } = useDirectTokenBalances(
+    userAddress,
+    myChainPublicClient
+    //ethPublicClient,
+    //polyPublicClient
+  );
 
   const handleExpandToggle = (index: number) => {
     setExpandedIndex(prevIndex => (prevIndex === index ? null : index));

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Token } from "~~/components/constants/tokens";
 import { projectDetails } from "~~/components/invest/projectDetails";
 import { ProjectPreview } from "~~/components/invest/projectPreview";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
 type ProjectKey = keyof typeof projectDetails;
 
@@ -77,8 +78,16 @@ export const RegionStep: React.FC<Props> = ({
 
   return (
     <div className="flex flex-col space-y-4">
-      <div className="px-0">
+      <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-light text-primary">INVESTMENT DETAILS</h2>
+        <button
+        onClick={onHelpToggle}
+        aria-label="Toggle help"
+        className="text-primary hover:text-secondary flex items-center gap-1"
+      >
+        <HelpOutlineIcon />
+        
+      </button>
       </div>
       <div className="flex flex-col justify-between h-full rounded-xl">
         <div className="space-y-4">

@@ -23,7 +23,7 @@ export const Footer = () => {
         rates.forEach(rate => rateMap.set(rate.symbol, rate));
 
         const formattedRates = supportedTokens
-          .filter(token => token.symbol !== "GBDO")
+          .filter(token => token.symbol !== "GBDo")
           .map(token => {
             const rateObj = rateMap.get(token.symbol);
             if (!rateObj || rateObj.rateAgainstGBDO === undefined) return undefined;

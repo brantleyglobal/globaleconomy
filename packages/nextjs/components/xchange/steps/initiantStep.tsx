@@ -154,7 +154,7 @@ export default function InitiantStep({
                     {mergedTokens.length === 0 ? "-- No Tokens Available --" : "Initiant Token to Deposit"}
                     </option>
                     {mergedTokens
-                    .filter(t => t.symbol !== "GBDo" && t.symbol !== "GBDx" && t.symbol !== "COPx")
+                    .filter(t => t.symbol !== "GBDx" && t.symbol !== "COPx")
                     .map((token) => (
                         <option key={token.symbol} value={token.symbol}>
                         {token.symbol} • {token.name}

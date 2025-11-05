@@ -9,6 +9,7 @@ import { Interface } from "@ethersproject/abi";
 import { useBalance } from "wagmi";
 import type { Address } from "viem";
 import { resolve } from "dns";
+import { dividendTokens } from "~~/components/constants/tokens";
 
 interface TokenType {
   address?: string;
@@ -62,17 +63,18 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
     deployments.TGMX,
     deployments.TGUSA,
     deployments.Globe,
+    ...dividendTokens.map(t => t.address as Address),
   ]);
 
   const polyAddresses = new Set<Address>([
     "0x5C067C80C00eCd2345b05E83A3e758eF799C40B5",
+    "0x6AE7Dfc73E0dDE2aa99ac063DcF7e8A63265108c",
   ]);
 
   const isOnMyChain = myChainSupportedTokenAddresses.has(selectedToken.address as Address);
   const isOnPoly = polyAddresses.has(selectedToken.address as Address);
   const isBitcoin = selectedToken.symbol === "BTC";
   const isOnEthChain = !isOnMyChain && !isOnPoly && !isBitcoin;
-
 
   let selectedTokenChainId: number;
   let chain: "global" | "polygon" | "ethereum" | "bitcoin";
@@ -188,15 +190,18 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
     }
 
     const tokenContract = new ethers.Contract(selectedToken.address, erc20Abi.abi, signer);
+    console.log("address", selectedToken.address);
+    console.log("chain", chain);
+    console.log("id", selectedTokenChainId);
 
     const humanReadable = formatUnits(amount, 18);
     const amountBN = parseUnits(humanReadable, selectedToken.decimals);
     
-    if (selectedToken.symbol === "ETH") {
+    if (selectedToken.symbol === "ETH" || selectedToken.symbol === "GBDo") {
       const tx = await signer.sendTransaction({
         to,
         value: amountBN,
-        gasLimit: 30_000,
+        gasLimit: 40_000,
       });
       receipt = await tx.wait();
     } else {
@@ -311,35 +316,48 @@ export function useTransferHandler(config: TransferHandlerProps) {
       const contract = new Contract(deployments.TransferTracker, transferTrackABI.abi, signer);
 
       let callAddress;
-        if (selectedToken.symbol === "ETH") {
-          callAddress = 0x00000000000000000000000000000000000000E0
-        } else if (selectedToken.symbol === "BTC"){
-          callAddress = 0x00000000000000000000000000000000000000b0;
-        } else {
-          callAddress = selectedToken.address;
-        }
+      if (selectedToken.symbol === "ETH") {
+        callAddress = "0x00000000000000000000000000000000000000E0";
+      } else if (selectedToken.symbol === "BTC"){
+        callAddress = "0x00000000000000000000000000000000000000b0";
+      } else {
+        callAddress = selectedToken.address;
+      }
 
-      const tx = await contract.Transfer(
+      const iface = new Interface(transferTrackABI.abi);
+
+      const calldata = iface.encodeFunctionData("Transfer", [
         callAddress,
         recipient,
         amount,
         "0x",
-        { gasLimit: 40_000 } 
-      );
+      ]);
+
+      const tx = await signer.sendTransaction({
+        to: deployments.TransferTracker,
+        value: 0n,
+        data: calldata,
+        gasLimit: 40_000n,
+      });
+
       const receipt = await tx.wait();
 
-      const iface = new Interface(transferTrackABI.abi);
-      let eventArgs;
+      let amountToSend;
+
+      if(!receipt){
+        throw new Error ("No Receipt Generated");
+      }
       for (const log of receipt.logs) {
         try {
-          const parsedLog = iface.parseLog({ topics: log.topics, data: log.data });
-          if (parsedLog.name === "TransferRecorded") {
-            eventArgs = parsedLog.args;
-            break;
+            const mutableTopics = [...log.topics];
+            const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
+            if (parsed?.name === "TransferRecorded") {
+              amountToSend = parsed.args.amount ?? parsed.args[0];
+              break;
+            }
+          } catch {
+            // Ignore error for non-matching logs
           }
-        } catch {
-          // ignore non-matching logs
-        }
       }
       
       // Log transfer success

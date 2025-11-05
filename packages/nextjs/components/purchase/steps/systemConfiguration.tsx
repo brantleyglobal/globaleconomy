@@ -32,7 +32,7 @@ export const SystemConfigurationStep: React.FC<Props> = ({
   const renderVariationGroup = (
     groupKey: keyof typeof variationGroups,
     labelKey: keyof typeof variationDisplayLabels,
-    currency: "GBDO" | "USD"
+    currency: "GBDo" | "USD"
   ) => {
     const group = variationGroups[groupKey];
     if (!group) return null;
@@ -90,8 +90,8 @@ export const SystemConfigurationStep: React.FC<Props> = ({
         <div className="flex-grow h-full overflow-y-auto mb-10">
           
           {variationGroups.epanel
-            ? renderVariationGroup("epanel", "epanel", "GBDO")
-            : variationGroups.xpanel && renderVariationGroup("xpanel", "xpanel", "GBDO")}
+            ? renderVariationGroup("epanel", "epanel", "GBDo")
+            : variationGroups.xpanel && renderVariationGroup("xpanel", "xpanel", "GBDo")}
 
           {variationGroups.etie
             ? renderVariationGroup("etie", "etie", "USD")

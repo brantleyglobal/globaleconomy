@@ -106,10 +106,10 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
   const variationGroups = variationGroupsMap[itemAsset.variant];
 
   const [selectedVariations, setSelectedVariations] = useState<Record<string, AssetVariation>>({});
-  const [selectedCurrency, setSelectedCurrency] = useState("GBDO");
+  const [selectedCurrency, setSelectedCurrency] = useState("GBDo");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "crypto">("crypto");
   const [cryptoType, setCryptoType] = useState<"native" | "stable">("native");
-  const [selectedStablecoin, setSelectedStablecoin] = useState("GBDO");
+  const [selectedStablecoin, setSelectedStablecoin] = useState("GBDo");
 
   const [convertedPrice, setConvertedPrice] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -127,10 +127,10 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
   const store = useCheckoutStore.getState();
   const resetForm = () => {
     setSelectedVariations({});
-    setSelectedCurrency("GBDO");
+    setSelectedCurrency("GBDo");
     setPaymentMethod("crypto");
     setCryptoType("native");
-    setSelectedStablecoin("GBDO");
+    setSelectedStablecoin("GBDo");
     setConvertedPrice(0);
     setQuantity(1);
     setImageSrc(variantImages.main);
@@ -175,7 +175,7 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
       paymentMethod === "cash"
         ? null
         : cryptoType === "native"
-        ? "GBDO"
+        ? "GBDo"
         : selectedStablecoin;
 
     store.setField("quantity", quantity);

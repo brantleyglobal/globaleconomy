@@ -11,6 +11,7 @@ import type { Props as InputStepProps  } from "~~/components/acquire/steps/onSte
 import { OnStep } from "~~/components/acquire/steps/onStep";
 import { DoneStep } from "~~/components/invest/steps/doneStep";
 import { sendAcquisitionConfirmation } from "~~/components/email/sendAcquisitionEmail";
+import HelpStep from "~~/components/acquire/steps/helpStep";
 import { useRouter } from "next/navigation";
 
 type Props = {
@@ -44,8 +45,7 @@ export const AcquireModal: React.FC<Props> = ({
 
   const { address: connectedWallet } = useAccount();
   const { isProcessing: isDepositProcessing, error: depositError, deposit } = useDeposit();
-  const { isProcessing: isDepositBTCProcessing, error: depositBTCerror, depositBTC } = useDeposit();
-  const isAnyProcessing = isDepositProcessing || isDepositBTCProcessing;
+  const isAnyProcessing = isDepositProcessing;
   const [userFirstName, setUserFirstName] = useState("");
   const [userLastName, setUserLastName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -64,7 +64,6 @@ export const AcquireModal: React.FC<Props> = ({
   const selectedToken2: Token | undefined = supportedTokens.find(
     (token2) => token2.symbol === selectedTokenSymbol2
   );
-
 
   const balance = useTokenBalance(connectedWallet, selectedToken!);
 
@@ -121,12 +120,6 @@ export const AcquireModal: React.FC<Props> = ({
 
       let receiptx = "";
 
-      if (selectedTokenSymbol === "BTC") {
-        const receiptx = await depositBTC(depositAmount, convertedAmount, selectedToken, connectedWallet!);
-      } else if ( selectedTokenSymbol !== "BTC") {
-        const receiptx = await deposit(depositAmount, convertedAmount, selectedToken, connectedWallet!);
-      }
-
       console.log("Transaction Hash:", receiptx);
       console.log("Sending Confirmation");
 
@@ -179,36 +172,42 @@ export const AcquireModal: React.FC<Props> = ({
           ))}
         </div>
       </div>
-
-      <div className="space-y-2 h-full h-[min(90vh,auto)] flex flex-col">
-        {step === ModalStep.OnStep && (
-          <OnStep
-            supportedTokens={supportedTokens}
-            selectedTokenSymbol={selectedTokenSymbol}
-            setSelectedTokenSymbol={setSelectedTokenSymbol}
-            depositAmount={depositAmount}
-            setDepositAmount={setDepositAmount}
-            userFirstName={userFirstName}
-            setUserFirstName={setUserFirstName}
-            userLastName={userLastName}
-            setUserLastName={setUserLastName}
-            userEmail={userEmail}
-            setUserEmail={setUserEmail}
-            connectedWallet={connectedWallet}
-            onConfirm={handleConfirm}
-            isProcessing={isAnyProcessing}
-            disabled={!connectedWallet || isAnyProcessing}
-            onNext={() => {
-              if (!selectedTokenSymbol || selectedQuarter <= 0 || !depositAmount) {
-                toast.error("Please fill all the investment details.");
-                return;
-              }
-              setStep(ModalStep.DoneStep);
-            }}
-          />
-        )}
-        {step === ModalStep.DoneStep && <DoneStep onClose={onClose} />}
-      </div>
+      {isHelpMode ? (
+        <HelpStep id="help-step" onClose={toggleHelp} />
+      ) : (
+        <>
+          <div className="space-y-2 h-full h-[min(90vh,auto)] flex flex-col">
+            {step === ModalStep.OnStep && (
+              <OnStep
+                supportedTokens={supportedTokens}
+                selectedTokenSymbol={selectedTokenSymbol}
+                setSelectedTokenSymbol={setSelectedTokenSymbol}
+                depositAmount={depositAmount}
+                setDepositAmount={setDepositAmount}
+                userFirstName={userFirstName}
+                setUserFirstName={setUserFirstName}
+                userLastName={userLastName}
+                setUserLastName={setUserLastName}
+                userEmail={userEmail}
+                setUserEmail={setUserEmail}
+                connectedWallet={connectedWallet}
+                onHelpToggle={() => setIsHelpMode(true)}
+                onConfirm={handleConfirm}
+                isProcessing={isAnyProcessing}
+                disabled={!connectedWallet || isAnyProcessing}
+                onNext={() => {
+                  if (!selectedTokenSymbol || selectedQuarter <= 0 || !depositAmount) {
+                    toast.error("Please fill all the investment details.");
+                    return;
+                  }
+                  setStep(ModalStep.DoneStep);
+                }}
+              />
+            )}
+            {step === ModalStep.DoneStep && <DoneStep onClose={onClose} />}
+          </div>
+        </>
+      )}
     </Modal>
   );
 };

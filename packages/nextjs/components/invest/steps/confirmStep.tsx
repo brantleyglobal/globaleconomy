@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Token } from "~~/components/constants/tokens";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { WalletIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
 type Props = {
   amount: string;
@@ -21,7 +22,6 @@ type Props = {
   disabled: boolean;
 };
 
-
 export function ConfirmStep({
   amount,
   committedQuarters,
@@ -39,8 +39,16 @@ export function ConfirmStep({
 
   return (
     <div className="flex flex-col h-full space-y-2">
-      <div>
+      <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-light text-primary tracking-wide">CONTRACT SUMMARY & CONFIRMATION</h3>
+        <button
+          onClick={onHelpToggle}
+          aria-label="Toggle help"
+          className="text-primary hover:text-secondary flex items-center gap-1"
+        >
+          <HelpOutlineIcon />
+          
+        </button>
       </div>
       <div className="flex flex-col justify-between h-full rounded-xl"> 
         <div className="flex-grow max-h-98 sm:max-h-98 overflow-y-auto mb-4 pt-6 bg-base-200 border px-4 border-base-300 rounded-md shadow-sm text-sm">

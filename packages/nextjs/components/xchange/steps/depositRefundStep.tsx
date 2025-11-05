@@ -160,7 +160,7 @@ export default function DepositOrRefundStep({
                 {supportedTokens.length === 0 ? "-- No Tokens Available --" : "Select Token"}
                 </option>
                 {supportedTokens
-                .filter(t => t.symbol !== "GBDo" && t.symbol !== "GBDx" && t.symbol !== "COPx")
+                .filter(t => t.symbol !== "GBDx" && t.symbol !== "COPx")
                 .map((token) => (
                     <option key={token.symbol} value={token.symbol}>
                     {token.symbol} • {token.name}

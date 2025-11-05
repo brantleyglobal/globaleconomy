@@ -5,8 +5,8 @@ import type { Token } from "~~/components/constants/tokens";
 
 const stablecoinSymbols = [
   "USDC", "DAI", "USDT", "TUSD", "FDUSD", "EURC", "AUDD", "AUDT", "QCAD", "JPYC",
-  "MMXN", "PYUSD", "XSGD", "USDP", "ZARP", "BRL1", "GBPT", "EURe", "TRYX",
-  "WBNB", "WETH", "WBTC", "FRAX", "GBDx", "COPx", "GBDo", "GLB"
+  "MMXN", "PYUSD", "XSGD", "USDP", "ZARP", "BRL1", "GBPT", "EURe", "TRYX", "BTC",
+  "ETH", "WBNB", "WETH", "WBTC", "FRAX", "GBDx", "COPx", "GBDo", "GLB"
 ];
 
 const symbolImageGroups: { [pattern: string]: string } = {

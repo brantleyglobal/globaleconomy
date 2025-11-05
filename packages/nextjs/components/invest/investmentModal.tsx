@@ -121,7 +121,6 @@ export const InvestmentModal: React.FC<Props> = ({
     (token2) => token2.symbol === selectedTokenSymbol2
   );
 
-
   const balance = useTokenBalance(connectedWallet, selectedToken!);
 
   function toggleHelp() {

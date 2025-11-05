@@ -40,7 +40,7 @@ export const CheckoutReviewStep: React.FC<Props> = ({
   const renderPaymentMethod = () => {
     switch (paymentMethod) {
       case "native":
-        return "GBDO";
+        return "GBDo";
       case "stable":
         return `${tokenSymbol} (Stablecoin)`;
       case "cash":

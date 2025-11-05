@@ -14,7 +14,7 @@ export const WalletAutoAdd = () => {
   const TOKENS = [
     {
       address: "0xdE8200d454DfD32Ae694705648Efa53750101aBc",
-      symbol: "GBDO",
+      symbol: "GBDo",
       decimals: 18,
       image: "https://brantley-global.com/globalw.png",
     },

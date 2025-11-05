@@ -24,7 +24,8 @@ import { toast } from "react-hot-toast";
 import { useTransferHandler } from "~~/components/transfer/useTransferHandler";
 import { sendTransferConfirmation } from "~~/components/email/sendTransferEmail";
 import { getAddress } from "viem";
-
+import HelpStep from "~~/components/transfer/helpStep";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { mainnet, polygon } from "viem/chains";
 
 const RPC_URLS = {
@@ -75,6 +76,8 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
   const [userLastName, setUserLastName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [isHelpMode, setIsHelpMode] = useState(false);
+  const [savedStep, setSavedStep] = useState<ModalStep | null>(null);
 
   const [walletTokens, setWalletTokens] = useState<
     (typeof supportedTokens[0] & { balance: bigint })[]
@@ -86,6 +89,11 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
   const [txResult, setTxResult] = useState<any>(null);
   const [addressError, setAddressError] = useState("");
   const [showWalletNotice, setShowWalletNotice] = useState(false);
+
+  enum ModalStep {
+    DetailStep = 0,
+    DoneStep = 1,
+  }
 
   // Merge tokens without duplicates by symbol
   const mergedTokens = useMemo(() => {
@@ -254,63 +262,25 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
     console.log("token: ", selectedToken?.symbol);
   }, [address, selectedToken]);
 
-  // Fetch all token balances with appropriate chain objects
-  /*useEffect(() => {
-    let isMounted = true;
-    if (!address) {
-      setWalletTokens([]);
-      setSelectedTokenSymbol("");
-      return;
-    }
-    const fetchBalances = async () => {
-      try {
-        const balances = await Promise.all(
-          mergedTokens.map(async (token) => {
-            const chainConfig = getChainConfig(token);
-            const rpcUrl = chainConfig.rpcUrls.default.http[0];
-            let balance: bigint = 0n;
-            if (token.isNative) {
-              balance = await baseClient.getBalance({
-                address,
-                chain: chainConfig,
-                transport: http(rpcUrl),
-              });
-            } else {
-              balance = await baseClient.readContract({
-                address: token.address,
-                abi: erc20Abi,
-                functionName: "balanceOf",
-                args: [address],
-                chain: chainConfig,
-                transport: http(rpcUrl),
-              });
-            }
-            return { ...token, balance };
-          })
-        );
-        if (isMounted) {
-          const tokensWithBalance = balances.filter((t) => t.balance > 0n);
-          setWalletTokens(tokensWithBalance);
-          setSelectedTokenSymbol(tokensWithBalance[0]?.symbol || "");
-        }
-      } catch (error) {
-        console.error("Failed to fetch token balances:", error);
-        if (isMounted) {
-          setWalletTokens([]);
-          setSelectedTokenSymbol("");
-        }
-      }
-    };
-    fetchBalances();
-    return () => { isMounted = false; };
-  }, [address, mergedTokens]);*/
-
   // Loading state for form validation
   useEffect(() => {
     setLoading(!recipient || !amount || !address);
   }, [recipient, amount, address]);
 
   const stepLabels = ["Transfer Details", "Done"];
+
+  function toggleHelp() {
+    if (!isHelpMode) {
+      setSavedStep(step);  // Save current step into state
+      setIsHelpMode(true);
+    } else {
+      setIsHelpMode(false);
+      if (savedStep !== null) {
+        setStep(savedStep); // Restore saved step from state
+        setSavedStep(null); // Clear saved state
+      }
+    }
+  }
 
   return (
     <div>
@@ -328,195 +298,208 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
           ))}
         </div>
       </div>
-      {step === 0 && (
+      {isHelpMode ? (
+        <HelpStep id="help-step" onClose={toggleHelp} />
+      ) : (
         <>
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-1 sm:space-y-0">
-              <h3 className="text-xl font-light text-primary">ASSET TRANSFER</h3>
-              <p className="text-xs text-gray-400">Securely move your assets</p>
-            </div>
+          {step === 0 && (
+            <>
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-1 sm:space-y-0">
+                  <h3 className="text-xl font-light text-primary">ASSET TRANSFER</h3>
+                  <p className="text-xs text-gray-400">Securely move your assets</p>
+                  <button
+                    onClick={toggleHelp}
+                    aria-label="Toggle help"
+                    className="text-primary hover:text-secondary flex items-center gap-1"
+                  >
+                    <HelpOutlineIcon />
+                    
+                  </button>
+                </div>
 
-            <div className="space-y-1">
-              <select
-                className="select rounded-md bg-black w-full text-primary mt-2 outline-none hover:bg-secondary/5 border-none focus:ring-0 focus:outline-none"
-                value={selectedTokenSymbol}
-                onChange={(e) => setSelectedTokenSymbol(e.target.value)}
-              >
-                <option value="" disabled>
-                  {mergedTokens.length === 0
-                    ? "-- No Tokens Available --"
-                    : "CounterParty Token to Deposit"}
-                </option>
-                {mergedTokens
-                  .filter(
-                    (t) =>
-                      t.symbol !== "GBDo" &&
-                      t.symbol !== "GBDx" &&
-                      t.symbol !== "COPx"
-                  )
-                  .map((token) => (
-                    <option key={token.symbol} value={token.symbol}>
-                      {token.symbol} • {token.name}
+                <div className="space-y-1">
+                  <select
+                    className="select rounded-md bg-black w-full text-primary mt-2 outline-none hover:bg-secondary/5 border-none focus:ring-0 focus:outline-none"
+                    value={selectedTokenSymbol}
+                    onChange={(e) => setSelectedTokenSymbol(e.target.value)}
+                  >
+                    <option value="" disabled>
+                      {mergedTokens.length === 0
+                        ? "-- No Tokens Available --"
+                        : "CounterParty Token to Deposit"}
                     </option>
-                  ))}
-              </select>
-            </div>
+                    {mergedTokens
+                      .filter(
+                        (t) =>
+                          t.symbol !== "COPx" &&
+                          t.symbol !== "GBDx"
+                      )
+                      .map((token) => (
+                        <option key={token.symbol} value={token.symbol}>
+                          {token.symbol} • {token.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
 
-            <AddressInput
-              placeholder="Recipient Address"
-              value={recipient ?? ""}
-              onChange={handleRecipientChange}
-            />
-            {addressError && (
-              <p className="text-red-500 text-xs mt-1">{addressError}</p>
-            )}
-            <input
-              type="text"
-              inputMode="decimal"
-              pattern="[0-9]*"
-              className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5"
-              placeholder="Enter Amount to Invest"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-
-            {selectedToken && (
-              <TransferSummary
-                from={address as `0x${string}`}
-                to={recipient as `0x${string}`}
-                token={selectedToken}
-                amount={amount}
-              />
-            )}
-
-            <div className="flex justify-between mb-4 px-2">
-              <div>
-                <span className="text-xs font-light">FROM</span>{" "}
-                {isConnected && address ? (
-                  <Address address={address} onlyEnsOrAddress />
-                ) : (
-                  <span className="text-sm ml-1">--</span>
+                <AddressInput
+                  placeholder="Recipient Address"
+                  value={recipient ?? ""}
+                  onChange={handleRecipientChange}
+                />
+                {addressError && (
+                  <p className="text-red-500 text-xs mt-1">{addressError}</p>
                 )}
-              </div>
-              <div>
-                <span className="text-xs font-light">AVAILABLE</span>{" "}
-                <span className="text-base font-light">
-                  {selectedToken && available !== undefined && available > 0n
-                    ? (Number(available) / 10 ** selectedToken.decimals).toFixed(2)
-                    : " --"}
-                </span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  pattern="[0-9]*"
+                  className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5"
+                  placeholder="Enter Amount to Transfer"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+
                 {selectedToken && (
-                  <span className="text-xs text-gray-500">{selectedToken.symbol}</span>
+                  <TransferSummary
+                    from={address as `0x${string}`}
+                    to={recipient as `0x${string}`}
+                    token={selectedToken}
+                    amount={amount}
+                  />
                 )}
-              </div>
-            </div>
 
-            <div className="">
-              <p className="text-white mb-2 mt-8 uppercase tracking-wide text-xs font-light">
-                CONFIRMATION DETAILS
-              </p>
-              <input
-                type="text"
-                value={userFirstName}
-                onChange={(e) => setUserFirstName(e.target.value)}
-                placeholder="First Name"
-                className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5"
-              />
-              <input
-                type="text"
-                value={userLastName}
-                onChange={(e) => setUserLastName(e.target.value)}
-                placeholder="Last Name"
-                className="input w-full bg-black mt-2 rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5"
-              />
-              <input
-                type="email"
-                value={userEmail}
-                onChange={handleEmailChange}
-                placeholder="Email Address"
-                className={`input w-full bg-black mt-2 rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5 ${
-                  emailError ? "border-red-500" : ""
-                }`}
-              />
-              {emailError && (
-                <p className="text-red-500 text-xs mt-1">{emailError}</p>
-              )}
-            </div>
-
-            <div className="flex flex-col sm:flex-row relative justify-between items-center gap-4 mt-10 pt-4 border-t w-full">
-              <div className="flex flex-col items-start sm:flex-row sm:items-center w-full sm:gap-2">
-                <WalletConnectButton />
-                {!address && (
-                  <>
-                    <button
-                      onClick={() => setShowWalletNotice(true)}
-                      className="w-6 h-6 rounded-full bg-white/40 hover:bg-red-200 flex items-center justify-center ml-2"
-                      title="Wallet Required"
-                    >
-                      <ExclamationCircleIcon className="w-4 h-4 text-red-600" />
-                    </button>
-                    {showWalletNotice && (
-                      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/70 border-t border-red-300 shadow-lg p-4 max-h-[40vh] overflow-y-auto animate-slide-up">
-                        <div className="flex items-center gap-2 mb-4">
-                          <WalletIcon className="w-6 h-6 text-red-500" />
-                          <h2 className="text-lg mt-2 font-semibold text-red-600">
-                            WALLET REQUIRED
-                          </h2>
-                        </div>
-                        <p className="text-sm text-black mb-2">
-                          Connect your wallet to continue. This ensures secure
-                          and personalized access.
-                        </p>
-                        <div className="flex justify-end">
-                          <button
-                            onClick={() => setShowWalletNotice(false)}
-                            className="px-4 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-                          >
-                            Got it
-                          </button>
-                        </div>
-                      </div>
+                <div className="flex justify-between mb-4 px-2">
+                  <div>
+                    <span className="text-xs font-light">FROM</span>{" "}
+                    {isConnected && address ? (
+                      <Address address={address} onlyEnsOrAddress />
+                    ) : (
+                      <span className="text-sm ml-1">--</span>
                     )}
-                  </>
-                )}
+                  </div>
+                  {/*<div>
+                    <span className="text-xs font-light">AVAILABLE</span>{" "}
+                    <span className="text-base font-light">
+                      {selectedToken && available !== undefined && available > 0n
+                        ? (Number(available) / 10 ** selectedToken.decimals).toFixed(2)
+                        : " --"}
+                    </span>
+                    {selectedToken && (
+                      <span className="text-xs text-gray-500">{selectedToken.symbol}</span>
+                    )}
+                  </div>*/}
+                </div>
+
+                <div className="">
+                  <p className="text-white mb-2 mt-8 uppercase tracking-wide text-xs font-light">
+                    CONFIRMATION DETAILS
+                  </p>
+                  <input
+                    type="text"
+                    value={userFirstName}
+                    onChange={(e) => setUserFirstName(e.target.value)}
+                    placeholder="First Name"
+                    className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5"
+                  />
+                  <input
+                    type="text"
+                    value={userLastName}
+                    onChange={(e) => setUserLastName(e.target.value)}
+                    placeholder="Last Name"
+                    className="input w-full bg-black mt-2 rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5"
+                  />
+                  <input
+                    type="email"
+                    value={userEmail}
+                    onChange={handleEmailChange}
+                    placeholder="Email Address"
+                    className={`input w-full bg-black mt-2 rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5 ${
+                      emailError ? "border-red-500" : ""
+                    }`}
+                  />
+                  {emailError && (
+                    <p className="text-red-500 text-xs mt-1">{emailError}</p>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row relative justify-between items-center gap-4 mt-10 pt-4 border-t w-full">
+                  <div className="flex flex-col items-start sm:flex-row sm:items-center w-full sm:gap-2">
+                    <WalletConnectButton />
+                    {!address && (
+                      <>
+                        <button
+                          onClick={() => setShowWalletNotice(true)}
+                          className="w-6 h-6 rounded-full bg-white/40 hover:bg-red-200 flex items-center justify-center ml-2"
+                          title="Wallet Required"
+                        >
+                          <ExclamationCircleIcon className="w-4 h-4 text-red-600" />
+                        </button>
+                        {showWalletNotice && (
+                          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/70 border-t border-red-300 shadow-lg p-4 max-h-[40vh] overflow-y-auto animate-slide-up">
+                            <div className="flex items-center gap-2 mb-4">
+                              <WalletIcon className="w-6 h-6 text-red-500" />
+                              <h2 className="text-lg mt-2 font-semibold text-red-600">
+                                WALLET REQUIRED
+                              </h2>
+                            </div>
+                            <p className="text-sm text-black mb-2">
+                              Connect your wallet to continue. This ensures secure
+                              and personalized access.
+                            </p>
+                            <div className="flex justify-end">
+                              <button
+                                onClick={() => setShowWalletNotice(false)}
+                                className="px-4 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+                              >
+                                Got it
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <button
+                    className="btn bg-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
+                    onClick={handleSendClick}
+                    disabled={
+                      !amount ||
+                      !isValidAmount(amount) ||
+                      !address ||
+                      !recipient ||
+                      isProcessing
+                    }
+                  >
+                    {isProcessing ? (
+                      <span className="loading loading-spinner loading-sm">
+                        Processing...
+                      </span>
+                    ) : (
+                      <BanknotesIcon className="h-5 w-4 shrink-0" />
+                    )}
+                    {isProcessing ? "Processing..." : "CONFIRM"}
+                  </button>
+                </div>
               </div>
-              <button
-                className="btn bg-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
-                onClick={handleSendClick}
-                disabled={
-                  !amount ||
-                  !isValidAmount(amount) ||
-                  !address ||
-                  !recipient ||
-                  isProcessing
-                }
+            </>
+          )}
+          {step === 1 && (
+            <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 bg-white/5 rounded-lg shadow-md text-center overflow-y-auto">
+              <h3 className="text-xl font-light text-primary mb-4">TRANSFER COMPLETE</h3>
+              <p className="text-gray-700 mb-2">
+                View Transaction Details The Dashboard.
+              </p>
+              <a
+                href="/dashboard"
+                className="inline-block mt-4 px-5 py-2 bg-white/15 text-white font-medium rounded hover:bg-secondary/30 transition"
               >
-                {isProcessing ? (
-                  <span className="loading loading-spinner loading-sm">
-                    Processing...
-                  </span>
-                ) : (
-                  <BanknotesIcon className="h-5 w-4 shrink-0" />
-                )}
-                {isProcessing ? "Processing..." : "CONFIRM"}
-              </button>
+                Go to Dashboard
+              </a>
             </div>
-          </div>
+          )}
         </>
-      )}
-      {step === 1 && (
-        <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 bg-white/5 rounded-lg shadow-md text-center overflow-y-auto">
-          <h3 className="text-xl font-light text-primary mb-4">TRANSFER COMPLETE</h3>
-          <p className="text-gray-700 mb-2">
-            View Transaction Details The Dashboard.
-          </p>
-          <a
-            href="/dashboard"
-            className="inline-block mt-4 px-5 py-2 bg-white/15 text-white font-medium rounded hover:bg-secondary/30 transition"
-          >
-            Go to Dashboard
-          </a>
-        </div>
       )}
     </div>
   );

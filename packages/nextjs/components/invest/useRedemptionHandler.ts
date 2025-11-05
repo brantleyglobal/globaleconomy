@@ -59,7 +59,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
       const signerAddress = await signer.getAddress();
 
       // Determine if token is ERC20 (symbol not GBDO and address exists)
-      const isERC20 = selectedToken.symbol !== "GBDO" && !!selectedToken.address;
+      const isERC20 = selectedToken.symbol !== "GBDo" && !!selectedToken.address;
 
       // Calculate current financial quarter term code (YYQDD format)
       const date = new Date();

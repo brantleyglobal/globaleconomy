@@ -13,7 +13,7 @@ const ABI = parseAbi([
 export const fetchPriceFromUniswap = async (targetNetwork: ChainWithAttributes): Promise<number> => {
   const { nativeCurrency, nativeCurrencyTokenAddress, id: chainId } = targetNetwork;
 
-  if (!nativeCurrencyTokenAddress || (nativeCurrency.symbol !== "GBDO" && nativeCurrency.symbol !== "SEP")) {
+  if (!nativeCurrencyTokenAddress || (nativeCurrency.symbol !== "GBDo" && nativeCurrency.symbol !== "SEP")) {
     return 0;
   }
 

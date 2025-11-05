@@ -57,7 +57,7 @@ export type CheckoutState = {
 export const useCheckoutStore = create<CheckoutState>((set) => ({
   asset: null,
   quantity: 1,
-  tokenSymbol: "GBDO",
+  tokenSymbol: "GBDo",
   estimatedTotal: "0.00",
   estimatedEscrow: "0.00",
   buyer: "",
@@ -91,7 +91,7 @@ export const useCheckoutStore = create<CheckoutState>((set) => ({
     set({
       asset: null,
       quantity: 1,
-      tokenSymbol: "GBDO",
+      tokenSymbol: "GBDo",
       estimatedTotal: "0.00",
       estimatedEscrow: "0.00",
       buyer: "",

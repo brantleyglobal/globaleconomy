@@ -6,7 +6,7 @@ import GlobalSwapabi from "~~/lib/contracts/abi/GlobalSwap.json";
 import GlobalSwapFactoryabi from "~~/lib/contracts/abi/GlobalSwapFactory.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import { erc20Abi } from "viem";
-import { supportedTokens, Token } from "~~/components/constants/tokens";
+import { supportedTokens, dividendTokens, Token } from "~~/components/constants/tokens";
 import { Address as AddressType } from "viem";
 import { getExchangeRates } from "~~/lib/exchangeRates";
 import { useWalletClient } from "wagmi";
@@ -110,10 +110,12 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
     deployments.TGMX,
     deployments.TGUSA,
     deployments.Globe,
+    ...dividendTokens.map(t => t.address as Address),
   ]);
 
   const polyAddresses = new Set<Address>([
     "0x5C067C80C00eCd2345b05E83A3e758eF799C40B5",
+    "0x6AE7Dfc73E0dDE2aa99ac063DcF7e8A63265108c",
   ]);
 
   const isOnMyChain = myChainSupportedTokenAddresses.has(selectedToken.address as Address);

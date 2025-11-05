@@ -12,13 +12,13 @@ import { GLOBALCHAIN } from "~~/utils/globalEco/customChains";
 import deployments from "~~/lib/contracts/deployments.json";
 import { toast } from "react-hot-toast";
 import { initiatePurchase } from "~~/components/purchase/usePurchaseHandler";
-import { PaymentMethodStep } from "~~/components/steps/paymentMethod";
-import { SystemConfigurationStep } from "~~/components/steps/systemConfiguration";
-import { OutputCustomizationStep } from "~~/components/steps/outputCustomization";
-import { CheckoutReviewStep } from "~~/components/steps/checkoutReview";
-import { PurchaseSummaryStep } from "~~/components/steps/purchaseSummary";
+import { PaymentMethodStep } from "~~/components/purchase//steps/paymentMethod";
+import { SystemConfigurationStep } from "~~/components/purchase/steps/systemConfiguration";
+import { OutputCustomizationStep } from "~~/components/purchase/steps/outputCustomization";
+import { CheckoutReviewStep } from "~~/components/purchase/steps/checkoutReview";
+import { PurchaseSummaryStep } from "~~/components/purchase/steps/purchaseSummary";
 import { handleStripeReturn } from "~~/components/purchase/usePurchaseHandler";
-import { ShippingInfoStep } from "../steps/shippingInfo";
+import { ShippingInfoStep } from "~~/components/purchase/steps/shippingInfo";
 
 export function getContractAddress(contractName: keyof typeof deployments): string {
   return deployments[contractName] ?? "";

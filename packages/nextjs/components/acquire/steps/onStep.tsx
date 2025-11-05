@@ -3,6 +3,7 @@ import { Token } from "~~/components/constants/tokens";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { WalletIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { getExchangeRates } from "~~/lib/exchangeRates";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
 export type Props = {
   supportedTokens: Token[];
@@ -16,12 +17,18 @@ export type Props = {
   setUserLastName: (val: string) => void;
   userEmail: string;
   setUserEmail: (val: string) => void;
-  connectedWallet: string | undefined
+  connectedWallet: string | undefined;
+  onHelpToggle: () => void;
   onNext: () => void;
   onConfirm: () => void;
   isProcessing: boolean;
   disabled: boolean;
 };
+
+enum ModalStep {
+  OnStep = 0,
+  DoneStep = 1,
+}
 
 export const OnStep: React.FC<Props> = ({
   supportedTokens,
@@ -30,11 +37,13 @@ export const OnStep: React.FC<Props> = ({
   depositAmount,
   setDepositAmount,
   connectedWallet,
+  onHelpToggle,
   onNext,
   onConfirm,
   isProcessing,
   disabled,
 }) => {
+
 
   const [userFirstName, setUserFirstName] = useState("");
   const [userLastName, setUserLastName] = useState("");
@@ -42,7 +51,6 @@ export const OnStep: React.FC<Props> = ({
   const [emailError, setEmailError] = useState("");
   const [showWalletNotice, setShowWalletNotice] = useState(false);
 
-  const [conversionRate, setConversionRate] = useState(1.05); // Example: 1 token = 1.05 USD
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
   const convertedAmount = exchangeRate && depositAmount
@@ -98,8 +106,16 @@ export const OnStep: React.FC<Props> = ({
   return (
     <div className="flex flex-col h-full space-y-4">
     {/* Header - separate from background */}
-    <div className="px-0">
-        <h2 className="text-xl font-light text-primary">GLOBAL DOLLAR PURCHASE</h2>
+    <div className="flex justify-between items-center mb-4">
+      <h2 className="text-xl font-light text-primary">GLOBAL DOLLAR PURCHASE</h2>
+      <button
+        onClick={onHelpToggle}
+        aria-label="Toggle help"
+        className="text-primary hover:text-secondary flex items-center gap-1"
+      >
+        <HelpOutlineIcon />
+        
+      </button>
     </div>
     <div className="flex flex-col justify-between h-full rounded-xl">     
       <div className="space-y-4">
@@ -155,12 +171,14 @@ export const OnStep: React.FC<Props> = ({
         <div className="space-y-4">
           <input
             type="name"
+            value={userFirstName}
             placeholder="First Name"
             className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5"
             onChange={e => setUserFirstName(e.target.value)}
           />
           <input
             type="name"
+            value={userLastName}
             placeholder="Last Name"
             className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5"
             onChange={e => setUserLastName(e.target.value)}
