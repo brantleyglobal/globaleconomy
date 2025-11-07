@@ -69,6 +69,7 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
   const polyAddresses = new Set<Address>([
     "0x5C067C80C00eCd2345b05E83A3e758eF799C40B5",
     "0x6AE7Dfc73E0dDE2aa99ac063DcF7e8A63265108c",
+    "0xb755506531786c8ac63b756bab1ac387bacb0c04",
   ]);
 
   const isOnMyChain = myChainSupportedTokenAddresses.has(selectedToken.address as Address);

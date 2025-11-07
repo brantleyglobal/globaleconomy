@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { ReactNode } from "react";
 import { useCheckoutStore } from "~~/components/purchase/useCheckoutStore";
 import { supportedTokens } from "~~/components/constants/tokens";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
@@ -26,6 +26,17 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
   const isDisabled = paymentMethod !== "cash" && !isConnected;
   const [showWalletNotice, setShowWalletNotice] = useState(false);
   const [selectedTokenSymbol, setSelectedTokenSymbol] = useState<string>("");
+  const [showStablecoinInfo, setShowStablecoinInfo] = useState(false);
+  const getNetwork = (symbol: string, address: string): string => {
+    if (symbol === "BTC") return "Bitcoin";
+    if (address.startsWith("0x")) {
+      // Polygon tokens often share the same address format as Ethereum
+      // If you want to manually tag Polygon tokens, you can add a symbol-based override here
+      const polygonSymbols = ["ZARP", "BRL1", "JPYC"];
+      return polygonSymbols.includes(symbol) ? "Polygon" : "Ethereum";
+    }
+    return "Unknown";
+  };
 
   return (
     <>
@@ -61,7 +72,16 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
               }`}
             >
               <div className="w-full">
-                <h4 className="text-md font-light mt-2 text-white">STABLECOIN & NON-STABLECOIN</h4>
+                <div className="w-full flex justify-between items-center mt-2">
+                <h4 className="text-md font-light mt-2 text-white">STABLE & NON-STABLECOIN</h4>
+                <button
+                  type="button"
+                  onClick={() => setShowStablecoinInfo(true)}
+                  className="bg-white/10 animate-pulse backdrop-blur-md px-6 py-2 rounded-full text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
+                >
+                  Supported Stablecoin
+                </button>
+                </div>
                 <p className="text-xs text-justify text-white mt-">
                   Includes routing fee of 0.25%. Non-Stablecoin purchases are not based live conversion rates in an effort to protect products on this platform from volatility. Users are encouraged to convert to Stablecoin for investment and energy related product purchases on this platform.
                 </p>
@@ -77,7 +97,7 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
                   }}
                 >
                   <option value="" disabled>
-                    Select Token
+                    Select Payment Method
                   </option>
                   {supportedTokens
                     .filter((t) => !["GBDx", "WETH", "WBTC", "WBNB", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(t.symbol))
@@ -165,7 +185,80 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
             </button>
           </div>
         </div>
-    </div>
+      </div>
+      <SlidePanel
+        isOpen={showStablecoinInfo}
+        onClose={() => setShowStablecoinInfo(false)}
+        title="SUPPORTED STABLECOIN"
+      >
+        <div className="overflow-hidden max-h-[40vh] rounded-t-xl">
+          <div className="overflow-y-auto max-h-[calc(40vh-20px)] px-6 py-4 space-y-4 text-sm text-gray-300">
+            {supportedTokens
+              .filter(({ symbol }) => !["GBDo", "BTC", "ETH", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(symbol))
+              .map(({ name, symbol, address }) => (
+                <div key={symbol} className="bg-white/5 backdrop-blur-md p-4 rounded-md shadow-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-blue-300">{name}</span>
+                    <span className="text-xs text-gray-400">{symbol}</span>
+                  </div>
+                  <div className="mt-1 text-xs break-all">
+                    <strong>Address:</strong> {address}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    <strong>Network:</strong> {getNetwork(symbol, address)}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      </SlidePanel>
     </>
   );
 };
+
+function SlidePanel({
+  isOpen,
+  onClose,
+  title,
+  children,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`fixed bottom-0 left-0 w-full z-50 bg-black/90 text-white px-6 py-8 transition-transform duration-500 ${
+        isOpen ? "translate-y-0" : "translate-y-full"
+      }`}
+    >
+      <div className="max-w-3xl mx-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-light">{title}</h2>
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 bg-white/10 backdrop-blur-md p-2 rounded-full hover:bg-white/20 transition duration-300"
+            aria-label="Close panel"
+          >
+            <svg
+              className="w-3 h-3 text-white"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
+        {/* Render children instead of description */}
+        <div>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+
