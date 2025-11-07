@@ -151,7 +151,7 @@ export const OnStep: React.FC<Props> = ({
           <button
               type="button"
               onClick={() => setShowStablecoinInfo(true)}
-              className="bg-white/10 animate-pulse backdrop-blur-md px-6 py-2 rounded-full text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
+              className="bg-white/10 animate-pulse backdrop-blur-md px-6 py-2 rounded-md w-full text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
           >
               Supported Stablecoin
           </button>

@@ -74,17 +74,17 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
               <div className="w-full">
                 <div className="w-full flex justify-between items-center mt-2">
                 <h4 className="text-md font-light mt-2 text-white">STABLE & NON-STABLECOIN</h4>
-                <button
-                  type="button"
-                  onClick={() => setShowStablecoinInfo(true)}
-                  className="bg-white/10 animate-pulse backdrop-blur-md px-6 py-2 rounded-full text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
-                >
-                  Supported Stablecoin
-                </button>
                 </div>
                 <p className="text-xs text-justify text-white mt-">
                   Includes routing fee of 0.25%. Non-Stablecoin purchases are not based live conversion rates in an effort to protect products on this platform from volatility. Users are encouraged to convert to Stablecoin for investment and energy related product purchases on this platform.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setShowStablecoinInfo(true)}
+                  className="bg-white/10 animate-pulse backdrop-blur-md px-6 py-2 mb-2 rounded-md w-full text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
+                >
+                  Supported Stablecoin
+                </button>
                 {/* Token Selector */}
                 <select
                   disabled={paymentMethod !== "stable"}
