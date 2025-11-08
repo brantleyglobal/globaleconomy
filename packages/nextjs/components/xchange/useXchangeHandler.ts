@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ethers, Contract, parseUnits, formatUnits, Interface, BrowserProvider, isAddress } from "ethers";
+import { ethers, Contract, parseUnits, formatUnits, Interface, BrowserProvider, isAddress, TransactionResponse, TransactionReceipt } from "ethers";
 import GlobalSwapabi from "~~/lib/contracts/abi/GlobalSwap.json";
 import GlobalSwapFactoryabi from "~~/lib/contracts/abi/GlobalSwapFactory.json";
 import deployments from "~~/lib/contracts/deployments.json";
@@ -322,10 +322,13 @@ export function useXchangeHandler(config: TransferHandlerProps) {
     console.log("SafeCheck...");
 
     let txhash = "";
-    let receipt;
+    let receipt: TransactionReceipt | null = null;
     let payoutFormatted = ""; 
     let swapAddress: string | undefined;
     let tokenTx2;
+    let tokenTx: TransactionResponse | undefined;
+    let chainStatus = true;
+    let amountToSend;
     
     if (!selectedToken.address) {
       throw new Error("Token address is undefined");
@@ -364,7 +367,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
       selectedTokenChainId = 137;
     }else{
       selectedTokenChainId = 1;
-    }
+    }        
 
     try {
       console.log("Executing...");
@@ -453,36 +456,42 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           callAddress2 = selectedToken.address;
         }
 
-        const tokenTx = await xchangeFactory.createSwap(
-          callAddressS,
-          recipient,
-          recipient2,
-          callAddress,
-          parsedValue,
-          callAddress2,
-          parsedValue2,
-          { gasLimit: 500_000 }
-        );
-        txhash = tokenTx.hash;
-        receipt = await tokenTx.wait();
-        console.log("AssetXchange creation confirmed");
+        try {
+          // Step 3: Send transaction directly to contract
+          const tokenTx = await xchangeFactory.createSwap(
+            callAddressS,
+            recipient,
+            recipient2,
+            callAddress,
+            parsedValue,
+            callAddress2,
+            parsedValue2,
+            { gasLimit: 500_000 }
+          );
+          txhash = tokenTx.hash;
+          receipt = await tokenTx.wait();
+          console.log("AssetXchange creation confirmed");
 
-        if (!receipt) throw new Error("Transaction receipt is null");
-        
-        let feeAmount;
-        // Parse logs to extract swapAddress
-        for (const log of receipt.logs) {
-          try {
-            const mutableTopics = [...log.topics];
-            const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
-            if (parsed?.name === "SwapCreated") {
-              swapAddress = parsed.args.swapAddress ?? parsed.args[0];
-              feeAmount = parsed.args.fee ?? parsed.args[0];
-              break;
+          if (!receipt) throw new Error("Transaction receipt is null");
+          
+          let feeAmount;
+          // Parse logs to extract swapAddress
+          for (const log of receipt.logs) {
+            try {
+              const mutableTopics = [...log.topics];
+              const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
+              if (parsed?.name === "SwapCreated") {
+                swapAddress = parsed.args.swapAddress ?? parsed.args[0];
+                feeAmount = parsed.args.fee ?? parsed.args[0];
+                break;
+              }
+            } catch {
+              // skip non-matching logs
             }
-          } catch {
-            // skip non-matching logs
           }
+    
+        } catch (err) {
+          console.error("Swap Creation failed:", err);
         }
 
         if (!swapAddress) throw new Error("SwapCreated event not found, missing swap address");
@@ -514,25 +523,32 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           symbol: selectedToken.symbol,
         });
           
-        tokenTx2 = await xchange.deposit({ gasLimit: 100_000 });
-        txhash = tokenTx2.hash;
-        receipt = await tokenTx2.wait();
-        console.log("AssetXchange deposit confirmed");
+        try {
+          // Step 3: Send transaction directly to contract
+          tokenTx2 = await xchange.deposit({ gasLimit: 100_000 });
+          txhash = tokenTx2.hash;
+          receipt = await tokenTx2.wait();
+          console.log("AssetXchange deposit confirmed");
 
-        if (!receipt) throw new Error("Transaction receipt is null");
+          if (!receipt) throw new Error("Transaction receipt is null");
 
-        let amountToSend;
-        for (const log of receipt.logs) {
-          try {
-            const mutableTopics = [...log.topics];
-            const parsed = iface2.parseLog({ topics: mutableTopics, data: log.data });
-            if (parsed?.name === "SwapJoined") {
-              amountToSend = parsed.args.amount ?? parsed.args[0];
-              break;
+          let amountToSend;
+          for (const log of receipt.logs) {
+            try {
+              const mutableTopics = [...log.topics];
+              const parsed = iface2.parseLog({ topics: mutableTopics, data: log.data });
+              if (parsed?.name === "SwapJoined") {
+                amountToSend = parsed.args.amount ?? parsed.args[0];
+                break;
+              }
+            } catch {
+              // Ignore error for non-matching logs
             }
-          } catch {
-            // Ignore error for non-matching logs
           }
+    
+        } catch (err) {
+          console.error("My chain call failed:", err);
+          chainStatus = false;
         }
 
 /*************************************************************************************************************/
@@ -578,37 +594,45 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
         // Deposit existing swap
         const xchange = new Contract(xchangeId, GlobalSwapabi.abi, signer);
-        const tokenTx = await xchange.deposit({
-          gasLimit: 100_000,
-        });
-        txhash = tokenTx.hash;
-        receipt = await tokenTx.wait();
-        console.log("AssetXchange deposit confirmed");
-
-        if (!receipt) throw new Error("Transaction receipt is null");
-
         let amountToSendA;
         let amountToSendB;
         let partyA;
         let partyB;
         let tokenA;
         let tokenB;
-        for (const log of receipt.logs) {
-          try {
-            const mutableTopics = [...log.topics];
-            const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
-            if (parsed?.name === "SwapCompleted") {
-              amountToSendA = parsed.args.amountA ?? parsed.args[0];
-              amountToSendB = parsed.args.amountB ?? parsed.args[0];
-              partyA = parsed.args.partyA ?? parsed.args[0];
-              partyB = parsed.args.partyB ?? parsed.args[0];
-              tokenA = parsed.args.tokenA ?? parsed.args[0];
-              tokenB = parsed.args.tokenB ?? parsed.args[0];
-              break;
+
+        try {
+          // Step 3: Send transaction directly to contract
+          const tokenTx = await xchange.deposit({
+            gasLimit: 100_000,
+          });
+          txhash = tokenTx.hash;
+          receipt = await tokenTx.wait();
+          console.log("AssetXchange deposit confirmed");
+
+          if (!receipt) throw new Error("Transaction receipt is null");
+
+          for (const log of receipt.logs) {
+            try {
+              const mutableTopics = [...log.topics];
+              const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
+              if (parsed?.name === "SwapCompleted") {
+                amountToSendA = parsed.args.amountA ?? parsed.args[0];
+                amountToSendB = parsed.args.amountB ?? parsed.args[0];
+                partyA = parsed.args.partyA ?? parsed.args[0];
+                partyB = parsed.args.partyB ?? parsed.args[0];
+                tokenA = parsed.args.tokenA ?? parsed.args[0];
+                tokenB = parsed.args.tokenB ?? parsed.args[0];
+                break;
+              }
+            } catch {
+              // Ignore error for non-matching logs
             }
-          } catch {
-            // Ignore error for non-matching logs
           }
+    
+        } catch (err) {
+          console.error("My chain call failed:", err);
+          chainStatus = false;
         }
 
         let signerForTransfer;
@@ -675,27 +699,34 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
         // Deposit existing swap
         const xchange = new Contract(xchangeId, GlobalSwapabi.abi, signer);
-        const tokenTx = await xchange.refund({
-          gasLimit: 40_000,
-        });
-        txhash = tokenTx.hash;
-        receipt = await tokenTx.wait();
-        console.log("AssetXchange Refund confirmed");
 
-        if (!receipt) throw new Error("Transaction receipt is null");
+        try {
+          // Step 3: Send transaction directly to contract
+          const tokenTx = await xchange.refund({
+            gasLimit: 40_000,
+          });
+          txhash = tokenTx.hash;
+          receipt = await tokenTx.wait();
+          console.log("AssetXchange Refund confirmed");
 
-        let amountToSend;
-        for (const log of receipt.logs) {
-          try {
-            const mutableTopics = [...log.topics];
-            const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
-            if (parsed?.name === "Refund") {
-              amountToSend = parsed.args.amount ?? parsed.args[0];
-              break;
+          if (!receipt) throw new Error("Transaction receipt is null");
+
+          for (const log of receipt.logs) {
+            try {
+              const mutableTopics = [...log.topics];
+              const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
+              if (parsed?.name === "Refund") {
+                amountToSend = parsed.args.amount ?? parsed.args[0];
+                break;
+              }
+            } catch {
+              // Ignore error for non-matching logs
             }
-          } catch {
-            // Ignore error for non-matching logs
           }
+    
+        } catch (err) {
+          console.error("My chain call failed:", err);
+          chainStatus = false;
         }
         
         let signerForTransfer;
@@ -789,38 +820,42 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           callAddress2 = selectedToken.address;
         }
 
-        const tokenTx = await xchangeFactory.createSwap(
-          callAddressS,
-          recipient,
-          recipient2,
-          callAddress,
-          parsedValue,
-          callAddress2,
-          parsedValue2,
-          { gasLimit: 500_000 }
-        );
-        txhash = tokenTx.hash;
-        receipt = await tokenTx.wait();
-        console.log("AssetXchange creation confirmed");
+        try {
+          // Step 3: Send transaction directly to contract
+          const tokenTx = await xchangeFactory.createSwap(
+            callAddressS,
+            recipient,
+            recipient2,
+            callAddress,
+            parsedValue,
+            callAddress2,
+            parsedValue2,
+            { gasLimit: 500_000 }
+          );
+          txhash = tokenTx.hash;
+          receipt = await tokenTx.wait();
+          console.log("AssetXchange creation confirmed");
 
-        if (!receipt) throw new Error("Transaction receipt is null");
+          if (!receipt) throw new Error("Transaction receipt is null");
 
-        // Parse logs
-        let amountToSend;
-        for (const log of receipt.logs) {
-          try {
-            const mutableTopics = [...log.topics];
-            const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
-            if (parsed?.name === "SwapCreated") {
-              swapAddress = parsed.args.swapAddress ?? parsed.args[0];
-              amountToSend = parsed.args.fee ?? parsed.args[0];
-              break;
+          // Parse logs
+          let amountToSend;
+          for (const log of receipt.logs) {
+            try {
+              const mutableTopics = [...log.topics];
+              const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
+              if (parsed?.name === "SwapCreated") {
+                swapAddress = parsed.args.swapAddress ?? parsed.args[0];
+                amountToSend = parsed.args.fee ?? parsed.args[0];
+                break;
+              }
+            } catch {
+              // Ignore error for non-matching logs
             }
-          } catch {
-            // Ignore error for non-matching logs
           }
+        } catch (err) {
+          console.error("Swap Creation failed:", err);
         }
-        
       }
 
       let paymentmethod = "Unknown";

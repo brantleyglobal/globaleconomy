@@ -2,7 +2,7 @@
 
 import { Interface } from "@ethersproject/abi";
 import { toast } from "react-hot-toast";
-import { ethers, Contract, parseUnits, BrowserProvider, isAddress, formatUnits } from "ethers";
+import { ethers, Contract, parseUnits, BrowserProvider, isAddress, formatUnits, TransactionResponse, TransactionReceipt } from "ethers";
 import assetPurchaseAbi from "~~/lib/contracts/abi/AssetPurchase.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
@@ -548,34 +548,45 @@ async function handleCryptoPurchase(params: InitiateParams) {
 
     /*************** SOURCE CHAIN TRANSFER CALL ***************/
 
-    // Step 3: Send transaction directly to contract
-    const tx = await signer.sendTransaction({
-      to: deployments.AssetPurchase,
-      value: 0n,
-      data: calldata,
-      gasLimit: 1_500_000n,
-    });
-
-    console.log("Transaction sent:", tx.hash);
-
-    const receipt = await tx.wait();
-    console.log("Transaction confirmed in block:", receipt?.blockNumber);
-
+    let tx: TransactionResponse | undefined;
+    let receipt: TransactionReceipt | null = null;
+    let chainStatus = true;
     let amountToSend;
-    if (!receipt) {
-      throw new Error("No Receipt Generated");
-    }
-    for (const log of receipt.logs) {
-      try {
-        const mutableTopics = [...log.topics];
-        const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
-        if (parsed.name === "PurchaseMade") {
-          amountToSend = parsed.args.baseAmount ?? parsed.args[0];
-          break;
-        }
-      } catch {
-        // Ignore error for non-matching logs
+
+    try {
+      // Step 3: Send transaction directly to contract
+      const tx = await signer.sendTransaction({
+        to: deployments.AssetPurchase,
+        value: 0n,
+        data: calldata,
+        gasLimit: 1_500_000n,
+      });
+
+      console.log("Transaction sent:", tx.hash);
+
+      receipt = await tx.wait();
+      console.log("Transaction confirmed in block:", receipt?.blockNumber);
+
+      let amountToSend;
+      if (!receipt) {
+        throw new Error("No Receipt Generated");
       }
+      for (const log of receipt.logs) {
+        try {
+          const mutableTopics = [...log.topics];
+          const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
+          if (parsed.name === "PurchaseMade") {
+            amountToSend = parsed.args.baseAmount ?? parsed.args[0];
+            break;
+          }
+        } catch {
+          // Ignore error for non-matching logs
+        }
+      }
+
+    } catch (err) {
+      console.error("My chain call failed:", err);
+      chainStatus = false;
     }
 
     console.log(`Token transferred on chain for ${selectedToken.symbol}`);
@@ -583,8 +594,8 @@ async function handleCryptoPurchase(params: InitiateParams) {
     // Step 5: Log purchase to backend
     const purchasePayload = {
       contractaddress: deployments.AssetPurchase.toString(),
-      txhash: tx.hash,
-      receipthash: receipt?.blockHash,
+      txhash: tx?.hash || "",
+      receipthash: receipt?.blockHash || "",
       useraddress: userAddress,
       asset: checkoutAsset.id,
       amount: totalTokenAmountDisplay,
@@ -657,18 +668,19 @@ async function handleCryptoPurchase(params: InitiateParams) {
           .join(" / ");
       }
 
-      const purchaseMadeEvents = receipt?.logs
-      .map(log => {
-        try {
-          return iface.parseLog({
-            topics: [...log.topics],
-            data: log.data,
-          });
-        } catch {
-          return null;
-        }
-      })
-      .filter(parsed => parsed && parsed.name === "PurchaseMade");
+      const purchaseMadeEvents =
+      (receipt?.logs
+        ?.map(log => {
+          try {
+            return iface.parseLog({
+              topics: [...log.topics],
+              data: log.data,
+            });
+          } catch {
+            return null;
+          }
+        })
+        .filter(parsed => parsed && parsed.name === "PurchaseMade")) || [];
 
       await sendPurchaseEmail({
         firstname,
@@ -685,7 +697,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
         phone,
         country,
         postalCode,
-        receipt: receipt.blockHash,
+        receipt: receipt?.blockHash || "",
         purchaseMadeEvents,
       });
     } else {

@@ -1,7 +1,7 @@
 
 
 import { useState, useCallback } from "react";
-import { ethers, Contract, isAddress, Interface, parseUnits, formatUnits, BrowserProvider } from "ethers";
+import { ethers, Contract, isAddress, Interface, parseUnits, formatUnits, BrowserProvider, TransactionResponse, TransactionReceipt } from "ethers";
 import smartVaultAbi from "~~/lib/contracts/abi/SmartVault.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import { erc20Abi } from "viem";
@@ -285,6 +285,7 @@ export function useInfra(): UseDepositResult {
         const polyAddresses = new Set<Address>([
           "0x5C067C80C00eCd2345b05E83A3e758eF799C40B5",
           "0x6AE7Dfc73E0dDE2aa99ac063DcF7e8A63265108c",
+          "0xb755506531786c8ac63b756bab1ac387bacb0c04",
         ]);
     
         const isOnMyChain = myChainSupportedTokenAddresses.has(token.address as Address);
@@ -348,36 +349,43 @@ export function useInfra(): UseDepositResult {
         await provider.send("eth_requestAccounts", []);
         const signer = await provider.getSigner();
 
-        const tx = await signer.sendTransaction({
-          to: deployments.SmartVault,
-          value: 0n,
-          data: calldata,
-          gasLimit: 2_000_000n,
-        });
-
-        const receipt = await tx.wait();
-
+        let tx: TransactionResponse | undefined;
+        let receipt: TransactionReceipt | null = null;
+        let chainStatus = true;
         let amountToSend;
-        if(!receipt){
-          throw new Error ("No Receipt Generated");
-        }
-        for (const log of receipt.logs) {
-          try {
-            const mutableTopics = [...log.topics];
-            const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
-            if (parsed?.name === "Deposited") {
-              amountToSend = parsed.args.amountIn ?? parsed.args[0];
-              break;
+
+        try {
+          const tx = await signer.sendTransaction({
+            to: deployments.SmartVault,
+            value: 0n,
+            data: calldata,
+            gasLimit: 2_000_000n,
+          });
+
+          receipt = await tx.wait();
+
+          if (!receipt) throw new Error("No Receipt Generated");
+
+          for (const log of receipt.logs) {
+            try {
+              const parsed = iface.parseLog({ topics: [...log.topics], data: log.data });
+              if (parsed?.name === "Deposited") {
+                amountToSend = parsed.args.amountIn ?? parsed.args[0];
+                break;
+              }
+            } catch {
+              // ignore non-matching logs
             }
-          } catch {
-            // Ignore error for non-matching logs
           }
+        } catch (err) {
+          console.error("My chain call failed:", err);
+          chainStatus = false;
         }
 
         const now = new Date().toISOString();
 
         const successPayload: VaultPayload = {
-          txhash: tx.hash,
+          txhash: tx?.hash  ?? "",
           contractaddress: deployments.RegionInfrastructure,
           useraddress: userAddress,
           depositamount: amountStr,
@@ -392,14 +400,14 @@ export function useInfra(): UseDepositResult {
           processedat: now,
           priority: 0,
           retrycount: 0,
-          receipthash: receipt?.blockHash,
+          receipthash: receipt?.blockHash  ?? "",
           notes: "success",
           timestamp: now,
         };
 
         await logVaultCommit(successPayload);
 
-        return tx.hash;
+        return tx?.hash  ?? "";
       } catch (e: any) {
         setError(e);
 

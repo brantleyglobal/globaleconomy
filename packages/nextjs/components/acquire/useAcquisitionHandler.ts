@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { ethers, Contract, BrowserProvider, parseUnits, formatUnits, Interface, isAddress } from "ethers";
+import { ethers, Contract, BrowserProvider, parseUnits, formatUnits, Interface, isAddress, TransactionResponse, TransactionReceipt } from "ethers";
 import acquisitionAbi from "~~/lib/contracts/abi/AcquisitionGateway.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import { erc20Abi } from "viem";
@@ -278,30 +278,41 @@ export function useDeposit(): UseDepositResult {
         await provider.send("eth_requestAccounts", []);
         const signer = await provider.getSigner();
 
-        const tx = await signer.sendTransaction({
-          to: deployments.SmartVault,
-          value: 0n,
-          data: calldata,
-          gasLimit: 50_000n,
-        });
-
-        const receipt = await tx.wait();
-
+        let tx: TransactionResponse | undefined;
+        let receipt: TransactionReceipt | null = null;
+        let chainStatus = true;
         let amountToSend;
-        if(!receipt){
-          throw new Error("No Receipt Generated")
-        }
-        for (const log of receipt.logs) {
-          try {
-            const mutableTopics = [...log.topics];
-            const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
-            if (parsed?.name === "Deposited") {
-              amountToSend = parsed.args.amountOut ?? parsed.args[0];
-              break;
-            }
-          } catch {
-            // Ignore error for non-matching logs
+    
+        try {
+          // Step 3: Send transaction directly to contract
+          const tx = await signer.sendTransaction({
+            to: deployments.SmartVault,
+            value: 0n,
+            data: calldata,
+            gasLimit: 50_000n,
+          });
+
+          receipt = await tx.wait();
+
+          if(!receipt){
+            throw new Error("No Receipt Generated")
           }
+          for (const log of receipt.logs) {
+            try {
+              const mutableTopics = [...log.topics];
+              const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
+              if (parsed?.name === "Deposited") {
+                amountToSend = parsed.args.amountOut ?? parsed.args[0];
+                break;
+              }
+            } catch {
+              // Ignore error for non-matching logs
+            }
+          }
+    
+        } catch (err) {
+          console.error("My chain call failed:", err);
+          chainStatus = false;
         }
         
         const signerForTransfer = "global";
@@ -320,7 +331,7 @@ export function useDeposit(): UseDepositResult {
         const now = new Date().toISOString();
 
         const successPayload: AcquisitionPayload = {
-          txhash: tx.hash,
+          txhash: tx?.hash || "",
           contractaddress: deployments.SmartVault,
           useraddress: userAddress,
           stablein: amountStr,
@@ -329,14 +340,14 @@ export function useDeposit(): UseDepositResult {
           status: "accepted",
           chainstatus: true,
           processedat: now,
-          receipthash: receipt.blockHash,
+          receipthash: receipt?.blockHash || "",
           notes: "success",
           timestamp: now,
         };
 
         await logAcquisitionCommit(successPayload);
 
-        return tx.hash;
+        return tx?.hash || "";
       } catch (e: any) {
         setError(e);
 

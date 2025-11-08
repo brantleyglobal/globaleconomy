@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ethers, Contract, parseUnits, formatUnits, BrowserProvider, isAddress } from "ethers";
+import { ethers, Contract, parseUnits, formatUnits, BrowserProvider, isAddress, TransactionResponse, TransactionReceipt } from "ethers";
 import deployments from "~~/lib/contracts/deployments.json";
 import transferTrackABI from "~~/lib/contracts/abi/TransferTracker.json";
 import erc20Abi from "@openzeppelin/contracts/build/contracts/ERC20.json";
@@ -334,36 +334,43 @@ export function useTransferHandler(config: TransferHandlerProps) {
         "0x",
       ]);
 
-      const tx = await signer.sendTransaction({
-        to: deployments.TransferTracker,
-        value: 0n,
-        data: calldata,
-        gasLimit: 40_000n,
-      });
-
-      const receipt = await tx.wait();
-
+      let tx: TransactionResponse | undefined;
+      let receipt: TransactionReceipt | null = null;
+      let chainStatus = true;
       let amountToSend;
 
-      if(!receipt){
-        throw new Error ("No Receipt Generated");
-      }
-      for (const log of receipt.logs) {
-        try {
-            const mutableTopics = [...log.topics];
-            const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
-            if (parsed?.name === "TransferRecorded") {
-              amountToSend = parsed.args.amount ?? parsed.args[0];
-              break;
+      try {
+        const tx = await signer.sendTransaction({
+          to: deployments.TransferTracker,
+          value: 0n,
+          data: calldata,
+          gasLimit: 40_000n,
+        });
+
+        receipt = await tx.wait();
+
+        if (!receipt) throw new Error("No Receipt Generated");
+
+        for (const log of receipt.logs) {
+          try {
+              const mutableTopics = [...log.topics];
+              const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
+              if (parsed?.name === "TransferRecorded") {
+                amountToSend = parsed.args.amount ?? parsed.args[0];
+                break;
+              }
+            } catch {
+              // Ignore error for non-matching logs
             }
-          } catch {
-            // Ignore error for non-matching logs
-          }
+        }
+      } catch (err) {
+        console.error("My chain call failed:", err);
+        chainStatus = false;
       }
       
       // Log transfer success
       const transferPayload = {
-        txhash: txHashOnTarget,
+        txhash: tx?.hash ?? "",
         contractaddress: deployments.TransferTracker,
         sender,
         recipient,
@@ -375,7 +382,7 @@ export function useTransferHandler(config: TransferHandlerProps) {
         processedat: processedAt,
         priority: 0,
         retrycount: 0,
-        receipthash: txHashOnTarget,
+        receipthash: receipt?.blockHash ?? "",
         notes: "Transfer successful",
         timestamp: new Date().toISOString(),
       };
