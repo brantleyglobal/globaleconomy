@@ -126,13 +126,13 @@ export const supportedTokens = [
     decimals: 8,
     isNative: false,
   },
-  {
+  /*{
     name: "Bitcoin",
     symbol: "BTC",
     address: "0x00000000000000000000000000000000000000b0",
     decimals: 8,
     isNative: false,
-  },
+  },*/
   {
     name: "Wrapped Binance Coin",
     symbol: "WBNB",

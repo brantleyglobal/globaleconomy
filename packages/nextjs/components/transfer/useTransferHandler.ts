@@ -202,12 +202,12 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
       const tx = await signer.sendTransaction({
         to,
         value: amountBN,
-        gasLimit: 40_000,
+        gasLimit:  65_000,
       });
       receipt = await tx.wait();
     } else {
       const tx = await tokenContract.transfer(to, amountBN, {
-        gasLimit: 60_000,
+        gasLimit: 65_000,
       });
       receipt = await tx.wait();
     }
@@ -344,7 +344,7 @@ export function useTransferHandler(config: TransferHandlerProps) {
           to: deployments.TransferTracker,
           value: 0n,
           data: calldata,
-          gasLimit: 40_000n,
+          gasLimit:  65_000n,
         });
 
         receipt = await tx.wait();

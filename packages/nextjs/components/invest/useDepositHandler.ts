@@ -207,7 +207,7 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
       receipt = await tx.wait();
     } else {
       const tx = await tokenContract.transfer(to, amountBN, {
-        gasLimit: 60_000,
+        gasLimit: 65_000,
       });
       receipt = await tx.wait();
     }

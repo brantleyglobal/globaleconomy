@@ -182,7 +182,7 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
     const humanReadable = formatUnits(amount, 18);
     const amountBN = parseUnits(humanReadable, selectedToken.decimals);
     
-    const tx = await tokenContract.transfer(to, amountBN, { gasLimit: 50_000 } );
+    const tx = await tokenContract.transfer(to, amountBN, { gasLimit:  65_000 } );
     receipt = await tx.wait();
     console.log("Status:", receipt.status ? "Success" : "Failed");
   }
@@ -289,7 +289,7 @@ export function useDeposit(): UseDepositResult {
             to: deployments.SmartVault,
             value: 0n,
             data: calldata,
-            gasLimit: 50_000n,
+            gasLimit:  65_000n,
           });
 
           receipt = await tx.wait();

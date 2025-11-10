@@ -252,7 +252,7 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
       receipt = await tx.wait();
     } else {
       const tx = await tokenContract.transfer(to, amountBN, {
-        gasLimit: 60_000,
+        gasLimit: 65_000,
       });
       receipt = await tx.wait();
     }
@@ -703,7 +703,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         try {
           // Step 3: Send transaction directly to contract
           const tokenTx = await xchange.refund({
-            gasLimit: 40_000,
+            gasLimit:  65_000,
           });
           txhash = tokenTx.hash;
           receipt = await tokenTx.wait();
