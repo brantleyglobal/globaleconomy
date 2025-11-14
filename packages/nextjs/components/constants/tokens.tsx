@@ -8,7 +8,7 @@ export interface Token {
   decimals: number;
   isNative?: boolean;
   displayName?: string;
-  chain: "global" | "ethereum" | "polygon" | "bitcoin"; // or use a broader enum if needed
+  chain?: string; // or use a broader enum if needed
 }
 
 

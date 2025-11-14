@@ -51,11 +51,15 @@ async function convertGbdoToSelectedTokenValue(
     tokenRate = 100000.0;
   } else if (selectedTokenSymbol === "WETH" || selectedTokenSymbol === "ETH") {
     tokenRate = 1600.0;
+  } else if (selectedTokenSymbol === "GBDo") {
+    tokenRate = 1.0;
   }
 
   // Otherwise fetch dynamic rate
-  if (tokenRate === null) {
-    const { rates, gbdoRate } = await getExchangeRates();
+
+  const { rates, gbdoRate } = await getExchangeRates();
+
+  if (tokenRate === null || tokenRate === undefined) {
     const rateData = rates.find((r) => r.symbol === selectedTokenSymbol);
     if (!rateData || !rateData.rateAgainstGBDo) {
       console.error("Token rate against GBDo not found or invalid");
@@ -395,7 +399,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         console.log("value1", parsedValue);
         console.log("value2", parsedValue2);
 
-        const {
+        /*const {
           balanceBigInt: feeBalanceBigInt,
           balanceBigNumber: feeBalanceBigNumber,
           decimals: feeDecimals,
@@ -411,7 +415,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           if (feeBalanceBigNumber < amountInSelectedFeeToken!) {
             console.log(`Insufficient ${selectedToken.symbol} balance.`);
           }
-        }
+        }*/
 
         /*************** CROSS CHAIN TRANSFER CALL ***************/
 
