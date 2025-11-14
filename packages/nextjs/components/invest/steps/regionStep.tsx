@@ -108,7 +108,11 @@ export const RegionStep: React.FC<Props> = ({
               value={selectedTokenSymbol2}
               onChange={e => {
                 setSelectedTokenSymbol2(e.target.value);
-                setSelectedQuarter(4);
+                if (selectedTokenSymbol2 === "BGFRS" || selectedTokenSymbol2 === "BGFFS" ) {
+                  setSelectedQuarter(4);
+                } else {
+                  setSelectedQuarter(12);
+                }
               }}
             >
               <option value="" disabled>
