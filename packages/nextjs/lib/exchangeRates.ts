@@ -25,7 +25,7 @@ export interface StablecoinRate {
   healthy: boolean;
   network: string;
   timestamp: number;
-  rateAgainstGBDO?: number;
+  rateAgainstGBDo?: number;
 }
 
 
@@ -85,7 +85,7 @@ const rateGuards: Record<string, { min: number; max: number; fallback?: number }
   FDUSD:{ min: 0.98, max: 1.02, fallback: 1.00 },
   FRAX: { min: 0.97, max: 1.03, fallback: 1.00 },
   PYUSD: { min: 0.98, max: 1.02, fallback: 1.00 },
-  COPX: { min: 1.00, max: 1.00, fallback: 1.00 },
+  COPx: { min: 1.00, max: 1.00, fallback: 1.00 },
   JPYC: { min: 0.0065, max: 0.0073 }, // JPY ≈ ¥1 ≈ $0.0069
   EURC: { min: 1.08, max: 1.12 },     // EUR ≈ €1 ≈ $1.10
   EURe: { min: 1.08, max: 1.12 },
@@ -123,7 +123,7 @@ const rpcUrls: Record<string, string> = {
 const trustedNetworks = Object.keys(rpcUrls);
 
 const rateCache = new Map<string, StablecoinRate>();
-let cachedGBDORate: number | null = null;
+let cachedGBDoRate: number | null = null;
 let lastUpdated: number | null = null;
 
 const stablecoins: StablecoinMeta[] = supportedTokens.map(token => ({
@@ -239,7 +239,7 @@ async function fetchRate(coin: StablecoinMeta): Promise<StablecoinRate | null> {
   }
 
   if (coin.symbol === "COPx") {
-    const gbdoRate = cachedGBDORate ?? calculateGBDORate(Array.from(rateCache.values()));
+    const gbdoRate = cachedGBDoRate ?? calculateGBDoRate(Array.from(rateCache.values()));
     return {
       symbol: "COPx",
       currency: "COPx",
@@ -329,12 +329,12 @@ function applyGuard(symbol: string, rate: number): number {
 }
 
 
-function calculateGBDORate(rates: StablecoinRate[]): number {
+function calculateGBDoRate(rates: StablecoinRate[]): number {
   const healthyRates = rates.filter(r => r.healthy);
   if (healthyRates.length === 0) return 1;
 
   const avg = healthyRates.reduce((sum, r) => sum + r.rate, 0) / healthyRates.length;
-  //console.log(`[GBDO] Healthy tokens: ${healthyRates.map(r => r.symbol).join(", ")}`);
+  //console.log(`[GBDo] Healthy tokens: ${healthyRates.map(r => r.symbol).join(", ")}`);
   return avg * PRIME_FACTOR;
 }
 
@@ -345,7 +345,7 @@ function smoothRate(current: number, previous: number): number {
     : current;
 }
 
-function shouldUpdateGBDO(): boolean {
+function shouldUpdateGBDo(): boolean {
   return !lastUpdated || (Date.now() - lastUpdated > UPDATE_INTERVAL_MS);
 }
 
@@ -368,38 +368,38 @@ export async function getExchangeRates(): Promise<{
 
   //console.log("[Rates] After applying guards:", stablecoinRates.map(r => `${r.symbol}: ${r.rate}`));
 
-  // Step 2: GBDO rate update logic
-  if (shouldUpdateGBDO()) {
-    const rawRate = calculateGBDORate(stablecoinRates);
-    const smoothed = cachedGBDORate !== null
-      ? smoothRate(rawRate, cachedGBDORate)
+  // Step 2: GBDo rate update logic
+  if (shouldUpdateGBDo()) {
+    const rawRate = calculateGBDoRate(stablecoinRates);
+    const smoothed = cachedGBDoRate !== null
+      ? smoothRate(rawRate, cachedGBDoRate)
       : rawRate;
 
-    //console.log(`[GBDO] Raw rate: ${rawRate}, Smoothed: ${smoothed}`);
-    cachedGBDORate = smoothed;
+    //console.log(`[GBDo] Raw rate: ${rawRate}, Smoothed: ${smoothed}`);
+    cachedGBDoRate = smoothed;
     lastUpdated = Date.now();
   }
 
   // Step 3: Resolve fallback if needed
-  const gbdoRate = cachedGBDORate ?? calculateGBDORate(stablecoinRates);
-  //console.log(`[GBDO] Final gbdoRate: ${gbdoRate}`);
+  const gbdoRate = cachedGBDoRate ?? calculateGBDoRate(stablecoinRates);
+  //console.log(`[GBDo] Final gbdoRate: ${gbdoRate}`);
 
-  // Step 4: Apply PRIME_FACTOR and derive rateAgainstGBDO
-  const ratesWithGBDO = stablecoinRates.map(r => {
+  // Step 4: Apply PRIME_FACTOR and derive rateAgainstGBDo
+  const ratesWithGBDo = stablecoinRates.map(r => {
     const scaledRate = r.symbol === "COPx" ? gbdoRate : r.rate * gbdoRate;
     const relativeRate = r.symbol === "COPx" ? 1.0 : (gbdoRate > 0 ? scaledRate / gbdoRate : 0);
-    //console.log(`[RateCalc] ${r.symbol}: raw=${r.rate}, scaled=${scaledRate}, rateAgainstGBDO=${relativeRate}`);
+    //console.log(`[RateCalc] ${r.symbol}: raw=${r.rate}, scaled=${scaledRate}, rateAgainstGBDo=${relativeRate}`);
     return {
       ...r,
       rate: scaledRate,
-      rateAgainstGBDO: relativeRate
+      rateAgainstGBDo: relativeRate
     };
   });
 
-  //console.log(`[Final] GBDO = ${gbdoRate}, Updated: ${new Date(lastUpdated ?? Date.now()).toISOString()}`);
+  //console.log(`[Final] GBDo = ${gbdoRate}, Updated: ${new Date(lastUpdated ?? Date.now()).toISOString()}`);
 
   return {
-    rates: ratesWithGBDO,
+    rates: ratesWithGBDo,
     gbdoRate,
     lastUpdated: lastUpdated ?? Date.now()
   };

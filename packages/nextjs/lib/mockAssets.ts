@@ -5,7 +5,7 @@ export const featuredAssetsMockE20 = [
   {
     assetId: 120720,
     asset: {
-      basePriceInGBDO: BigInt(14000000000),
+      basePriceInGBDo: BigInt(14000000000),
       baseDays: 90,
       perUnitDelay: 5,
       variant: "eseries",
@@ -25,7 +25,7 @@ export const featuredAssetsMockE45 = [
   {
     assetId: 120745,
     asset: {
-      basePriceInGBDO: BigInt(15000000000),
+      basePriceInGBDo: BigInt(15000000000),
       baseDays: 90,
       perUnitDelay: 5,
       variant: "eseries",
@@ -44,7 +44,7 @@ export const featuredAssetsMockE70 = [
   {
     assetId: 120770,
     asset: {
-      basePriceInGBDO: BigInt(16000000000),
+      basePriceInGBDo: BigInt(16000000000),
       baseDays: 90,
       perUnitDelay: 5,
       variant: "eseries",
@@ -63,7 +63,7 @@ export const featuredAssetsMockX100 = [
   {
     assetId: 1207100,
     asset: {
-      basePriceInGBDO: BigInt(43000000000),
+      basePriceInGBDo: BigInt(43000000000),
       baseDays: 180,
       perUnitDelay: 5,
       variant: "xseries",
@@ -82,7 +82,7 @@ export const featuredAssetsMockX200 = [
   {
     assetId: 1207200,
     asset: {
-      basePriceInGBDO: BigInt(53000000000),
+      basePriceInGBDo: BigInt(53000000000),
       baseDays: 180,
       perUnitDelay: 5,
       variant: "xseries",
@@ -101,7 +101,7 @@ export const featuredAssetsMockX300 = [
   {
     assetId: 1207300,
     asset: {
-      basePriceInGBDO: BigInt(63000000000),
+      basePriceInGBDo: BigInt(63000000000),
       baseDays: 180,
       perUnitDelay: 5,
       variant: "xseries",
@@ -120,7 +120,7 @@ export const featuredAssetsMockX400 = [
   {
     assetId: 1207400,
     asset: {
-      basePriceInGBDO: BigInt(73000000000),
+      basePriceInGBDo: BigInt(73000000000),
       baseDays: 180,
       perUnitDelay: 5,
       variant: "xseries",
@@ -139,7 +139,7 @@ export const featuredAssetsMockX500 = [
   {
     assetId: 1207500,
     asset: {
-      basePriceInGBDO: BigInt(80000000000),
+      basePriceInGBDo: BigInt(80000000000),
       baseDays: 180,
       perUnitDelay: 5,
       variant: "xseries",
@@ -158,7 +158,7 @@ export const featuredAssetsMockX600 = [
   {
     assetId: 1207600,
     asset: {
-      basePriceInGBDO: BigInt(90000000000),
+      basePriceInGBDo: BigInt(90000000000),
       baseDays: 180,
       perUnitDelay: 5,
       variant: "xseries",

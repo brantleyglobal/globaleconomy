@@ -16,6 +16,7 @@ interface TokenType {
   symbol?: string;
   decimals?: number;
   isNative?: boolean;
+  chain?: string;
 }
 
 interface TransferHandlerProps {
@@ -51,7 +52,7 @@ function useSelectedTokenBalance(
   };
 }
 
-async function sendTransferOnTargetChain(recipient: string, tamount: bigint, selectedToken: { address?: string, decimals?: number, symbol?: string }, btcWallet?: BitcoinWallet) {
+async function sendTransferOnTargetChain(recipient: string, tamount: bigint, selectedToken: { address?: string, decimals?: number, symbol?: string, chain?: string }, btcWallet?: BitcoinWallet) {
   if (!selectedToken.address) throw new Error("Token address required");
 
   const myChainSupportedTokenAddresses = new Set<Address>([
@@ -78,19 +79,20 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
   const isOnEthChain = !isOnMyChain && !isOnPoly && !isBitcoin;
 
   let selectedTokenChainId: number;
-  let chain: "global" | "polygon" | "ethereum" | "bitcoin";
-  if (isBitcoin) {
-    selectedTokenChainId = 0; // optional placeholder
-    chain = "bitcoin";
-  } else if (isOnMyChain) {
-    selectedTokenChainId = 3503995874081207;
-    chain = "global";
-  } else if (isOnPoly) {
-    selectedTokenChainId = 137;
-    chain = "polygon";
-  } else {
-    selectedTokenChainId = 1;
-    chain = "ethereum";
+  let chain = selectedToken.chain; // fallback if missing
+
+  switch (chain) {
+    case "bitcoin":
+      selectedTokenChainId = 0;
+      break;
+    case "global":
+      selectedTokenChainId = 38391207;
+      break;
+    case "polygon":
+      selectedTokenChainId = 137;
+      break;
+    default:
+      selectedTokenChainId = 1;
   }
 
   console.log("checking3");
@@ -202,33 +204,36 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
       const tx = await signer.sendTransaction({
         to,
         value: amountBN,
-        gasLimit:  65_000,
+        gasLimit:  80_000,
       });
       receipt = await tx.wait();
     } else {
       const tx = await tokenContract.transfer(to, amountBN, {
-        gasLimit: 65_000,
+        gasLimit: 80_000,
       });
       receipt = await tx.wait();
     }
 
     console.log("Status:", receipt.status ? "Success" : "Failed");
   }
-  selectedTokenChainId = 3503995874081207;
 
   const resethexChainId = "0x" + selectedTokenChainId.toString(16);
-  const homeChainId = 3503995874081207;
+  const homeChainId = 38391207;
   const homeHexChainId = "0x" + homeChainId.toString(16);
-
 
   const resetChainId = await window.ethereum.request({ method: "eth_chainId" });
   if (resetChainId !== homeHexChainId) {
     try {
+      // Switch to the correct chain
       await window.ethereum.request({
         method: "wallet_switchEthereumChain",
         params: [{ chainId: resethexChainId }],
       });
       await waitForChainChanged(resethexChainId);
+
+      const provider = new BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+
     } catch (switchError: any) {
       if (switchError.code === 4902) {
         throw new Error("Requested chain is not available in MetaMask. Please add it manually.");
@@ -236,7 +241,7 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
         throw switchError;
       }
     }
-  }    
+  }
 
   return receipt.transactionHash;
 }
@@ -303,6 +308,7 @@ export function useTransferHandler(config: TransferHandlerProps) {
         address: selectedToken.address!,
         decimals: selectedToken.decimals,
         symbol: selectedToken.symbol,
+        chain: selectedToken.chain,
       }, 
       btcWallet);
 
@@ -312,6 +318,12 @@ export function useTransferHandler(config: TransferHandlerProps) {
       const provider = new BrowserProvider((window as any).ethereum);
       await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
+
+      const selectedTokenChainId = 38391207;
+
+      const resethexChainId = "0x" + selectedTokenChainId.toString(16);
+      const homeChainId = 38391207;
+      const homeHexChainId = "0x" + homeChainId.toString(16);
 
       const amount = parseUnits(value, selectedToken.decimals ?? 18);
       const contract = new Contract(deployments.TransferTracker, transferTrackABI.abi, signer);
@@ -340,11 +352,11 @@ export function useTransferHandler(config: TransferHandlerProps) {
       let amountToSend;
 
       try {
-        const tx = await signer.sendTransaction({
+        const tx = await signer!.sendTransaction({
           to: deployments.TransferTracker,
           value: 0n,
           data: calldata,
-          gasLimit:  65_000n,
+          gasLimit:  80_000n,
         });
 
         receipt = await tx.wait();

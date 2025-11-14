@@ -192,7 +192,7 @@ export default function InitiantStep({
                     {supportedTokens.length === 0 ? "-- No Tokens Available --" : "Service Payment Method"}
                     </option>
                     {supportedTokens
-                    .filter(t => t.symbol !== "GBDo" && t.symbol !== "GBDx" && t.symbol !== "GLB" && t.symbol !==  "BGFFS" && t.symbol !== "BGFRS" && t.symbol !== "TGMX" && t.symbol !== "TGUSA" && t.symbol !== "COPx")
+                    .filter(t => t.symbol !== "GBDx" && t.symbol !== "GLB" && t.symbol !==  "BGFFS" && t.symbol !== "BGFRS" && t.symbol !== "TGMX" && t.symbol !== "TGUSA" && t.symbol !== "COPx")
                     .map((token) => (
                         <option key={token.symbol} value={token.symbol}>
                         {token.symbol} • {token.name}
@@ -242,7 +242,7 @@ export default function InitiantStep({
                 <button
                     type="button"
                     onClick={() => setShowStablecoinInfo(true)}
-                    className="bg-white/10 animate-pulse backdrop-blur-md px-6 py-2 rounded-full text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
+                    className="bg-white/10 animate-pulse backdrop-blur-md px-6 py-2 rounded-md text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
                 >
                     Supported Stablecoin
                 </button>
@@ -263,7 +263,7 @@ export default function InitiantStep({
                 <div className="overflow-hidden max-h-[40vh] rounded-t-xl">
                     <div className="overflow-y-auto max-h-[calc(40vh-20px)] px-6 py-4 space-y-4 text-sm text-gray-300">
                     {supportedTokens
-                        .filter(({ symbol }) => !["GBDo", "BTC", "ETH", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(symbol))
+                        .filter(({ symbol }) => !["BTC", "ETH", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(symbol))
                         .map(({ name, symbol, address }) => (
                         <div key={symbol} className="bg-white/5 backdrop-blur-md p-4 rounded-md shadow-sm">
                             <div className="flex justify-between items-center">

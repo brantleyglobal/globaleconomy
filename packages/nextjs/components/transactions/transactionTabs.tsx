@@ -17,7 +17,8 @@ const tabs = ["PRODUCT PURCHASES", "GBDo PURCHASES", "XCHANGE CONTRACTS",  "XCHA
 type TabKey = "PRODUCT PURCHASES" | "GBDo PURCHASES" | "XCHANGE CONTRACTS" | "XCHANGE DEPOSITS" | "XCHANGE REFUNDS" | "TRANSFERS" | "VAULT DEPOSITS" | "DIVIDEND PAYOUTS";
 
 export const TransactionTabs = () => {
-  const { address: userAddress, isConnected } = useAccount();
+  const [userAddress, setUserAddress] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   const [activeTab, setActiveTab] = useState<TabKey>("PRODUCT PURCHASES");
   const [data, setData] = useState<Record<TabKey, Transaction[]>>({
@@ -38,6 +39,34 @@ export const TransactionTabs = () => {
       fetchData(activeTab);
     }
   }, [activeTab, userAddress, isConnected]);
+
+  useEffect(() => {
+    const getAddress = async () => {
+      if (typeof window !== "undefined" && window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: "eth_accounts" });
+          if (accounts.length > 0) {
+            setUserAddress(accounts[0]);
+            setIsConnected(true);
+          } else {
+            setUserAddress(null);
+            setIsConnected(false);
+          }
+
+          // Listen for account changes
+          window.ethereum.on?.("accountsChanged", (accounts: string[]) => {
+            const newAccount = accounts.length > 0 ? accounts[0] : null;
+            setUserAddress(newAccount);
+            setIsConnected(!!newAccount);
+          });
+        } catch (err) {
+          console.error("Failed to get wallet address:", err);
+        }
+      }
+    };
+
+    getAddress();
+  }, []);
 
   const fetchData = async (tab: TabKey) => {
     setLoading(true);

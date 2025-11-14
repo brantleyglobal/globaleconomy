@@ -95,7 +95,7 @@ export const TermStep: React.FC<Props> = ({
           >
             <option value="" disabled>Select Deposit Method</option>
             {supportedTokens
-              .filter(t => !["GBDo", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(t.symbol))
+              .filter(t => !["GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(t.symbol))
               .map(t => (
                 <option key={t.symbol} value={t.symbol}>
                   {t.symbol} • {t.name}

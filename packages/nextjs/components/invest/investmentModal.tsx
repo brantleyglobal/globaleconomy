@@ -113,13 +113,13 @@ export const InvestmentModal: React.FC<Props> = ({
   const [depositAmount, setDepositAmount] = useState("");
 
   // Derive full Token object from selected symbol
-  const selectedToken: Token | undefined = supportedTokens.find(
+  const selectedToken = supportedTokens.find(
     (token) => token.symbol === selectedTokenSymbol
-  );
+  ) as Token | undefined;
 
   const selectedToken2: Token | undefined = supportedTokens.find(
     (token2) => token2.symbol === selectedTokenSymbol2
-  );
+  ) as Token | undefined;
 
   const balance = useTokenBalance(connectedWallet, selectedToken!);
 
@@ -177,8 +177,6 @@ export const InvestmentModal: React.FC<Props> = ({
       let receiptx = "";
 
       if (
-        (selectedTokenSymbol === "BGFFS") ||
-        (selectedTokenSymbol === "BGFRS") ||
         (selectedTokenSymbol === "TGMX") ||
         (selectedTokenSymbol === "TGUSA") ||
         (selectedTokenSymbol === "GLB")
@@ -227,7 +225,7 @@ export const InvestmentModal: React.FC<Props> = ({
   };
 
   useEffect(() => {
-    if (step === 2) {
+    if (step === ModalStep.ConfirmStep) {
       try {
         const now = Date.now() / 1000;
         const currentQ = getQuarter(now);
@@ -367,7 +365,10 @@ export const InvestmentModal: React.FC<Props> = ({
             )}
             {step === ModalStep.TermStep && (
               <TermStep
-                supportedTokens={supportedTokens}
+                supportedTokens={supportedTokens.map(token => ({
+                  ...token,
+                  chain: token.chain as "global" | "ethereum" | "polygon" | "bitcoin",
+                }))}
                 selectedTokenSymbol={selectedTokenSymbol}
                 setSelectedTokenSymbol={setSelectedTokenSymbol}
                 selectedQuarter={selectedQuarter}
@@ -393,7 +394,10 @@ export const InvestmentModal: React.FC<Props> = ({
             )} 
             {step === ModalStep.RegionStep && (
               <RegionStep
-                supportedTokens={supportedTokens}
+                supportedTokens={supportedTokens.map(token => ({
+                  ...token,
+                  chain: token.chain as "global" | "ethereum" | "polygon" | "bitcoin",
+                }))}
                 selectedTokenSymbol={selectedTokenSymbol}
                 setSelectedTokenSymbol={setSelectedTokenSymbol}
                 selectedTokenSymbol2={selectedTokenSymbol2}
@@ -411,7 +415,7 @@ export const InvestmentModal: React.FC<Props> = ({
                 setUserEmail={setUserEmail}
                 onPrevious={() => setStep(ModalStep.AgreementStep)}
                 onNext={() => {
-                  if (!selectedTokenSymbol || selectedQuarter <= 0 || !depositAmount) {
+                  if (!selectedTokenSymbol || !selectedTokenSymbol2 || !depositAmount) {
                     toast.error("Please fill all the investment details.");
                     return;
                   }

@@ -46,7 +46,7 @@ export const supportedChains: Chain[] = [
     testnet: false,
   },
   {
-    id: 3503995874081207,
+    id: 38391207,
     name: "GLOBALCHAIN",
     nativeCurrency: {
       name: "GBDo",

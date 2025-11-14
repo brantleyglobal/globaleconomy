@@ -61,7 +61,7 @@ export const SystemConfigurationStep: React.FC<Props> = ({
               >
                 <div className="font-light">{variation.label}</div>
                 <div className="text-xs text-info-300">
-                  +${Number(variation.apriceInGBDO) / 1e6} {currency}
+                  +${Number(variation.apriceInGBDo) / 1e6} {currency}
                 </div>
                 {/*{isSelected && (
                   <div className="absolute right-0 top-0 h-full w-1 bg-info rounded-l-md animate-slideFade" />

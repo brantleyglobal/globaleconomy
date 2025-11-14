@@ -37,13 +37,14 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
   const [walletName, setWalletName] = useState<string>("");
   const [isMetaMask, setIsMetaMask] = useState(false);
   const [isBrave, setIsBrave] = useState(false);
-  const [isCoinbase, setIsCoinbase] = useState(false);
+  //const [isCoinbase, setIsCoinbase] = useState(false);
   const [isTrust, setIsTrust] = useState(false);
   const [selectedChain, setSelectedChain] = useState<"ethereum" | "bitcoin">("ethereum");
   const [btcWallet, setBtcWallet] = useState<BitcoinWallet | null>(null);
   const [btcAddress, setBtcAddress] = useState<string | null>(null);
   const [isMultiChainWallet, setIsMultiChainWallet] = useState(false);
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const isMobile = typeof window !== "undefined" && /Mobi|Android/i.test(navigator.userAgent);
   const toggleSubmenu = (menu: string) => {
     setOpenSubmenu(prev => (prev === menu ? null : menu));
   };
@@ -75,11 +76,11 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
       setWalletName("MetaMask");
       setIsMetaMask(true);
       setIsMultiChainWallet(false);
-    } else if (ethereum?.isCoinbaseWallet) {
+    } /*else if (ethereum?.isCoinbaseWallet) {
       setWalletName("Coinbase Wallet");
       setIsCoinbase(true);
       setIsMultiChainWallet(false);
-    } else if (ethereum?.isBraveWallet) {
+    }*/ else if (ethereum?.isBraveWallet) {
       setWalletName("Brave Wallet");
       setIsBrave(true);
       setIsMultiChainWallet(false);
@@ -212,6 +213,12 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
         {/* Dropdown Menu */}
         {menuOpen && (
           <div className="absolute top-12 left-0 bg-black/80 text-xs text-white rounded shadow-md z-50 w-56">
+            {/* Mobile-only notice */}
+            {isMobile && !account && (
+              <div className="bg-yellow-900 text-yellow-100 text-xs rounded px-4 py-2 mb-2">
+                Use a desktop browser for blockchain transactions and crypto address related functionality 
+              </div>
+            )}
             {/* Browser Wallets */}
             <button
               onClick={() => toggleSubmenu("browser")}
@@ -225,7 +232,7 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
               <div className="pl-4">
                 <a href="https://metamask.io/download.html" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 hover:bg-white/5">MetaMask</a>
                 <a href="https://brave.com/wallet/" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 hover:bg-white/5">Brave Wallet</a>
-                <a href="https://www.coinbase.com/wallet/articles/getting-started-extension" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 hover:bg-white/5">Coinbase Wallet</a>
+                {/*<a href="https://www.coinbase.com/wallet/articles/getting-started-extension" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 hover:bg-white/5">Coinbase Wallet</a>*/}
                 <a href="https://trustwallet.com/browser-extension" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 hover:bg-white/5">Trust Wallet</a>
                 <a href="https://www.xdefi.io/" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 hover:bg-white/5">XDEFI Wallet</a>
               </div>
@@ -261,7 +268,7 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
       </button>
 
       {/* Address Display or Connect Prompt */}
-      {(selectedChain === "ethereum" && account) || (selectedChain === "bitcoin" && btcAddress) ? (
+      {(selectedChain === "ethereum" && account) ? (
         <span className="text-xs text-white">
           {selectedChain === "ethereum"
             ? `${walletName}: ${account?.slice(0, 6)}...${account?.slice(-4)}`
@@ -288,11 +295,11 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
                   Connect with Brave Wallet
                 </button>
               )}
-              {isCoinbase && (
+              {/*{isCoinbase && (
                 <button onClick={connectWallet} className="w-full px-4 py-2 hover:bg-white/5">
                   Connect with Coinbase Wallet
                 </button>
-              )}
+              )}*/}
               {isTrust && (
                 <button onClick={connectWallet} className="w-full px-4 py-2 hover:bg-white/5">
                   Connect with Trust Wallet
@@ -314,7 +321,7 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
               >
                 Ethereum
               </button>
-              <button
+              {/*<button
                 onClick={() => {
                   setSelectedChain("bitcoin");
                   setMenuOpen(false);
@@ -324,7 +331,7 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
                 }`}
               >
                 Bitcoin
-              </button>
+              </button>*/}
             </div>
           )}
           {(account || btcAddress) && (

@@ -105,10 +105,10 @@ export const RegionStep: React.FC<Props> = ({
           <div>
             <select
               className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white/50 placeholder:text-white/50 hover:bg-secondary/5"
-              value={selectedTokenSymbol}
+              value={selectedTokenSymbol2}
               onChange={e => {
-                setSelectedTokenSymbol(e.target.value);
-                setSelectedQuarter(9);
+                setSelectedTokenSymbol2(e.target.value);
+                setSelectedQuarter(4);
               }}
             >
               <option value="" disabled>
@@ -133,7 +133,7 @@ export const RegionStep: React.FC<Props> = ({
                 Select Deposit Method
               </option>
               {supportedTokens
-                .filter(t => !["GLB", "GBDx", "GBDo", "COPx", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(t.symbol))
+                .filter(t => !["GLB", "GBDx", "COPx", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(t.symbol))
                 .map(t => (
                   <option key={t.symbol} value={t.symbol}>
                     {t.name}

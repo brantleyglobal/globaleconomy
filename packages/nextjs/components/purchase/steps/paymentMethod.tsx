@@ -100,7 +100,7 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
                     Select Payment Method
                   </option>
                   {supportedTokens
-                    .filter((t) => !["GBDx", "WETH", "WBTC", "WBNB", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(t.symbol))
+                    .filter((t) => !["GBDo", "GBDx", "WETH", "WBTC", "WBNB", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(t.symbol))
                     .map((t) => (
                       <option key={t.symbol} value={t.symbol}>
                         {t.symbol} • {t.name}

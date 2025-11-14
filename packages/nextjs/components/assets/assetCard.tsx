@@ -8,13 +8,13 @@ import { Modal } from "~~/components/common/modal";
 import { StablecoinRate } from "~~/lib/exchangeRates";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 
-type AssetVariation = { label: string; apriceInGBDO: bigint; };
+type AssetVariation = { label: string; apriceInGBDo: bigint; };
 
 type Props = {
   data: {
     asset: {
       assetId: number;
-      basePriceInGBDO: number;
+      basePriceInGBDo: number;
       baseDays: number;
       perUnitDelay: string;
       variant: "eseries" | "xseries";
@@ -56,30 +56,30 @@ const fiatToStablecoin: Record<string, string> = {
 const variationGroupsMap: Record<"eseries" | "xseries", Record<string, AssetVariation[]>> = {
   eseries: {
     epanel: [
-      { label: "120v Split Phase @60Hz", apriceInGBDO: BigInt(0) },
-      { label: "Customize", apriceInGBDO: BigInt(1_000_000_000) },
+      { label: "120v Split Phase @60Hz", apriceInGBDo: BigInt(0) },
+      { label: "Customize", apriceInGBDo: BigInt(1_000_000_000) },
     ],
     monitoring: [
-      { label: "No Monitoring", apriceInGBDO: BigInt(0) },
-      { label: "Monitoring", apriceInGBDO: BigInt(2_000_000_000) },
+      { label: "No Monitoring", apriceInGBDo: BigInt(0) },
+      { label: "Monitoring", apriceInGBDo: BigInt(2_000_000_000) },
     ],
     etie: [
-      { label: "Stand Alone", apriceInGBDO: BigInt(0) },
-      { label: "Grid Tie", apriceInGBDO: BigInt(1_000_000_000) },
+      { label: "Stand Alone", apriceInGBDo: BigInt(0) },
+      { label: "Grid Tie", apriceInGBDo: BigInt(1_000_000_000) },
     ],
   },
   xseries: {
     xpanel: [
-      { label: "360v 3 Phase @60Hz", apriceInGBDO: BigInt(0) },
-      { label: "Customize", apriceInGBDO: BigInt(5_000_000_000) },
+      { label: "360v 3 Phase @60Hz", apriceInGBDo: BigInt(0) },
+      { label: "Customize", apriceInGBDo: BigInt(5_000_000_000) },
     ],
     monitoring: [
-      { label: "No Monitoring", apriceInGBDO: BigInt(0) },
-      { label: "Monitoring", apriceInGBDO: BigInt(2_000_000_000) },
+      { label: "No Monitoring", apriceInGBDo: BigInt(0) },
+      { label: "Monitoring", apriceInGBDo: BigInt(2_000_000_000) },
     ],
     xtie: [
-      { label: "Stand Alone", apriceInGBDO: BigInt(0) },
-      { label: "Grid Tie", apriceInGBDO: BigInt(5_000_000_000) },
+      { label: "Stand Alone", apriceInGBDo: BigInt(0) },
+      { label: "Grid Tie", apriceInGBDo: BigInt(5_000_000_000) },
     ],
   },
 };
@@ -116,7 +116,7 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
   const [buyModalOpen, setBuyModalOpen] = useState(false);
   const [descriptionModalOpen, setDescriptionModalOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
-  const rawBasePriceGBDO = Number(itemAsset.basePriceInGBDO) / 1e6;
+  const rawBasePriceGBDo = Number(itemAsset.basePriceInGBDo) / 1e6;
   const [modalOpen, setModalOpen] = useState(false);
   const variantKey = itemAsset.variant;
   const galleryImages = galleryMap[variantKey]?.pool || [];
@@ -144,14 +144,14 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
     setSelectedVariations(initial);
   }, [itemAsset.variant]);
 
-  const basePriceGBDO = useMemo(() => {
-    const base = BigInt(itemAsset.basePriceInGBDO ?? 0);
+  const basePriceGBDo = useMemo(() => {
+    const base = BigInt(itemAsset.basePriceInGBDo ?? 0);
     const variationTotal = Object.values(selectedVariations).reduce(
-      (sum, v) => sum + BigInt(v.apriceInGBDO ?? 0),
+      (sum, v) => sum + BigInt(v.apriceInGBDo ?? 0),
       BigInt(0)
     );
     return Number(base + variationTotal) / 1e6;
-  }, [itemAsset.basePriceInGBDO, selectedVariations]);
+  }, [itemAsset.basePriceInGBDo, selectedVariations]);
 
 
   const [exchangeData, setExchangeData] = useState<{
@@ -165,10 +165,10 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
     if (!exchangeData || !selectedCurrency) return;
 
     const tokenData = exchangeData.rates.find(r => r.symbol === selectedCurrency);
-    const rateAgainstGBDO = tokenData?.rateAgainstGBDO ?? 1;
+    const rateAgainstGBDo = tokenData?.rateAgainstGBDo ?? 1;
 
-    setConvertedPrice(basePriceGBDO * rateAgainstGBDO);
-  }, [basePriceGBDO, selectedCurrency, exchangeData]);
+    setConvertedPrice(basePriceGBDo * rateAgainstGBDo);
+  }, [basePriceGBDo, selectedCurrency, exchangeData]);
 
   useEffect(() => {
     const tokenSymbol =
@@ -227,7 +227,7 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
           className="w-3 h-3 ml-3 opacity-80 mt-2"
         />
         <span className="text-lg font-light">
-          {rawBasePriceGBDO.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {rawBasePriceGBDo.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
       </p>
 
@@ -247,7 +247,7 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
               id: itemAsset.assetId,
               name: metadata.name ?? "Unnamed Asset",
               metadataCID: metadata.altImage ?? metadata.image ?? "",
-              basePriceInGBDO: BigInt(itemAsset.basePriceInGBDO ?? 0),
+              basePriceInGBDo: BigInt(itemAsset.basePriceInGBDo ?? 0),
               baseDays: itemAsset.baseDays,
               perUnitDelay: Number(itemAsset.perUnitDelay ?? "0"),
               variant: itemAsset.variant,

@@ -5,7 +5,7 @@
 import { GenericContractsDeclaration } from "~~/utils/globalEco/contract";
 
 const deployedContracts = {
-  3503995874081207: {
+  38391207: {
     TransferTracker: {
       address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
       abi: [

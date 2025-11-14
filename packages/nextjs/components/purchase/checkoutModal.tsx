@@ -33,7 +33,7 @@ export type StripeReturnContext = {
 // Represents a priced variation like panel type, monitoring, etc.
 export type AssetVariation = {
   label: string;
-  apriceInGBDO: bigint;
+  apriceInGBDo: bigint;
 };
 
 export type CheckoutModalProps = {
@@ -141,7 +141,7 @@ const CheckoutModalBase = (
     selectedFrequency === "60Hz";
 
   const isRestrictedCombo = isEpanelRestricted || isXpanelRestricted;
-  const basePriceInGBDO = useCheckoutStore(state => state.asset?.basePriceInGBDO ?? BigInt(0));
+  const basePriceInGBDo = useCheckoutStore(state => state.asset?.basePriceInGBDo ?? BigInt(0));
 
  // External data and contract hooks
   const { address } = useAccount();
@@ -212,32 +212,32 @@ const CheckoutModalBase = (
       gbdoRate: number;
       lastUpdated: number;
     },
-    basePriceInGBDO: BigInt
+    basePriceInGBDo: BigInt
   ): Promise<number> {
-    // Convert microGBDO to GBDO
-    const basePrice = Number(basePriceInGBDO) / 1e6;
-    //console.log("[Pricing] Base GBDO:", basePrice);
+    // Convert microGBDo to GBDo
+    const basePrice = Number(basePriceInGBDo) / 1e6;
+    //console.log("[Pricing] Base GBDo:", basePrice);
 
     // Sum variations
     const variationTotal = Object.values(variations)
-      .reduce((sum, v) => sum + Number(v.apriceInGBDO), 0) / 1e6;
-    //console.log("[Pricing] Variation Total GBDO:", variationTotal);
+      .reduce((sum, v) => sum + Number(v.apriceInGBDo), 0) / 1e6;
+    //console.log("[Pricing] Variation Total GBDo:", variationTotal);
 
-    let subtotalGBDO = basePrice + variationTotal;
-    //console.log("[Pricing] Subtotal before Fees:", subtotalGBDO);
+    let subtotalGBDo = basePrice + variationTotal;
+    //console.log("[Pricing] Subtotal before Fees:", subtotalGBDo);
 
     // Apply fee based on method
     if (method === "stable") {
-      const fee = subtotalGBDO * 0;
-      subtotalGBDO += fee;
+      const fee = subtotalGBDo * 0;
+      subtotalGBDo += fee;
       //console.log("[Fee] Stablecoin fee applied:", fee);
     } else if (method === "cash") {
-      const fee = subtotalGBDO * 0.029 + 0.30;
-      subtotalGBDO += fee;
+      const fee = subtotalGBDo * 0.029 + 0.30;
+      subtotalGBDo += fee;
       //console.log("[Fee] Cash fee applied:", fee);
     }
 
-    //console.log("[Pricing] Subtotal after Fees:", subtotalGBDO);
+    //console.log("[Pricing] Subtotal after Fees:", subtotalGBDo);
 
     // Determine token rate
     const effectiveSymbol = method === "cash" ? "USDC" : tokenSymbol;
@@ -246,11 +246,11 @@ const CheckoutModalBase = (
       : exchangeData.rates.find(r => r.symbol === effectiveSymbol)?.rate ?? 1;
 
     //console.log(`[Pricing] Using Rate for ${effectiveSymbol}:`, tokenRate);
-    //console.log(`[Pricing] GBDO Reference Rate: ${exchangeData.gbdoRate}`);
-    const gbdoRate = await getGBDORateFromRates();
+    //console.log(`[Pricing] GBDo Reference Rate: ${exchangeData.gbdoRate}`);
+    const gbdoRate = await getGBDoRateFromRates();
 
     // Final calculation
-    const finalPrice = (subtotalGBDO * gbdoRate) / tokenRate;
+    const finalPrice = (subtotalGBDo * gbdoRate) / tokenRate;
     //console.log(`[Pricing] Final Price in ${effectiveSymbol}:`, finalPrice);
 
     return Math.round(finalPrice * 100) / 100;
@@ -266,17 +266,17 @@ const CheckoutModalBase = (
       paymentMethod,
       tokenSymbol,
       exchangeData,
-      basePriceInGBDO
+      basePriceInGBDo
     );
 
     setField("estimatedTotal", total.toFixed(2));
     setCurrentStep(5);
   }
 
-  async function getGBDORateFromRates() {
+  async function getGBDoRateFromRates() {
     const result = await getExchangeRates();
     const gbdoRate = result.gbdoRate;
-    //console.log("GBDO Rate is:", gbdoRate);
+    //console.log("GBDo Rate is:", gbdoRate);
     return gbdoRate;
   }
 
@@ -328,7 +328,7 @@ const CheckoutModalBase = (
         paymentMethod,
         tokenSymbol,
         exchangeData,
-        basePriceInGBDO
+        basePriceInGBDo
       );
 
       function sanitizeBigInts(obj: Record<string, any>) {

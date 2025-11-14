@@ -1,18 +1,11 @@
 import { useEffect, useState } from "react";
-import { Address } from "viem";
-import { usePublicClient } from "wagmi";
+import { Address, createPublicClient, http } from "viem";
 import { erc20Abi } from "viem";
 import { supportedTokens, dividendTokens } from "~~/components/constants/tokens";
 import deployments from "~~/lib/contracts/deployments.json";
-import type { PublicClient } from 'viem';
-import { createPublicClient, http } from 'viem';
-import { mainnet, polygon } from 'viem/chains';
-import { GLOBALCHAIN } from '~~/utils/globalEco/customChains';
-
-const myChainPublicClient = createPublicClient({
-  chain: GLOBALCHAIN,
-  transport: http('https://rpc.brantley-global.com'),
-});
+import type { PublicClient } from "viem";
+import { GLOBALCHAIN } from "~~/utils/globalEco/customChains";
+import { polygon, mainnet } from "viem/chains";
 
 type TokenBalance = {
   symbol: string;
@@ -20,12 +13,40 @@ type TokenBalance = {
   decimals: number;
   balance: bigint;
   isNative?: boolean;
+  chain?: keyof typeof chainClients;
+};
+
+type Token = {
+  name: string;
+  symbol: string;
+  address: Address;
+  decimals: number;
+  isNative?: boolean;
+  chain: keyof typeof chainClients;
+};
+
+type NormalizedToken = Omit<Token, "isNative"> & { isNative: boolean };
+
+function normalizeTokens(tokens: Token[]): NormalizedToken[] {
+  return tokens.map(token => ({
+    ...token,
+    isNative: token.isNative ?? false,
+  }));
+}
+
+const nativeToken: NormalizedToken = {
+  name: GLOBALCHAIN.nativeCurrency.name,
+  symbol: GLOBALCHAIN.nativeCurrency.symbol,
+  address: "0x0000000000000000000000000000000000000000",
+  decimals: GLOBALCHAIN.nativeCurrency.decimals,
+  isNative: true,
+  chain: "global",
 };
 
 const myChainSupportedTokenAddresses = new Set<Address>([
-  deployments.Copian,
+  //nativeToken.address,
+  //deployments.Copian,
   deployments.GlobalDollarX,
-  deployments.GlobalDollar,
   deployments.BGFFS,
   deployments.BGFRS,
   deployments.TGMX,
@@ -34,94 +55,141 @@ const myChainSupportedTokenAddresses = new Set<Address>([
   ...dividendTokens.map(t => t.address as Address),
 ]);
 
-const polyAddresses = new Set<Address>([
-  "0x5C067C80C00eCd2345b05E83A3e758eF799C40B5",
-  "0x6AE7Dfc73E0dDE2aa99ac063DcF7e8A63265108c",
-]);
+const allTokens: Token[] = [
+  /*{
+    ...nativeToken,
+    chain: "global",
+  },*/
+  ...dividendTokens.map(t => ({
+    ...t,
+    isNative: false,
+    chain: "global",
+  })),
+  ...supportedTokens.map(t => {
+    const chain: keyof typeof chainClients =
+      myChainSupportedTokenAddresses.has(t.address) ? "global" :
+      t.symbol === "MATIC" ? "polygon" : "ethereum";
 
-type Token = {
-  name: string;
-  symbol: string;
-  address: Address;
-  decimals: number;
-  isNative?: boolean;
+    return {
+      ...t,
+      isNative: t.isNative ?? false,
+      chain,
+    };
+  }),
+];
+
+const defaultClient = createPublicClient({
+  chain: GLOBALCHAIN,
+  transport: http('https://rpc.brantley-global.com'),
+});
+
+const chainClients: Record<string, PublicClient> = {
+  global: createPublicClient({
+    chain: GLOBALCHAIN,
+    transport: http("https://rpc.brantley-global.com"),
+  }),
+  ethereum: createPublicClient({
+    chain: mainnet,
+    transport: http("https://ethereum-rpc.publicnode.com"),
+  }),
+  polygon: createPublicClient({
+    chain: polygon,
+    transport: http("https://polygon-rpc.com"),
+  }),
 };
 
-type NormalizedToken = Omit<Token, "isNative"> & { isNative: boolean };
-
-function normalizeTokens(tokens: Token[]): NormalizedToken[] {
-  return tokens.map(token => ({
-    ...token,
-    isNative: token.isNative ?? false,  // if undefined, set false
-  }));
-}
-
 export const useDirectTokenBalances = (
-  userAddress?: Address,
-  myChainPublicClient?: PublicClient
+  externalAddress?: Address,
+  externalClient?: PublicClient
 ) => {
+  const [userAddress, setUserAddress] = useState<Address | undefined>(externalAddress);
+  const client: PublicClient = externalClient ?? defaultClient;
   const [balances, setBalances] = useState<TokenBalance[]>([]);
 
   useEffect(() => {
-    async function fetchBalancesForTokens(tokens: typeof supportedTokens, client: PublicClient) {
-      if (!userAddress) return [];
-      const results = await Promise.allSettled(
-        tokens.map(async (token) => {
-          if (token.isNative) {
-            const balance = await client.getBalance({ address: userAddress });
-            return {
-              symbol: token.symbol,
-              address: token.address,
-              decimals: token.decimals,
-              balance,
-            };
-          } else {
-            // Call readContract method on the publicClient instance
-            const balance = await client.readContract({
-              address: token.address,
-              abi: erc20Abi,
-              functionName: "balanceOf",
-              args: [userAddress],
-            });
-            return {
-              symbol: token.symbol,
-              address: token.address,
-              decimals: token.decimals,
-              balance,
-            };
+    async function resolveAddress() {
+      if (externalAddress) return; // already provided
+      if (typeof window !== "undefined" && window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: "eth_accounts" });
+          if (accounts.length > 0) {
+            setUserAddress(accounts[0] as Address);
           }
-        }),
+        } catch (err) {
+          console.error("Failed to get wallet address:", err);
+        }
+      }
+    }
+
+    resolveAddress();
+  }, [externalAddress]);
+
+  useEffect(() => {
+    if (!userAddress || !client) return;
+
+    async function fetchBalancesForTokens(
+      tokens: NormalizedToken[],
+      client: PublicClient,
+      address: Address
+    ): Promise<TokenBalance[]> {
+      const results = await Promise.allSettled(
+        tokens.map(async token => {
+          const balance = token.isNative
+            ? await client.getBalance({ address })
+            : await client.readContract({
+                address: token.address,
+                abi: erc20Abi,
+                functionName: "balanceOf",
+                args: [address],
+              });
+
+          return {
+            symbol: token.symbol,
+            address: token.address,
+            decimals: token.decimals,
+            balance,
+            isNative: token.isNative,
+            chain: token.chain,
+          };
+        })
       );
 
-      results.forEach(r => {
-        if (r.status === "rejected") {
-          console.error("Balance fetch failed:", r.reason);
-        }
-      });
-
       return results
-        .filter((r) => r.status === "fulfilled")
-        .map((r) => (r as PromiseFulfilledResult<TokenBalance>).value)
-        .filter((token) => token.balance > 0n);
+        .filter(r => r.status === "fulfilled")
+        .map(r => (r as PromiseFulfilledResult<TokenBalance>).value)
+        .filter(token => token.balance > 0n);
     }
 
     async function fetchAllBalances() {
-      if (!userAddress || !myChainPublicClient) return;
+      const groupedTokens: Record<keyof typeof chainClients, NormalizedToken[]> = {
+        global: [],
+        ethereum: [],
+        polygon: [],
+      };
 
-      const myChainTokens = normalizeTokens([
-        ...dividendTokens,
-        ...supportedTokens.filter(t => myChainSupportedTokenAddresses.has(t.address)),
-      ]);
+      for (const token of normalizeTokens(allTokens)) {
+        groupedTokens[token.chain].push(token);
+      }
 
-      const [myChainBalances] = await Promise.all([
-        fetchBalancesForTokens(myChainTokens, myChainPublicClient),
-      ]);
+      const balancePromises = Object.entries(groupedTokens).map(
+        async ([chainKey, tokens]) => {
+          try {
+            const client = chainClients[chainKey as keyof typeof chainClients];
+            return await fetchBalancesForTokens(tokens, client, userAddress!);
+          } catch (err) {
+            console.error(`Error fetching balances for ${chainKey}:`, err);
+            return [];
+          }
+        }
+      );
 
-      setBalances([...myChainBalances ]);
+      const allResults = await Promise.all(balancePromises);
+      const mergedBalances = allResults.flat();
+      setBalances(mergedBalances);
     }
 
     fetchAllBalances();
-  }, [userAddress, myChainPublicClient]);
+  }, [userAddress]);
 
   return { balances };
 };

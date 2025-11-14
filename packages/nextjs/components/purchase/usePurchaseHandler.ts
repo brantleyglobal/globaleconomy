@@ -38,6 +38,7 @@ interface InitiateParams {
     symbol: string;
     address?: string;
     decimals?: number;
+    chain?: string
   };
   value: string;
   shippingInfo: ShippingInfo;
@@ -211,7 +212,7 @@ async function initiateStripeCheckout(params: InitiateParams) {
   window.location.href = session.url;
 }
 
-async function sendTransferOnTargetChain(recipient: string, tamount: bigint, selectedToken: { address?: string, decimals?: number, symbol?: string }, btcWallet?: BitcoinWallet) {
+async function sendTransferOnTargetChain(recipient: string, tamount: bigint, selectedToken: { address?: string, decimals?: number, symbol?: string, chain?: string}, btcWallet?: BitcoinWallet) {
   if (!selectedToken.address) throw new Error("Token address required");
 
   const myChainSupportedTokenAddresses = new Set<Address>([
@@ -238,19 +239,20 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
 
 
   let selectedTokenChainId: number;
-  let chain: "global" | "polygon" | "ethereum" | "bitcoin";
-  if (isBitcoin) {
-    selectedTokenChainId = 0; // optional placeholder
-    chain = "bitcoin";
-  } else if (isOnMyChain) {
-    selectedTokenChainId = 3503995874081207;
-    chain = "global";
-  } else if (isOnPoly) {
-    selectedTokenChainId = 137;
-    chain = "polygon";
-  } else {
-    selectedTokenChainId = 1;
-    chain = "ethereum";
+  let chain = selectedToken.chain ?? "ethereum"; // fallback if missing
+
+  switch (chain) {
+    case "bitcoin":
+      selectedTokenChainId = 0;
+      break;
+    case "global":
+      selectedTokenChainId = 38391207;
+      break;
+    case "polygon":
+      selectedTokenChainId = 137;
+      break;
+    default:
+      selectedTokenChainId = 1;
   }
 
   console.log("checking3");
@@ -355,14 +357,14 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
     const humanReadable = formatUnits(amount, 18);
     const amountBN = parseUnits(humanReadable, selectedToken.decimals);
     
-    const tx = await tokenContract.transfer(to, amountBN, { gasLimit:  65_000 } );
+    const tx = await tokenContract.transfer(to, amountBN, { gasLimit:  80_000 } );
     receipt = await tx.wait();
     console.log("Status:", receipt.status ? "Success" : "Failed");
   }
-  selectedTokenChainId = 3503995874081207;
+  selectedTokenChainId = 38391207;
 
   const resethexChainId = "0x" + selectedTokenChainId.toString(16);
-  const homeChainId = 3503995874081207;
+  const homeChainId = 38391207;
   const homeHexChainId = "0x" + homeChainId.toString(16);
 
 
@@ -445,15 +447,18 @@ async function handleCryptoPurchase(params: InitiateParams) {
     const { rates, gbdoRate } = await getExchangeRates();
 
     // Find selected token's rate from rates array
-    const selectedTokenRateObj = rates.find(r => r.symbol === tokenSymbol);
+    let exchangeRateFloat;
+    if (selectedToken.symbol === "GBDo") {
+      exchangeRateFloat = gbdoRate / 1;
+    } else {
+      const selectedTokenRateObj = rates.find(r => r.symbol === tokenSymbol);
 
-    if (!selectedTokenRateObj) {
-      throw new Error(`Exchange rate for token symbol ${tokenSymbol} not found`);
+      if (!selectedTokenRateObj) {
+        throw new Error(`Exchange rate for token symbol ${tokenSymbol} not found`);
+      }
+      const tokenRate = selectedTokenRateObj.rate;
+      exchangeRateFloat = gbdoRate / tokenRate;
     }
-
-    const tokenRate = selectedTokenRateObj.rate; // rate of selected token
-
-    const exchangeRateFloat = gbdoRate / tokenRate;
     console.log("exchangeRateFloat (gbdoRate / tokenRate):", exchangeRateFloat);
 
     const totalTokenAmountFloat = totalCost * exchangeRateFloat;
@@ -534,6 +539,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
       address: selectedToken.address!,
       decimals: selectedToken.decimals,
       symbol: selectedToken.symbol,
+      chain: selectedToken.chain,
     });
 
     // Step 2: Connect to wallet

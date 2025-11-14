@@ -31,7 +31,7 @@ const getImagePath = (symbol: string): string => {
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
-const addTokenToMetaMask = async (token: Token) => {
+const addTokenToMetaMask = async (token: Token & { image: string }) => {
   if (
     !window.ethereum ||
     !token.address ||
@@ -44,7 +44,7 @@ const addTokenToMetaMask = async (token: Token) => {
   const alreadyAdded = localStorage.getItem(`token-added-${token.symbol}`);
   if (alreadyAdded) return;
 
-  const imagePath = getImagePath(token.symbol);
+  //const imagePath = getImagePath(token.symbol);
 
   try {
     const wasAdded = await window.ethereum.request({
@@ -55,7 +55,7 @@ const addTokenToMetaMask = async (token: Token) => {
           address: token.address,
           symbol: token.symbol,
           decimals: token.decimals,
-          image: imagePath,
+          image: token.image,
         },
       },
     });
@@ -77,14 +77,18 @@ export const useAutoAddTokens = () => {
 
     const run = async () => {
       await delay(1500); // Wait for wallet to settle
-      const nonStableTokens = supportedTokens.filter(
-        token => !stablecoinSymbols.includes(token.symbol)
-      );
+      const nonStableTokens = supportedTokens
+      .filter(token => !stablecoinSymbols.includes(token.symbol))
+      .map(token => ({
+        ...token,
+        image: getImagePath(token.symbol),
+      }));
 
       for (const token of nonStableTokens) {
         await addTokenToMetaMask(token);
-        await delay(1000); // Delay between each token addition
+        await delay(1000);
       }
+
     };
 
     run();

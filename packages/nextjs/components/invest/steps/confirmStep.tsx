@@ -50,8 +50,10 @@ export function ConfirmStep({
           
         </button>
       </div>
-      <div className="flex flex-col justify-between h-full rounded-xl"> 
-        <div className="flex-grow max-h-98 sm:max-h-98 overflow-y-auto mb-4 pt-6 bg-base-200 border px-4 border-base-300 rounded-md shadow-sm text-sm">
+        <div className="flex flex-col justify-between h-full rounded-xl"> 
+          <div className="flex-grow max-h-98 sm:max-h-98 overflow-y-auto mb-4 pt-6 bg-base-200 border px-4 border-base-300 rounded-md shadow-sm text-sm">
+            {/* Summary info */}
+            <div className="flex-grow max-h-98 sm:max-h-98 overflow-y-auto mb-4 pt-6 bg-base-200 border px-4 border-base-300 rounded-md shadow-sm text-sm">
           {/* Summary info */}
           <div className="flex justify-between items-center border-b border-base-300 pb-2">
             <p className="text-white/50 uppercase tracking-wide text-xs font-light">
@@ -61,6 +63,16 @@ export function ConfirmStep({
               {parseFloat(amount).toFixed(2)} {token?.symbol ?? ""}
             </p>
           </div>
+
+          {/* Conditional Venture Name */}
+          {token2 && (
+            <div className="flex justify-between items-center border-b border-base-300 pb-2">
+              <p className="text-white/50 uppercase tracking-wide text-xs font-light">
+                Venture Name
+              </p>
+              <p className="font-bold text-white">{token2.name}</p>
+            </div>
+          )}
 
           <div className="flex justify-between items-center border-b border-base-300 pb-2">
             <p className="text-white/50 uppercase tracking-wide text-xs font-light">
@@ -83,20 +95,29 @@ export function ConfirmStep({
             <p className="font-bold text-white">{summary?.eligibilityLabel}</p>
           </div>
 
-          <div className="flex justify-between items-center border-b border-base-300 pb-2">
-            <p className="text-white/50 uppercase tracking-wide text-xs font-light">
-              Investment Multiplier
-            </p>
-            <p className="font-bold text-white">{summary?.multiplier}%</p>
-          </div>
+          {/* Only show multiplier if valid */}
+          {summary?.multiplier ? (
+            <div className="flex justify-between items-center border-b border-base-300 pb-2">
+              <p className="text-white/50 uppercase tracking-wide text-xs font-light">
+                Investment Multiplier
+              </p>
+              <p className="font-bold text-white">{summary.multiplier}%</p>
+            </div>
+          ) : null}
+
           <div className="text-sm text-gray-400 text-justify leading-relaxed mt-6 space-y-2">
             <p>
-              This transaction is <span className="font-semibold text-red">Irreversible</span>. A <span className="font-semibold text-white">.25%</span> protocol fee will be deducted from your 
-              deposited amount and issued dividend tokens will be based on the deposited amount less the protocol fee. Your investment and any rewards{" "}
-              <span className="italic text-white">will not</span> be available until you reach your <span className="font-semibold text-white">Invest Unlock Quarter</span>.
-              By clicking <span className="font-semibold text-white">Confirm</span>, you consent to invest the total stated above and accept the conditions outlined in the investment process.
+              This transaction is <span className="font-semibold text-red">Irreversible</span>. A{" "}
+              <span className="font-semibold text-white">.25%</span> protocol fee will be deducted from your
+              deposited amount and issued dividend tokens will be based on the deposited amount less the protocol fee.
+              Your investment and any rewards{" "}
+              <span className="italic text-white">will not</span> be available until you reach your{" "}
+              <span className="font-semibold text-white">Invest Unlock Quarter</span>.
+              By clicking <span className="font-semibold text-white">Confirm</span>, you consent to invest the total
+              stated above and accept the conditions outlined in the investment process.
             </p>
           </div>
+        </div>
         </div>
         {/* Wallet connect section and buttons */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 py-4 border-t bg-transparent w-full">

@@ -33,7 +33,7 @@ const tokenRates = Object.keys(redstoneFeeds).map((token) => {
       ? guard.fallback ?? rawRate
       : rawRate;
   const scaledRate = guardedRate * primeFactor;
-  const rateAgainstGBDO = scaledRate / primeFactor;
+  const rateAgainstGBDo = scaledRate / primeFactor;
   const guardTriggered = rawRate !== guardedRate;
   const feedHealth = ""; // placeholder for future validation logic
   const network = "Ethereum";
@@ -44,7 +44,7 @@ const tokenRates = Object.keys(redstoneFeeds).map((token) => {
     rawRate,
     guardedRate,
     scaledRate,
-    rateAgainstGBDO,
+    rateAgainstGBDo,
     primeFactor,
     guardTriggered,
     feedHealth,
@@ -60,7 +60,7 @@ export default function CurrencyRatesTab() {
       <section className="space-y-2">
         <h1 className="text-3xl font-light">CURRENCY RATE SYSTEM</h1>
         <p className="text-sm leading-relaxed max-w-3xl">
-          Rates are normalized to GBDO as a base unit of stability. Each token’s rate is calculated 
+          Rates are normalized to GBDo as a base unit of stability. Each token’s rate is calculated 
           using raw market data, adjusted via guards to mitigate volatility, and scaled by a PRIME_FACTOR 
           to ensure parity within price-weighted systems. Guard triggers automatically stabilize tokens 
           when feed anomalies or slippage thresholds are breached.
@@ -78,7 +78,7 @@ export default function CurrencyRatesTab() {
                 <th className="px-4 py-2">Raw</th>
                 <th className="px-4 py-2">Guarded</th>
                 <th className="px-4 py-2">Scaled</th>
-                <th className="px-4 py-2">vs GBDO</th>
+                <th className="px-4 py-2">vs GBDo</th>
                 <th className="px-4 py-2">PRIME_FACTOR</th>
                 <th className="px-4 py-2">Guard Triggered</th>
                 <th className="px-4 py-2">Feed Health</th>
@@ -93,7 +93,7 @@ export default function CurrencyRatesTab() {
                   <td className="px-4 py-2">{t.rawRate}</td>
                   <td className="px-4 py-2">{t.guardedRate}</td>
                   <td className="px-4 py-2">{t.scaledRate}</td>
-                  <td className="px-4 py-2">{t.rateAgainstGBDO}</td>
+                  <td className="px-4 py-2">{t.rateAgainstGBDo}</td>
                   <td className="px-4 py-2">{t.primeFactor}</td>
                   <td className="px-4 py-2">{t.guardTriggered ? "Yes" : "No"}</td>
                   <td className="px-4 py-2">{t.feedHealth}</td>

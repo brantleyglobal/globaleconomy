@@ -57,28 +57,28 @@ async function convertGbdoToSelectedTokenValue(
   if (tokenRate === null) {
     const { rates, gbdoRate } = await getExchangeRates();
     const rateData = rates.find((r) => r.symbol === selectedTokenSymbol);
-    if (!rateData || !rateData.rateAgainstGBDO) {
-      console.error("Token rate against GBDO not found or invalid");
+    if (!rateData || !rateData.rateAgainstGBDo) {
+      console.error("Token rate against GBDo not found or invalid");
       return null;
     }
-    tokenRate = rateData.rateAgainstGBDO;
+    tokenRate = rateData.rateAgainstGBDo;
   }
 
-  // Suppose GBDO decimals is 18 (adjust if different)
+  // Suppose GBDo decimals is 18 (adjust if different)
   const gbdoDecimals = 18;
 
-  // Convert 10 GBDO to wei BigNumber
+  // Convert 10 GBDo to wei BigNumber
   const gbdoAmountInWei = parseUnits(gbdoAmount, gbdoDecimals);
 
   if (!tokenRate || tokenRate <= 0) {
-    console.error("Token rate against GBDO not found or invalid");
+    console.error("Token rate against GBDo not found or invalid");
     return null;
   }
 
   // Calculate token amount by scaling appropriately
   // tokenAmount = (gbdoAmountInWei * 1e18) / (tokenRate * 1e18) simplified:
-  // Actually: amount in token * rate against GBDO = GBDO amount
-  // So token amount = GBDO amount / rateAgainstGBDO
+  // Actually: amount in token * rate against GBDo = GBDo amount
+  // So token amount = GBDo amount / rateAgainstGBDo
 
   // Using BigNumber math
   const tokenDecimals = 18;
@@ -98,7 +98,7 @@ async function convertGbdoToSelectedTokenValue(
   return tokenAmount;
 }
 
-async function sendTransferOnTargetChain(recipient: string, tamount: bigint, selectedToken: { address?: string, decimals?: number, symbol?: string }, btcWallet?: BitcoinWallet) {
+async function sendTransferOnTargetChain(recipient: string, tamount: bigint, selectedToken: { address?: string, decimals?: number, symbol?: string,  chain?: string }, btcWallet?: BitcoinWallet) {
   if (!selectedToken.address) throw new Error("Token address required");
 
   const myChainSupportedTokenAddresses = new Set<Address>([
@@ -126,19 +126,20 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
 
 
   let selectedTokenChainId: number;
-  let chain: "global" | "polygon" | "ethereum" | "bitcoin";
-  if (isBitcoin) {
-    selectedTokenChainId = 0; // optional placeholder
-    chain = "bitcoin";
-  } else if (isOnMyChain) {
-    selectedTokenChainId = 3503995874081207;
-    chain = "global";
-  } else if (isOnPoly) {
-    selectedTokenChainId = 137;
-    chain = "polygon";
-  } else {
-    selectedTokenChainId = 1;
-    chain = "ethereum";
+  let chain = selectedToken.chain ?? "ethereum"; // fallback if missing
+
+  switch (chain) {
+    case "bitcoin":
+      selectedTokenChainId = 0;
+      break;
+    case "global":
+      selectedTokenChainId = 38391207;
+      break;
+    case "polygon":
+      selectedTokenChainId = 137;
+      break;
+    default:
+      selectedTokenChainId = 1;
   }
 
   console.log("checking3");
@@ -252,16 +253,16 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
       receipt = await tx.wait();
     } else {
       const tx = await tokenContract.transfer(to, amountBN, {
-        gasLimit: 65_000,
+        gasLimit: 80_000,
       });
       receipt = await tx.wait();
     }
     console.log("Status:", receipt.status ? "Success" : "Failed");
   }
-  selectedTokenChainId = 3503995874081207;
+  selectedTokenChainId = 38391207;
 
   const resethexChainId = "0x" + selectedTokenChainId.toString(16);
-  const homeChainId = 3503995874081207;
+  const homeChainId = 38391207;
   const homeHexChainId = "0x" + homeChainId.toString(16);
 
 
@@ -362,7 +363,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
     let selectedTokenChainId;
     if(isOnMyChain){
-      selectedTokenChainId = 3503995874081207;
+      selectedTokenChainId = 38391207;
     }else if(isOnPoly){
       selectedTokenChainId = 137;
     }else{
@@ -423,9 +424,10 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
         if (amountInSelectedFeeToken !== null) {
           const serviceTxHashOnTarget = await sendTransferOnTargetChain(holdingWalletAddress, amountInSelectedFeeToken, {
-            address: selectedToken.address!,
-            decimals: selectedToken.decimals,
-            symbol: selectedToken.symbol,
+            address: selectedTokenS.address!,
+            decimals: selectedTokenS.decimals,
+            symbol: selectedTokenS.symbol,
+            chain: selectedTokenS.chain,
           });
         }
 
@@ -521,6 +523,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           address: selectedToken.address!,
           decimals: selectedToken.decimals,
           symbol: selectedToken.symbol,
+          chain: selectedToken.chain,
         });
           
         try {
@@ -590,6 +593,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           address: selectedToken.address!,
           decimals: selectedToken.decimals,
           symbol: selectedToken.symbol,
+          chain: selectedToken.chain,
         });
 
         // Deposit existing swap
@@ -703,7 +707,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         try {
           // Step 3: Send transaction directly to contract
           const tokenTx = await xchange.refund({
-            gasLimit:  65_000,
+            gasLimit:  80_000,
           });
           txhash = tokenTx.hash;
           receipt = await tokenTx.wait();
@@ -791,6 +795,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           address: selectedToken.address!,
           decimals: selectedToken.decimals,
           symbol: selectedToken.symbol,
+          chain: selectedToken.chain,
         });
 
         let callAddressS;

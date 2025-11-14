@@ -13,7 +13,7 @@ export function TokenBalancesPanel() {
 
   const ethPublicClient = usePublicClient({ chainId: 1 });
   const polyPublicClient = usePublicClient({ chainId: 137 });
-  const myChainPublicClient = usePublicClient({ chainId: 3503995874081207 });
+  const myChainPublicClient = usePublicClient({ chainId: 38391207 });
 
   const { balances } = useDirectTokenBalances(
     userAddress,
@@ -26,11 +26,13 @@ export function TokenBalancesPanel() {
     setExpandedIndex(prevIndex => (prevIndex === index ? null : index));
   };
 
+  console.log("Balance keys:", balances.map(b => `${b.chain}-${b.address}`));
+
   return (
     <section className="space-y-6">
-      <h2 className="text-white text-xl font-light">BALANCES</h2>
-      <p className="text-zinc-300 max-w-3xl text-sm">
-        Available Balances For Connected Wallets.
+      <h2 className="text-white text-xl px-2 font-light">BALANCES</h2>
+      <p className="text-zinc-300 max-w-3xl px-2 text-sm">
+        Available Ecosystem Balances For Connected Wallet.
       </p>
       <div className="overflow-x-auto rounded-box shadow">
         <table className="table table-zebra w-full text-sm bg-base-100">
@@ -42,7 +44,7 @@ export function TokenBalancesPanel() {
           <tbody>
             {balances.map((coin, i) => (
               <TokenBalanceRow
-                key={coin.address} // Use stable and unique keys like contract address
+                key={`${coin.chain}-${coin.address}`} // Use stable and unique keys like contract address
                 symbol={coin.symbol}
                 decimals={coin.decimals}
                 balance={coin.balance}

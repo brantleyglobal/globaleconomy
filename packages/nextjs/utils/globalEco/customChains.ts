@@ -1,7 +1,7 @@
 import { defineChain } from "viem";
 
 export const GLOBALCHAIN = defineChain({
-  id: 3503995874081207,
+  id: 38391207,
   name: "GLOBALCHAIN",
   network: "gbdo",
   nativeCurrency: {

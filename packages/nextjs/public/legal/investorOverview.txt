@@ -17,7 +17,7 @@
 
   <p>Brantley Global is not registered as a securities issuer under any national jurisdiction. Investments are made at the discretion of the participant and do not constitute a regulated financial product.</p>
 
-  <p>Dividend payouts are not guaranteed and are subject to the performance of the underlying ecosystem and prevailing market conditions. The market value of GBDO tokens may fluctuate independently of dividend performance or redemption schedules.</p>
+  <p>Dividend payouts are not guaranteed and are subject to the performance of the underlying ecosystem and prevailing market conditions. The market value of GBDo tokens may fluctuate independently of dividend performance or redemption schedules.</p>
 
   <p>Investors are responsible for understanding and complying with any tax obligations arising from dividends, token trades, or redemptions.</p>
 

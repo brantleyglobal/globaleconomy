@@ -26,8 +26,8 @@ export const Footer = () => {
           .filter(token => token.symbol !== "GBDo")
           .map(token => {
             const rateObj = rateMap.get(token.symbol);
-            if (!rateObj || rateObj.rateAgainstGBDO === undefined) return undefined;
-            return `GBDO ${rateObj.rateAgainstGBDO.toFixed(4)} : ${token.symbol}`;
+            if (!rateObj || rateObj.rateAgainstGBDo === undefined) return undefined;
+            return `GBDo ${rateObj.rateAgainstGBDo.toFixed(4)} : ${token.symbol}`;
           })
           .filter((rate): rate is string => typeof rate === "string");
 
@@ -45,7 +45,7 @@ export const Footer = () => {
 
   return (
     <footer className="w-full z-50 bg-black text-sm text-base-content border-t border-base-300">
-      {/* GBDO Rate Banner */}
+      {/* GBDo Rate Banner */}
       <div className="overflow-hidden bg-base-200 border-t border-base-300">
         <div className="animate-scroll-track whitespace-nowrap inline-flex px-4 py-2 text-sm sm:text-base">
           {[...gbdoRates, ...gbdoRates].map((rate, idx) => (

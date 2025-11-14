@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Address as AddressType, getContract } from "viem";
+import { Address as AddressType, getContract, erc20Abi } from "viem";
 import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { BanknotesIcon, WalletIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { Token, dividendTokens } from "~~/components/constants/tokens";
 import { ethers, Contract, BrowserProvider } from "ethers";
-import { erc20Abi } from "viem";
 import smartVaultabi from "~~/lib/contracts/abi/SmartVault.json";
 import { toast } from "react-hot-toast";
 import deployments from "~~/lib/contracts/deployments.json";
@@ -103,7 +102,10 @@ export const DividendRedeemModal = ({ openWalletModal }: FaucetProps) => {
               const contract = getContract({ address: token.address, abi: erc20Abi, client: publicClient });
               balance = await contract.read.balanceOf([address]);
             }
-            return { ...token, balance };
+            return { ...token,
+              chain: token.chain as "global" | "ethereum" | "polygon" | "bitcoin",
+              balance,
+            };
           })
         );
         const tokensWithBalance = balances.filter((token) => token.balance > 0n);

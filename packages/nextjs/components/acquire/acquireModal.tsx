@@ -57,13 +57,13 @@ export const AcquireModal: React.FC<Props> = ({
   const [convertedAmount, setConvertedAmount] = useState("");
 
   // Derive full Token object from selected symbol
-  const selectedToken: Token | undefined = supportedTokens.find(
+  const selectedToken = supportedTokens.find(
     (token) => token.symbol === selectedTokenSymbol
-  );
+  ) as Token | undefined;
 
   const selectedToken2: Token | undefined = supportedTokens.find(
     (token2) => token2.symbol === selectedTokenSymbol2
-  );
+  ) as Token | undefined;
 
   const balance = useTokenBalance(connectedWallet, selectedToken!);
 
@@ -179,7 +179,10 @@ export const AcquireModal: React.FC<Props> = ({
           <div className="space-y-2 h-full h-[min(90vh,auto)] flex flex-col">
             {step === ModalStep.OnStep && (
               <OnStep
-                supportedTokens={supportedTokens}
+                supportedTokens={supportedTokens.map(token => ({
+                  ...token,
+                  chain: token.chain as "global" | "ethereum" | "polygon" | "bitcoin",
+                }))}
                 selectedTokenSymbol={selectedTokenSymbol}
                 setSelectedTokenSymbol={setSelectedTokenSymbol}
                 depositAmount={depositAmount}

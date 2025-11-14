@@ -254,7 +254,7 @@ export default function CounterPartyStep({
                 <button
                     type="button"
                     onClick={() => setShowStablecoinInfo(true)}
-                    className="bg-white/10 animate-pulse backdrop-blur-md px-6 py-2 rounded-full text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
+                    className="bg-white/10 animate-pulse backdrop-blur-md w-full px-6 py-2 rounded-md text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
                 >
                     Supported Stablecoin
                 </button>
@@ -276,7 +276,7 @@ export default function CounterPartyStep({
             <div className="overflow-hidden max-h-[40vh] rounded-t-xl">
                 <div className="overflow-y-auto max-h-[calc(40vh-20px)] px-6 py-4 space-y-4 text-sm text-gray-300">
                 {supportedTokens
-                    .filter(({ symbol }) => !["GBDo", "BTC", "ETH", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(symbol))
+                    .filter(({ symbol }) => !["BTC", "ETH", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(symbol))
                     .map(({ name, symbol, address }) => (
                     <div key={symbol} className="bg-white/5 backdrop-blur-md p-4 rounded-md shadow-sm">
                         <div className="flex justify-between items-center">

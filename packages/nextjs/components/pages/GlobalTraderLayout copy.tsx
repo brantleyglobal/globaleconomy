@@ -65,7 +65,7 @@ export default function GlobalTraderLayout() {
       id: "overview",
       label: "Overview",
       content: `
-        <p>Global Dollar (GBDO) operates an asset-backed ecosystem in which investments are directly tied to products and services within the platform. By investing in Global Dollar, participants are supporting the underlying economy of the ecosystem.</p>
+        <p>Global Dollar (GBDo) operates an asset-backed ecosystem in which investments are directly tied to products and services within the platform. By investing in Global Dollar, participants are supporting the underlying economy of the ecosystem.</p>
         <p>The system offers dividend payouts based on the chosen investment cycle, with a minimum term of two quarters (6 months). If an investor initiates their deposit after the 15th day of a quarter, the investor's term will not begin until the following quarter. At the end of each term, investors receive any earned dividends and their original investment amount.</p>
       `,
     },
@@ -120,7 +120,7 @@ export default function GlobalTraderLayout() {
       label: "Legal Notice",
       content: `
         <p>Global Dollar is not registered as a securities issuer under any national jurisdiction. Investments are made at the discretion of the participant and do not constitute a regulated financial product.</p>
-        <p>Dividend payouts are not guaranteed and are subject to the performance of the underlying ecosystem and prevailing market conditions. The market value of GBDO tokens may fluctuate independently of dividend performance or redemption schedules.</p>
+        <p>Dividend payouts are not guaranteed and are subject to the performance of the underlying ecosystem and prevailing market conditions. The market value of GBDo tokens may fluctuate independently of dividend performance or redemption schedules.</p>
         <p>Investors are responsible for understanding and complying with any tax obligations arising from dividends, token trades, or redemptions.</p>
         <p>Global Dollar reserves the right to delay or modify payout schedules in the event of force majeure, including but not limited to natural disasters, cyberattacks, or systemic market failures.</p>
         <p>Investors are strongly encouraged to assess their personal risk tolerance and consult a financial advisor before participating in the Global Dollar ecosystem.</p>

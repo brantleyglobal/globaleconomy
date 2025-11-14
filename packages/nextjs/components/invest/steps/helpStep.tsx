@@ -20,7 +20,7 @@ export default function HelpStep({ id, onClose }: Props) {
       </h2>
       <p id={`${id}-desc`} className="mb-4 text-xs text-justify leading-relaxed">
         This help section guides you through the steps required to create a new contract,
-        make a deposit, or request a refund on AssetXchange. There is 10 GBDO (approx. 10.50usd) service fee to create a contract.
+        make a deposit, or request a refund on AssetXchange. There is 10 GBDo (approx. 10.50usd) service fee to create a contract.
         Fees are none refundable as they are for contract creation. This fee is only collected upon contract creation.
         Your confirmation email will contain exact details for all parties. If the values are incorrect, contact the contract creation party to resolve.
         There are 2 transactions conducted, the fist being the transfer of your assets. While this has been confined to this platform

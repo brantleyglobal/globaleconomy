@@ -20,9 +20,9 @@ export const Banner = () => {
         {/*</div>
       </div>*/}
 
-      {/* GBDO Coin Display */}
+      {/* GBDo Coin Display */}
       {/*<div className="flex items-center border-white/5 gap-2 bg-black px-3 py-1 rounded-md shadow-md md:mr-3">*/}
-        {/* <img src="/globalw.png" className="w-10 h-10" alt="GBDO Coin" /> */}
+        {/* <img src="/globalw.png" className="w-10 h-10" alt="GBDo Coin" /> */}
         {/*<span className="text-sm text-white font-light"></span>
       </div>*/}
 

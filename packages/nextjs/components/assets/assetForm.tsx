@@ -6,7 +6,7 @@ import { useScaffoldWriteContract } from "~~/hooks/globalEco";
 export const AddAssetForm: React.FC = () => {
   const [form, setForm] = useState({
     name: "",
-    priceGBDO: "",
+    priceGBDo: "",
     metadataCID: "",
     baseDays: "",
     perUnitDelay: "",
@@ -27,13 +27,13 @@ export const AddAssetForm: React.FC = () => {
         functionName: "addAsset",
         args: [
           form.name,
-          BigInt(form.priceGBDO),
+          BigInt(form.priceGBDo),
           form.metadataCID,
           BigInt(form.baseDays),
           BigInt(form.perUnitDelay),
         ],
       });
-      setForm({ name: "", priceGBDO: "", metadataCID: "", baseDays: "", perUnitDelay: "" });
+      setForm({ name: "", priceGBDo: "", metadataCID: "", baseDays: "", perUnitDelay: "" });
     } catch (err) {
       console.error("Failed to add asset:", err);
     }
@@ -45,7 +45,7 @@ export const AddAssetForm: React.FC = () => {
       <h2 className="text-xl font-semibold">Add New Asset</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <input className="input input-bordered" name="name" placeholder="Asset name" value={form.name} onChange={handleChange} />
-        <input className="input input-bordered" name="priceGBDO" placeholder="Price in GBDO" value={form.priceGBDO} onChange={handleChange} />
+        <input className="input input-bordered" name="priceGBDo" placeholder="Price in GBDo" value={form.priceGBDo} onChange={handleChange} />
         <input className="input input-bordered" name="metadataCID" placeholder="IPFS CID" value={form.metadataCID} onChange={handleChange} />
         <input className="input input-bordered" name="baseDays" placeholder="Base Days" value={form.baseDays} onChange={handleChange} />
         <input className="input input-bordered" name="perUnitDelay" placeholder="Delay per Extra Unit" value={form.perUnitDelay} onChange={handleChange} />

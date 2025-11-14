@@ -5,7 +5,7 @@ export type CheckoutAsset = {
   id: number;
   name: string;
   metadataCID: string;
-  basePriceInGBDO: BigInt;
+  basePriceInGBDo: BigInt;
   baseDays: number;
   perUnitDelay: number;
   variant: "eseries" | "xseries";

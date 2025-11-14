@@ -120,7 +120,7 @@ export default function HomePageLayout() {
       label: "LEGAL NOTICE",
       content: `
         <p>Global Dollar is not registered as a securities issuer under any national jurisdiction. Investments are made at the discretion of the participant and do not constitute a regulated financial product.</p>
-        <p>Dividend payouts are not guaranteed and are subject to the performance of the underlying ecosystem and prevailing market conditions. The market value of GBDO tokens may fluctuate independently of dividend performance or redemption schedules.</p>
+        <p>Dividend payouts are not guaranteed and are subject to the performance of the underlying ecosystem and prevailing market conditions. The market value of GBDo tokens may fluctuate independently of dividend performance or redemption schedules.</p>
         <p>Investors are responsible for understanding and complying with any tax obligations arising from dividends, token trades, or redemptions.</p>
         <p>Global Dollar reserves the right to delay or modify payout schedules in the event of force majeure, including but not limited to natural disasters, cyberattacks, or systemic market failures.</p>
         <p>Investors are strongly encouraged to assess their personal risk tolerance and consult a financial advisor before participating in the Global Dollar ecosystem.</p>
@@ -177,7 +177,7 @@ export default function HomePageLayout() {
                 const parsedAsset = {
                   asset: {
                     assetId: rawAsset.assetId ?? 0,
-                    basePriceInGBDO: Number(rawAsset.asset?.basePriceInGBDO ?? 0),
+                    basePriceInGBDo: Number(rawAsset.asset?.basePriceInGBDo ?? 0),
                     baseDays: rawAsset.asset?.baseDays ?? 0,
                     perUnitDelay: String(rawAsset.asset?.perUnitDelay ?? "0"),
                     variant: variant as "eseries" | "xseries",

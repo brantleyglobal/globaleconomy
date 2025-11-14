@@ -65,7 +65,8 @@ export const GlobalXchangeModal = ({ isOpen, onClose }: GlobalXchangeModalProps)
   const [policyText, setPolicyText] = useState("");
 
   // Wallet state from wagmi
-  const { address, isConnected } = useAccount();
+  const [address, setAddress] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   // RainbowKit modal control hook
   //const { openConnectModal } = useConnectModal();
@@ -115,6 +116,33 @@ export const GlobalXchangeModal = ({ isOpen, onClose }: GlobalXchangeModalProps)
     fetch("/legal/privacy-policy.txt")
       .then((r) => r.text())
       .then(setPolicyText);
+  }, []);
+
+  useEffect(() => {
+    const resolveWallet = async () => {
+      if (typeof window !== "undefined" && window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: "eth_accounts" });
+          if (accounts.length > 0) {
+            setAddress(accounts[0]);
+            setIsConnected(true);
+          } else {
+            setAddress(null);
+            setIsConnected(false);
+          }
+
+          window.ethereum.on?.("accountsChanged", (accounts: string[]) => {
+            const newAccount = accounts.length > 0 ? accounts[0] : null;
+            setAddress(newAccount);
+            setIsConnected(!!newAccount);
+          });
+        } catch (err) {
+          console.error("Failed to get wallet address:", err);
+        }
+      }
+    };
+
+    resolveWallet();
   }, []);
 
   const stepLabels = ["Selection", "Policy", "Initiant", "CounterParty", "Deposits/Refunds", "Review", "Done"];
@@ -306,7 +334,7 @@ export const GlobalXchangeModal = ({ isOpen, onClose }: GlobalXchangeModalProps)
               onHelpToggle={() => setIsHelpMode(true)}
               onBack={returnFromReview}
               isConnected={isConnected}
-              walletAddress={address}
+              walletAddress={address ?? undefined}
               //openWalletModal={openConnectModal}
               reviewType={userAction ?? "newContract"}
               isRefundSelected={isRefundSelected}

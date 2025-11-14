@@ -69,10 +69,10 @@ export const CheckoutReviewStep: React.FC<Props> = ({
     return variant.startsWith("xseries") ? "heavy" : "standard";
   }
 
-  async function getGBDORateFromRates() {
+  async function getGBDoRateFromRates() {
     const result = await getExchangeRates();
     const gbdoRate = result.gbdoRate;
-    //console.log("GBDO Rate is:", gbdoRate);
+    //console.log("GBDo Rate is:", gbdoRate);
     return gbdoRate;
   }
 
@@ -117,7 +117,7 @@ export const CheckoutReviewStep: React.FC<Props> = ({
     const rate = shippingRates.find(
       (r) => r.region === region && r.category === category
     );
-    const gbdoRate = await getGBDORateFromRates();
+    const gbdoRate = await getGBDoRateFromRates();
     const shippingTotal = (((rate ? rate.Rate : 0) * quantity) * gbdoRate) / tokenRate;
     return shippingTotal; // convert cents to dollars
   }

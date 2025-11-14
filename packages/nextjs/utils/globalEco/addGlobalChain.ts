@@ -16,7 +16,7 @@ const TOKENS = [
   },
   {
     address: "0x0Cac0b334967bef2017b1e47629f842648598636",
-    symbol: "COPX",
+    symbol: "COPx",
     decimals: 18,
     image: "https://brantley-global.com/global.png",
   },

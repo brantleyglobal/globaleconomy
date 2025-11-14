@@ -14,7 +14,7 @@ interface StablecoinMeta {
   rate: number;
   disabled?: boolean;
   timestamp: number;
-  rateAgainstGBDO?: number;
+  rateAgainstGBDo?: number;
 }
 
 export interface StablecoinRate {
@@ -24,13 +24,13 @@ export interface StablecoinRate {
   healthy: boolean;
   network: string;
   timestamp: number;
-  rateAgainstGBDO?: number;
+  rateAgainstGBDo?: number;
 }
 
 const PRIME_FACTOR = 1.481;
 const SMOOTHING_THRESHOLD = 0.02;
 
-let cachedGBDORate: number | null = null;
+let cachedGBDoRate: number | null = null;
 let lastUpdated: number | null = null;
 const rateGuards: Record<string, { min: number; max: number; fallback?: number }> = {
   USDC: { min: 0.98, max: 1.02, fallback: 1.00 },
@@ -42,7 +42,7 @@ const rateGuards: Record<string, { min: number; max: number; fallback?: number }
   FDUSD:{ min: 0.98, max: 1.02, fallback: 1.00 },
   FRAX: { min: 0.97, max: 1.03, fallback: 1.00 },
   PYUSD: { min: 0.98, max: 1.02, fallback: 1.00 },
-  COPX: { min: 1.00, max: 1.00, fallback: 1.00 },
+  COPx: { min: 1.00, max: 1.00, fallback: 1.00 },
   JPYC: { min: 0.0065, max: 0.0073 }, // JPY ≈ ¥1 ≈ $0.0069
   EURC: { min: 1.08, max: 1.12 },     // EUR ≈ €1 ≈ $1.10
   EURe: { min: 1.08, max: 1.12 },
@@ -109,7 +109,7 @@ function smoothRate(current: number, previous: number): number {
     : current;
 }
 
-function calculateGBDORate(rates: StablecoinRate[]): number {
+function calculateGBDoRate(rates: StablecoinRate[]): number {
   const healthyRates = rates.filter(r => r.healthy);
   if (healthyRates.length === 0) return 1;
   const avg = healthyRates.reduce((sum, r) => sum + r.rate, 0) / healthyRates.length;
@@ -142,21 +142,21 @@ export async function getExchangeRates(apiUrl: string, apiKey: string, supported
     };
   });
 
-  // Calculate GBDO and smooth over last value
-  const rawGbdo = calculateGBDORate(stablecoinRates);
-  const smoothedGbdo = cachedGBDORate !== null ? smoothRate(rawGbdo, cachedGBDORate) : rawGbdo;
+  // Calculate GBDo and smooth over last value
+  const rawGbdo = calculateGBDoRate(stablecoinRates);
+  const smoothedGbdo = cachedGBDoRate !== null ? smoothRate(rawGbdo, cachedGBDoRate) : rawGbdo;
 
-  cachedGBDORate = smoothedGbdo;
+  cachedGBDoRate = smoothedGbdo;
   lastUpdated = now;
 
-  // Scale each rate with GBDO and calculate relative rate
+  // Scale each rate with GBDo and calculate relative rate
   stablecoinRates = stablecoinRates.map(r => {
-    const scaledRate = r.symbol === "COPX" ? smoothedGbdo : r.rate * smoothedGbdo;
-    const rateAgainstGBDO = r.symbol === "COPX" ? 1 : scaledRate / smoothedGbdo;
+    const scaledRate = r.symbol === "COPx" ? smoothedGbdo : r.rate * smoothedGbdo;
+    const rateAgainstGBDo = r.symbol === "COPx" ? 1 : scaledRate / smoothedGbdo;
     return {
       ...r,
       rate: scaledRate,
-      rateAgainstGBDO,
+      rateAgainstGBDo,
     };
   });
 

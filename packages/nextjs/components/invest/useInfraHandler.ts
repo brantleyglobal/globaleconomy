@@ -56,7 +56,7 @@ interface BitcoinWallet {
   sendTransaction: (to: string, amount: number) => Promise<string>;
 }
 
-async function sendTransferOnTargetChain(recipient: string, tamount: bigint, selectedToken: { address?: string, decimals?: number, symbol?: string }, btcWallet?: BitcoinWallet) {
+async function sendTransferOnTargetChain(recipient: string, tamount: bigint, selectedToken: { address?: string, decimals?: number, symbol?: string, chain?: string }, btcWallet?: BitcoinWallet) {
   if (!selectedToken.address) throw new Error("Token address required");
 
   const myChainSupportedTokenAddresses = new Set<Address>([
@@ -83,19 +83,20 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
 
 
   let selectedTokenChainId: number;
-  let chain: "global" | "polygon" | "ethereum" | "bitcoin";
-  if (isBitcoin) {
-    selectedTokenChainId = 0; // optional placeholder
-    chain = "bitcoin";
-  } else if (isOnMyChain) {
-    selectedTokenChainId = 3503995874081207;
-    chain = "global";
-  } else if (isOnPoly) {
-    selectedTokenChainId = 137;
-    chain = "polygon";
-  } else {
-    selectedTokenChainId = 1;
-    chain = "ethereum";
+  let chain = selectedToken.chain ?? "ethereum"; // fallback if missing
+
+  switch (chain) {
+    case "bitcoin":
+      selectedTokenChainId = 0;
+      break;
+    case "global":
+      selectedTokenChainId = 38391207;
+      break;
+    case "polygon":
+      selectedTokenChainId = 137;
+      break;
+    default:
+      selectedTokenChainId = 1;
   }
 
   console.log("checking3");
@@ -208,7 +209,7 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
       receipt = await tx.wait();
     } else {
       const tx = await tokenContract.transfer(to, amountBN, {
-        gasLimit: 65_000,
+        gasLimit: 80_000,
       });
       receipt = await tx.wait();
     }
@@ -216,10 +217,10 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
     console.log("Status:", receipt.status ? "Success" : "Failed");
 
   }
-  selectedTokenChainId = 3503995874081207;
+  selectedTokenChainId = 38391207;
 
   const resethexChainId = "0x" + selectedTokenChainId.toString(16);
-  const homeChainId = 3503995874081207;
+  const homeChainId = 38391207;
   const homeHexChainId = "0x" + homeChainId.toString(16);
 
 
@@ -294,7 +295,7 @@ export function useInfra(): UseDepositResult {
     
         let selectedTokenChainId;
         if(isOnMyChain){
-          selectedTokenChainId = 3503995874081207;
+          selectedTokenChainId = 38391207;
         }else if(isOnPoly){
           selectedTokenChainId = 137;
         }else{
@@ -342,6 +343,7 @@ export function useInfra(): UseDepositResult {
           address: token.address!,
           decimals: token.decimals,
           symbol: token.symbol,
+          chain: token.chain,
         }, 
         btcWallet);
 

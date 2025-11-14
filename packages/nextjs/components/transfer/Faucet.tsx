@@ -54,6 +54,8 @@ const myChainSupportedTokenAddresses = new Set<AddressType>([
 
 const polyAddresses = new Set<AddressType>([
   "0x5C067C80C00eCd2345b05E83A3e758eF799C40B5",
+  "0x6AE7Dfc73E0dDE2aa99ac063DcF7e8A63265108c",
+  "0xb755506531786c8ac63b756bab1ac387bacb0c04",
 ]);
 
 function getChainConfig(token: { address: AddressType }) {
@@ -376,14 +378,14 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
                   <TransferSummary
                     from={address as `0x${string}`}
                     to={recipient as `0x${string}`}
-                    token={selectedToken}
+                    token={{ ...selectedToken, chain: selectedToken.chain as "global" | "ethereum" | "polygon" | "bitcoin" }}
                     amount={amount}
                   />
                 )}
 
                 <div className="flex justify-between mb-4 px-2">
-                  <div className="w-full flex justify-between items-center mt-2">
-                    <div>
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1">
                       <span className="text-xs font-light">FROM</span>{" "}
                       {isConnected && address ? (
                         <Address address={address} onlyEnsOrAddress />
@@ -481,6 +483,7 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
                       </>
                     )}
                   </div>
+
                   <button
                     className="btn bg-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
                     onClick={handleSendClick}
@@ -492,14 +495,19 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
                       isProcessing
                     }
                   >
-                    {isProcessing ? (
-                      <span className="loading loading-spinner loading-sm">
-                        Processing...
-                      </span>
-                    ) : (
-                      <BanknotesIcon className="h-5 w-4 shrink-0" />
-                    )}
-                    {isProcessing ? "Processing..." : "CONFIRM"}
+                    <div className="flex items-center gap-2">
+                      {isProcessing ? (
+                        <>
+                          <span className="loading loading-spinner loading-sm" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <BanknotesIcon className="h-5 w-4 shrink-0" />
+                          <span>CONFIRM</span>
+                        </>
+                      )}
+                    </div>
                   </button>
                 </div>
               </div>
