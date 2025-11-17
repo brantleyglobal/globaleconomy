@@ -136,6 +136,20 @@ export const InvestmentModal: React.FC<Props> = ({
     }
   }
 
+  const goToReview = () => {
+    setSavedStep(step);
+    setStep(ModalStep.ConfirmStep);
+  };
+
+  const returnFromReview = () => {
+    if (savedStep !== null) {
+      setStep(savedStep);
+      setSavedStep(null);
+    } else {
+      setStep(ModalStep.SelectionStep); // fallback if none saved
+    }
+  };
+
   const handleConfirm = async () => {
     if (!selectedToken) {
       toast.error("Please select a valid token.");
@@ -185,7 +199,7 @@ export const InvestmentModal: React.FC<Props> = ({
           toast.error("Please select a valid token.");
           return;
         }
-        const receiptx = await infra(depositAmount, selectedToken2, selectedToken, connectedWallet!);
+        const receiptx = await infra(depositAmount, selectedToken2, selectedToken, connectedWallet!, selectedQuarter);
       } else {
         const receiptx = await deposit(depositAmount, selectedQuarter, selectedToken, connectedWallet!);
       }
@@ -388,7 +402,7 @@ export const InvestmentModal: React.FC<Props> = ({
                     toast.error("Please fill all the investment details.");
                     return;
                   }
-                  setStep(ModalStep.ConfirmStep);
+                  goToReview()
                 }}
               />
             )} 
@@ -419,7 +433,7 @@ export const InvestmentModal: React.FC<Props> = ({
                     toast.error("Please fill all the investment details.");
                     return;
                   }
-                  setStep(ModalStep.ConfirmStep);
+                  goToReview()
                 }}
               />
             )}           
@@ -431,7 +445,7 @@ export const InvestmentModal: React.FC<Props> = ({
                 token2={selectedToken2!}
                 summary={summary}
                 connectedWallet={connectedWallet}
-                onPrevious={() => setStep(1)}
+                onPrevious={returnFromReview}
                 onConfirm={handleConfirm}
                 onHelpToggle={() => setIsHelpMode(true)}
                 isProcessing={isAnyProcessing}

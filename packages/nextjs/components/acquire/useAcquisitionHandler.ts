@@ -30,7 +30,8 @@ interface UseDepositResult {
     amountStr: string,
     amountoutStr: string,
     token: Token,
-    userAddress: string
+    userAddress: string,
+    rate: string,
   ) => Promise<string>;
 }
 
@@ -38,7 +39,12 @@ interface BitcoinWallet {
   sendTransaction: (to: string, amount: number) => Promise<string>;
 }
 
-async function sendTransferOnTargetChain(recipient: string, tamount: bigint, selectedToken: { address?: string, decimals?: number, symbol?: string,  chain?: string }, btcWallet?: BitcoinWallet) {
+type TxResult = {
+  txHash: string;
+  receipt: any | null;
+};
+
+async function sendTransferOnTargetChain(recipient: string, tamount: bigint, selectedToken: { address?: string, decimals?: number, symbol?: string,  chain?: string }, btcWallet?: BitcoinWallet): Promise<TxResult> {
   if (!selectedToken.address) throw new Error("Token address required");
 
   const myChainSupportedTokenAddresses = new Set<Address>([
@@ -140,7 +146,7 @@ async function sendTransferOnTargetChain(recipient: string, tamount: bigint, sel
     await waitForBitcoinReady();
     const txid = await btcWallet.sendTransaction(recipient, Number(sats));
     console.log("Bitcoin TXID:", txid);
-    return txid;
+    return { txHash: txid, receipt: null };
   } else {
 
     if (!isAddress(to)) throw new Error("Invalid recipient address");
@@ -231,7 +237,8 @@ export function useDeposit(): UseDepositResult {
       amountStr: string,
       amountoutStr: string,
       token: Token,
-      userAddress: string
+      userAddress: string,
+      rate: string,
     ): Promise<string> => {
       setIsProcessing(true);
       setError(null);
@@ -239,8 +246,12 @@ export function useDeposit(): UseDepositResult {
       try {
 
         const iface = new Interface(acquisitionAbi.abi);
-        const parsedValue = parseUnits(amountStr, 18);
-        const parsedValue2 = parseUnits(amountoutStr, 18);
+        const parsedValue = parseUnits(String(amountStr), 18);
+        const parsedValue2 = parseUnits(String(amountoutStr), 18);
+        const exchangeRate = parseUnits(String(rate), 18);
+        console.log(parsedValue);
+        console.log(parsedValue2);
+        console.log(rate);
 
         let callAddress;
         if (token.symbol === "ETH") {
@@ -251,89 +262,33 @@ export function useDeposit(): UseDepositResult {
           callAddress = token.address;
         }
 
-        const calldata = iface.encodeFunctionData("deposit", [
+        const calldata = iface.encodeFunctionData("acquisition", [
           callAddress,
+          token.address,
           parsedValue,
           parsedValue2,
+          exchangeRate,
         ]);
 
         let holdingWalletAddress;
         if (token.symbol === "BTC"){
           holdingWalletAddress = process.env.NEXT_PUBLIC_BITCOLLECTOR_ADDRESS!;
         } else {        
-          holdingWalletAddress = process.env.NEXT_PUBLIC_COLLECTOR_ADDRESS!;
+          holdingWalletAddress = deployments.AcquisitionGateway;
         }
 
         /*************** CROSS CHAIN TRANSFER CALL ***************/
-        const txHashOnTarget = await sendTransferOnTargetChain(holdingWalletAddress, parsedValue, {
+        const { txHash, receipt } = await sendTransferOnTargetChain(holdingWalletAddress, parsedValue, {
           address: token.address!,
           decimals: token.decimals,
           symbol: token.symbol,
           chain: token.chain,
         });
-        
-        if (!window.ethereum) {
-          throw new Error("Ethereum provider not found.");
-        }
-
-        const provider = new BrowserProvider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        const signer = await provider.getSigner();
-
-        let tx: TransactionResponse | undefined;
-        let receipt: TransactionReceipt | null = null;
-        let chainStatus = true;
-        let amountToSend;
-    
-        try {
-          // Step 3: Send transaction directly to contract
-          const tx = await signer.sendTransaction({
-            to: deployments.SmartVault,
-            value: 0n,
-            data: calldata,
-            gasLimit:  80_000n,
-          });
-
-          receipt = await tx.wait();
-
-          if(!receipt){
-            throw new Error("No Receipt Generated")
-          }
-          for (const log of receipt.logs) {
-            try {
-              const mutableTopics = [...log.topics];
-              const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
-              if (parsed?.name === "Deposited") {
-                amountToSend = parsed.args.amountOut ?? parsed.args[0];
-                break;
-              }
-            } catch {
-              // Ignore error for non-matching logs
-            }
-          }
-    
-        } catch (err) {
-          console.error("My chain call failed:", err);
-          chainStatus = false;
-        }
-        
-        const signerForTransfer = "global";
-        const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-
-        sendReconciliation({
-          apiKey: process.env.NEXT_PUBLIC_API_SECRET!,
-          to: userAddress,
-          amount: amountToSend,
-          tokenAddress: ZERO_ADDRESS,
-          chain: signerForTransfer
-        }).then(({ txHash, status }) => {
-          console.log(`Refund sent! Tx: ${txHash}, Status: ${status}`);
-        }).catch(console.error);
 
         const now = new Date().toISOString();
 
         const successPayload: AcquisitionPayload = {
-          txhash: tx?.hash || "",
+          txhash: txHash || "",
           contractaddress: deployments.SmartVault,
           useraddress: userAddress,
           stablein: amountStr,
@@ -349,7 +304,7 @@ export function useDeposit(): UseDepositResult {
 
         await logAcquisitionCommit(successPayload);
 
-        return tx?.hash || "";
+        return txHash || "";
       } catch (e: any) {
         setError(e);
 

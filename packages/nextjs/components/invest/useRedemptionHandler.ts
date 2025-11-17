@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ethers, Contract, BrowserProvider } from "ethers";
+import { ethers, Contract, BrowserProvider, parseUnits,  } from "ethers";
 import smartVaultabi from "~~/lib/contracts/abi/SmartVault.json";
 import infraAbi from "~~/lib/contracts/abi/RegionInfrastructure.json";
 import deployments from "~~/lib/contracts/deployments.json";
-import { erc20Abi } from "viem";
-import { Address } from "viem";
+import { erc20Abi, Address } from "viem";
 import { sendReconciliation } from "~~/lib/reconciliatonHelper";
 import { Interface } from "@ethersproject/abi";
+import { getExchangeRates } from "~~/lib/exchangeRates";
 
 interface TokenType {
   address?: string;
@@ -61,6 +61,25 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
       // Determine if token is ERC20 (symbol not GBDo and address exists)
       const isERC20 = selectedToken.symbol !== "GBDo" && !!selectedToken.address;
 
+      const { rates, gbdoRate } = await getExchangeRates();
+        
+      // Find selected token's rate from rates array
+      let exchangeRateFloat;
+      if (selectedToken.symbol === "GBDo") {
+        exchangeRateFloat = gbdoRate / 1;
+      } else {
+        const selectedTokenRateObj = rates.find(r => r.symbol === selectedToken.symbol);
+  
+        if (!selectedTokenRateObj) {
+          throw new Error(`Exchange rate for token symbol ${selectedToken.symbol} not found`);
+        }
+        const tokenRate = selectedTokenRateObj.rate;
+        exchangeRateFloat = gbdoRate / tokenRate;
+      }
+      console.log("exchangeRateFloat (gbdoRate / tokenRate):", exchangeRateFloat);
+  
+      const exchangeRate = parseUnits(exchangeRateFloat.toFixed(18), selectedToken.decimals);
+
       // Calculate current financial quarter term code (YYQDD format)
       const date = new Date();
       const year = date.getFullYear() % 100;
@@ -76,7 +95,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
       const termAbi = ["function unlockQuarter() view returns (uint16)", "function comingQuarter() view returns (uint16)"];
 
       // Select vault or infrastructure contract address based on token symbol
-      const contractAddress = ["GLB", "TGUSA", "TGMX"].includes(selectedToken.symbol!) ? deployments.RegionInfrastructure : deployments.SmartVault;
+      const contractAddress = ["GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(selectedToken.symbol!) ? deployments.RegionInfrastructure : deployments.SmartVault;
 
       // Contracts for term queries
       const contract = new ethers.Contract(selectedToken.address, termAbi[0], provider);
@@ -100,11 +119,27 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
 
       let tokenTx, receipt;
 
-      if (!["GLB", "TGUSA", "TGMX"].includes(selectedToken.symbol!)) {
-        tokenTx = await vaultContract.withdraw(selectedToken.address, termCodeStr, balanceBefore);
+      if (!["GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(selectedToken.symbol!)) {
+        // Check allowance for vault
+        const allowance = await stablecoinContract.allowance(signerAddress, vaultContract.address);
+        if (allowance.lt(balanceBefore)) {
+          const approveTx = await stablecoinContract.approve(vaultContract.address, balanceBefore);
+          await approveTx.wait();
+        }
+
+        // Withdraw
+        tokenTx = await vaultContract.withdraw(selectedToken.address, termCodeStr, balanceBefore, exchangeRate);
         receipt = await tokenTx.wait();
       } else {
-        tokenTx = await infraContract.withdraw(selectedToken.address, termCodeStr, balanceBefore);
+        // Check allowance for infra
+        const allowance = await stablecoinContract.allowance(signerAddress, infraContract.address);
+        if (allowance.lt(balanceBefore)) {
+          const approveTx = await stablecoinContract.approve(infraContract.address, balanceBefore);
+          await approveTx.wait();
+        }
+
+        // Withdraw
+        tokenTx = await infraContract.withdraw(selectedToken.address, termCodeStr, balanceBefore, exchangeRate);
         receipt = await tokenTx.wait();
       }
 
@@ -124,54 +159,12 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         } catch { /* ignore non-matching logs */ }
       }
 
-      if (!amountToSend) throw new Error("RedemptionFulfilled event not found");
-
-      // Identify token chain and prepare reconciliation call
-      const myChainAddresses = new Set<Address>([
-        deployments.Copian,
-        deployments.GlobalDollarX,
-        deployments.GlobalDollar,
-        deployments.BGFFS,
-        deployments.BGFRS,
-        deployments.TGMX,
-        deployments.TGUSA,
-        deployments.Globe,
-      ]);
-
-      const polyAddresses = new Set<Address>([
-        "0x5C067C80C00eCd2345b05E83A3e758eF799C40B5",
-      ]);
-
-      const isOnMyChain = myChainAddresses.has(selectedToken.address as Address);
-      const isOnPoly = polyAddresses.has(selectedToken.address as Address);
-      const isBitcoin = selectedToken.symbol === "BTC";
-      const isOnEthChain = !isOnMyChain && !isOnPoly && !isBitcoin;
-
-      let signerForTransfer: string;
-
-      if (isOnMyChain) signerForTransfer = "global";
-      else if (isOnPoly) signerForTransfer = "polygon";
-      else if (isBitcoin) signerForTransfer = "bitcoin";
-      else if (isOnEthChain) signerForTransfer = "ethereum";
-      else throw new Error("Unsupported token chain");
-
-      // Call reconciliation endpoint asynchronously
-      sendReconciliation({
-        apiKey: process.env.NEXT_PUBLIC_API_SECRET!,
-        to: signerAddress,
-        amount: amountToSend.toString(),
-        tokenAddress: selectedToken.address,
-        chain: signerForTransfer,
-      }).then(({ txHash, status }) => {
-        console.log(`Redemption sent! Tx: ${txHash}, Status: ${status}`);
-      }).catch(console.error);
-
       // Prepare payload for redemption logging
       const redemptionPayload = {
         txhash: tokenTx.hash,
         contractaddress: contractAddress,
         useraddress: sender,
-        amount: amountToSend.toString(),
+        amount: amountToSend?.toString(),
         asset: selectedToken.symbol,
         status: "accepted",
         chainstatus: true,
@@ -211,7 +204,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         success: true,
         txHash: tokenTx.hash,
         receiptHash: receipt.blockHash,
-        amount: amountToSend.toString(),
+        amount: amountToSend?.toString(),
         token: selectedToken.symbol ?? "unknown",
         status: "queued",
       };

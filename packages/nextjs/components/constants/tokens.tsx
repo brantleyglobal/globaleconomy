@@ -11,7 +11,6 @@ export interface Token {
   chain?: string; // or use a broader enum if needed
 }
 
-
 interface Deployments {
   [key: string]: string;
 }
@@ -305,14 +304,6 @@ export const supportedTokens = [
     name: "Monerium Euro",
     symbol: "EURe",
     address: "0x3231Cb76718CDeF2155FC47b5286d82e6eDA273f",
-    decimals: 18,
-    isNative: false,
-    chain: "ethereum",
-  },
-  {
-    name: "Ethtereum",
-    symbol: "ETH",
-    address: "0x0000000000000000000000000000000000000000",
     decimals: 18,
     isNative: false,
     chain: "ethereum",

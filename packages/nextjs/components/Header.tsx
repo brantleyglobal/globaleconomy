@@ -34,6 +34,7 @@ const menuLinks = [
   { label: "ABOUT", href: "/about" },
   { label: "ENERGY ORDER", href: "/energy-order" },
   { label: "WHITEPAPER", href: "/whitepaper" },
+  { label: "VERIFCATIONS", href: "/verification" },
   { label: "HELP", href: "/help" },
 ];
 

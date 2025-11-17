@@ -117,6 +117,7 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
       const normalizedToken = {
         ...token,
         isNative: token.isNative ?? false, // default false if undefined
+        chain: token.chain ?? "unknown",
       };
 
       if (!map.has(normalizedToken.symbol)) {
@@ -154,13 +155,29 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
   };
 
   const handleRecipientChange = (val: string) => {
+    // Always update the raw value
+    setRecipient(val);
+
+    // If empty, clear error
+    if (val === "") {
+      setAddressError("");
+      return;
+    }
+
+    // If not long enough yet, mark as incomplete
+    if (val.length < 42) {
+      setAddressError("Address incomplete");
+      return;
+    }
+
+    // Once length is correct, try to checksum/validate
     try {
       const checksummed = getAddress(val);
       setRecipient(checksummed);
       setAddressError("");
     } catch {
       setRecipient(undefined);
-      setAddressError(val === "" ? "" : "Invalid Ethereum address");
+      setAddressError("Invalid Ethereum address");
     }
   };
 
@@ -354,6 +371,13 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
                         </option>
                       ))}
                   </select>
+                  <button
+                      type="button"
+                      onClick={() => setShowStablecoinInfo(true)}
+                      className="bg-white/10 animate-pulse backdrop-blur-md w-full px-6 py-2 mt-2 rounded-md text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
+                  >
+                      Supported Stablecoin
+                  </button>                  
                 </div>
 
                 <AddressInput
@@ -393,13 +417,6 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
                         <span className="text-sm ml-1">--</span>
                       )}
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => setShowStablecoinInfo(true)}
-                        className="bg-white/10 animate-pulse backdrop-blur-md px-6 py-2 rounded-full text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
-                    >
-                        Supported Stablecoin
-                    </button>
                   </div>
                   {/*<div>
                     <span className="text-xs font-light">AVAILABLE</span>{" "}

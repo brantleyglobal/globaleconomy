@@ -101,7 +101,7 @@ export default function DividendOverview() {
 
       <p className="text-zinc-300 max-w-3xl text-sm">
         All committed investments participate in the quarterly dividend pool. 
-        Profits are allocated based on each user’s multiplier and duration commitment, and unlocked at the end of their cycle. 
+        Profits are allocated based on each user’s multiplier and committment duration, and unlocked at the end of their cycle along with their initial investment. 
         Just transparent logic and predictable value flow.
       </p>
 

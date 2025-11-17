@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useChainId, useAccount, useConnectors } from "wagmi";
 import { GLOBALCHAIN } from "~~/utils/globalEco/customChains";
 
@@ -11,6 +11,8 @@ export const WalletAutoAdd = () => {
 
   const metaMaskConnector = connectors.find(c => c.id === "metaMask");
 
+  const hasRun = useRef(false);
+
   const TOKENS = [
     {
       address: "0xdE8200d454DfD32Ae694705648Efa53750101aBc",
@@ -20,7 +22,7 @@ export const WalletAutoAdd = () => {
     },
     {
       address: "0x0Cac0b334967bef2017b1e47629f842648598636",
-      symbol: "COPX",
+      symbol: "COPx",
       decimals: 18,
       image: "https://brantley-global.com/global.png",
     },
@@ -78,7 +80,9 @@ export const WalletAutoAdd = () => {
 
     const isMetaMask = window?.ethereum?.isMetaMask;
 
-    if (isConnected && isMetaMask && chainId !== GLOBALCHAIN.id) {
+    // Only run once per page load
+    if (!hasRun.current && isConnected && isMetaMask && chainId !== GLOBALCHAIN.id) {
+      hasRun.current = true;
       switchToGLOBALCHAIN();
     }
   }, [isConnected, chainId]);

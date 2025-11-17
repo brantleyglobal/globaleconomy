@@ -37,7 +37,7 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
   const [walletName, setWalletName] = useState<string>("");
   const [isMetaMask, setIsMetaMask] = useState(false);
   const [isBrave, setIsBrave] = useState(false);
-  //const [isCoinbase, setIsCoinbase] = useState(false);
+  const [isCoinbase, setIsCoinbase] = useState(false);
   const [isTrust, setIsTrust] = useState(false);
   const [selectedChain, setSelectedChain] = useState<"ethereum" | "bitcoin">("ethereum");
   const [btcWallet, setBtcWallet] = useState<BitcoinWallet | null>(null);
@@ -76,11 +76,11 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
       setWalletName("MetaMask");
       setIsMetaMask(true);
       setIsMultiChainWallet(false);
-    } /*else if (ethereum?.isCoinbaseWallet) {
+    } else if (ethereum?.isCoinbaseWallet) {
       setWalletName("Coinbase Wallet");
       setIsCoinbase(true);
       setIsMultiChainWallet(false);
-    }*/ else if (ethereum?.isBraveWallet) {
+    } else if (ethereum?.isBraveWallet) {
       setWalletName("Brave Wallet");
       setIsBrave(true);
       setIsMultiChainWallet(false);
@@ -216,7 +216,7 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
             {/* Mobile-only notice */}
             {isMobile && !account && (
               <div className="bg-yellow-900 text-yellow-100 text-xs rounded px-4 py-2 mb-2">
-                Use a desktop browser for blockchain transactions and crypto address related functionality 
+                Use MetaMask Mobile or desktop browser for blockchain transactions and crypto address related functionality 
               </div>
             )}
             {/* Browser Wallets */}
@@ -295,11 +295,11 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
                   Connect with Brave Wallet
                 </button>
               )}
-              {/*{isCoinbase && (
+              {isCoinbase && (
                 <button onClick={connectWallet} className="w-full px-4 py-2 hover:bg-white/5">
                   Connect with Coinbase Wallet
                 </button>
-              )}*/}
+              )}
               {isTrust && (
                 <button onClick={connectWallet} className="w-full px-4 py-2 hover:bg-white/5">
                   Connect with Trust Wallet

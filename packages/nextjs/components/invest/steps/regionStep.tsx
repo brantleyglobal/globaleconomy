@@ -50,7 +50,7 @@ export const RegionStep: React.FC<Props> = ({
   onPrevious,
 }) => {
   // Use helper to get typed details safely
-  const details = getProjectDetails(selectedTokenSymbol);
+  const details = getProjectDetails(selectedTokenSymbol2);
 
   const [userFirstName, setUserFirstName] = useState("");
   const [userLastName, setUserLastName] = useState("");
@@ -155,7 +155,6 @@ export const RegionStep: React.FC<Props> = ({
               Supported Stablecoin
           </button>
           </div>
-          {details ? <ProjectPreview {...details} /> : null}
           <div>
             <input
               type="text"
@@ -167,6 +166,7 @@ export const RegionStep: React.FC<Props> = ({
               onChange={e => setDepositAmount(e.target.value)}
             />
           </div>
+          {details ? <ProjectPreview {...details} /> : null}
           <div className="mt-12">
             <p className="text-white/50 uppercase tracking-wide text-xs font-semibold">
               EMAIL FOR CONFIRMATION

@@ -34,7 +34,7 @@ export function TokenBalancesPanel() {
       <p className="text-zinc-300 max-w-3xl px-2 text-sm">
         Available Ecosystem Balances For Connected Wallet.
       </p>
-      <div className="overflow-x-auto rounded-box shadow">
+      <div className="overflow-x-auto rounded-md shadow">
         <table className="table table-zebra w-full text-sm bg-base-100">
           <thead className="bg-base-300 text-base-content">
             <tr>

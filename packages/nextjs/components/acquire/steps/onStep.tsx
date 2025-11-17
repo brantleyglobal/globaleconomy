@@ -4,6 +4,7 @@ import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { WalletIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { getExchangeRates } from "~~/lib/exchangeRates";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import { token } from "../../../../hardhat/typechain-types/@openzeppelin/contracts-upgradeable";
 
 export type Props = {
   supportedTokens: Token[];
@@ -11,6 +12,10 @@ export type Props = {
   setSelectedTokenSymbol: (symbol: string) => void;
   depositAmount: string;
   setDepositAmount: (amount: string) => void;
+  convertedAmount: string;
+  setConvertedAmount: (amount: string) => void;
+  exchangeRate: string;
+  setExchangeRate: (amount: string) => void;
   userFirstName: string;
   setUserFirstName: (val: string) => void;
   userLastName: string;
@@ -36,6 +41,10 @@ export const OnStep: React.FC<Props> = ({
   setSelectedTokenSymbol,
   depositAmount,
   setDepositAmount,
+  convertedAmount,
+  setConvertedAmount,
+  exchangeRate,
+  setExchangeRate,
   connectedWallet,
   onHelpToggle,
   onNext,
@@ -62,13 +71,6 @@ export const OnStep: React.FC<Props> = ({
       return "Unknown";
   };
 
-  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
-
-  const convertedAmount = exchangeRate && depositAmount
-  ? (parseFloat(depositAmount) * exchangeRate).toFixed(2)
-  : "";
-
-  
   // Basic email validation regex
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -91,28 +93,92 @@ export const OnStep: React.FC<Props> = ({
     depositAmount === "" || selectedTokenSymbol === "";
 
   useEffect(() => {
+    let cancelled = false; // guard against stale responses
+    const requestId = Date.now();
+
     const fetchRate = async () => {
-      if (!selectedTokenSymbol) return;
+      const symbol = (selectedTokenSymbol || "").toUpperCase();
+      if (!symbol) return;
 
       try {
         const { rates, gbdoRate } = await getExchangeRates();
-        const selectedTokenRateObj = rates.find(r => r.symbol === selectedTokenSymbol);
 
-        if (!selectedTokenRateObj) {
-          throw new Error(`Exchange rate for token symbol ${selectedTokenSymbol} not found`);
+        // Validate gbdoRate
+        const gbdo = Number(gbdoRate);
+        if (!isFinite(gbdo) || gbdo <= 0) {
+          throw new Error(`Invalid GBDO rate: ${gbdoRate}`);
         }
 
-        const tokenRate = selectedTokenRateObj.rate;
-        const exchangeRateFloat = tokenRate / gbdoRate;
-        setExchangeRate(exchangeRateFloat);
+        // Hardcoded USD prices for volatile tokens (example values)
+        const hardcodedUsd: Record<string, number> = {
+          WETH: 3000,
+          WBNB: 900,
+          WBTC: 90000,
+        };
+
+        // Build a quick lookup for API rates (assumed USD)
+        const apiMap = new Map<string, number>();
+        for (const r of rates ?? []) {
+          if (r?.symbol) apiMap.set(String(r.symbol).toUpperCase(), Number(r.rate));
+        }
+
+        // Resolve tokenRate (USD)
+        let tokenRate = hardcodedUsd[symbol];
+        if (tokenRate === undefined) {
+          const apiRate = apiMap.get(symbol);
+          if (!isFinite(apiRate!)) {
+            throw new Error(`Exchange rate for token ${symbol} not found or invalid`);
+          }
+          tokenRate = apiRate!;
+        }
+
+        // Compute token → GBDo
+        const exchangeRateFloat = tokenRate / gbdo;
+
+        // Extra validation
+        if (!isFinite(exchangeRateFloat)) {
+          throw new Error(
+            `Computed exchange rate is invalid: tokenRate=${tokenRate}, gbdoRate=${gbdo}`
+          );
+        }
+
+        // Skip if effect has been cancelled (user changed token)
+        if (cancelled) return;
+
+        // Log clearly so you can verify inputs and outputs
+        console.log(`[fetchRate ${requestId}] symbol=${symbol}`);
+        console.log(`[fetchRate ${requestId}] tokenRate(USD)=`, tokenRate);
+        console.log(`[fetchRate ${requestId}] gbdoRate(USD)=`, gbdo);
+        console.log(`[fetchRate ${requestId}] 1 ${symbol} ≈ ${exchangeRateFloat} GBDo`);
+
+        // Keep string handler
+        setExchangeRate(exchangeRateFloat.toString());
       } catch (err) {
         console.error("Error fetching exchange rate:", err);
-        setExchangeRate(null);
+        setExchangeRate("");
       }
     };
 
     fetchRate();
+
+    return () => {
+      // cancel any in-flight response from older selections
+      cancelled = true;
+    };
   }, [selectedTokenSymbol]);
+
+  // Derive converted amount whenever depositAmount or exchangeRate changes
+  useEffect(() => {
+    if (exchangeRate && depositAmount && !isNaN(Number(depositAmount))) {
+      const converted = (
+        Number(depositAmount) * parseFloat(exchangeRate)
+      ).toFixed(2);
+
+      setConvertedAmount(converted); // string
+    } else {
+      setConvertedAmount("");
+    }
+  }, [depositAmount, exchangeRate]);
 
   return (
     <div className="flex flex-col h-full space-y-4">
@@ -177,8 +243,8 @@ export const OnStep: React.FC<Props> = ({
             value={convertedAmount}
           />
           {exchangeRate && (
-            <p className="text-xs px-2 text-white/40">
-              1 {selectedTokenSymbol} ≈ {exchangeRate.toFixed(4)} GBDo
+            <p>
+              1 {selectedTokenSymbol} ≈ {exchangeRate ? parseFloat(exchangeRate).toFixed(4) : ""} GBDo
             </p>
           )}
         </div>

@@ -160,43 +160,10 @@ export default function HomePageLayout() {
         </div>
       </section>
 
-
       <Footer />
 
       <div className="bg-black px-4 py-2 sm:px-6 md:px-8 lg:px-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Storefront */}
-          <div className="md:col-span-3">
-            <h2 className="text-lg md:text-xl font-light text-white mb-4"></h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {allFeaturedAssets.map(rawAsset => {
-                const variant = rawAsset.asset?.variant === "eseries" || rawAsset.asset?.variant === "xseries"
-                  ? rawAsset.asset.variant
-                  : "eseries";
-
-                const parsedAsset = {
-                  asset: {
-                    assetId: rawAsset.assetId ?? 0,
-                    basePriceInGBDo: Number(rawAsset.asset?.basePriceInGBDo ?? 0),
-                    baseDays: rawAsset.asset?.baseDays ?? 0,
-                    perUnitDelay: String(rawAsset.asset?.perUnitDelay ?? "0"),
-                    variant: variant as "eseries" | "xseries",
-                  },
-                  metadata: {
-                    name: rawAsset.metadata?.name ?? "",
-                    model: rawAsset.metadata?.model ?? "",
-                    description: rawAsset.metadata?.description ?? "",
-                    image: rawAsset.metadata?.image ?? "",
-                    altImage: rawAsset.metadata?.altImage ?? rawAsset.metadata?.image ?? "",
-                  },
-                };
-
-                return <AssetCard key={parsedAsset.asset.assetId} data={parsedAsset} />;
-              })}
-            </div>
-          </div>
-          
-
           {/* Investor Portal */}
           <div className="bg-white/3 to-black rounded-xl shadow-lg px-6 mt-4 space-y-4">
             {/* Inlaid Video */}
@@ -247,6 +214,37 @@ export default function HomePageLayout() {
               <FiatCardPager/>
             </div>
           </div>
+
+          {/* Storefront */}
+          <div className="md:col-span-3">
+            <h2 className="text-lg md:text-xl font-light text-white mb-4"></h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {allFeaturedAssets.map(rawAsset => {
+                const variant = rawAsset.asset?.variant === "eseries" || rawAsset.asset?.variant === "xseries"
+                  ? rawAsset.asset.variant
+                  : "eseries";
+
+                const parsedAsset = {
+                  asset: {
+                    assetId: rawAsset.assetId ?? 0,
+                    basePriceInGBDo: Number(rawAsset.asset?.basePriceInGBDo ?? 0),
+                    baseDays: rawAsset.asset?.baseDays ?? 0,
+                    perUnitDelay: String(rawAsset.asset?.perUnitDelay ?? "0"),
+                    variant: variant as "eseries" | "xseries",
+                  },
+                  metadata: {
+                    name: rawAsset.metadata?.name ?? "",
+                    model: rawAsset.metadata?.model ?? "",
+                    description: rawAsset.metadata?.description ?? "",
+                    image: rawAsset.metadata?.image ?? "",
+                    altImage: rawAsset.metadata?.altImage ?? rawAsset.metadata?.image ?? "",
+                  },
+                };
+
+                return <AssetCard key={parsedAsset.asset.assetId} data={parsedAsset} />;
+              })}
+            </div>
+          </div>          
         </div>
 
         {/* Modals */}

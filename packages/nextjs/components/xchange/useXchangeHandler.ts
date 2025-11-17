@@ -1,18 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { ethers, Contract, parseUnits, formatUnits, Interface, BrowserProvider, isAddress, TransactionResponse, TransactionReceipt } from "ethers";
+import { useState, useEffect } from "react";
+import { Contract, parseUnits, formatUnits, Interface, BrowserProvider, isAddress, TransactionResponse, TransactionReceipt } from "ethers";
 import GlobalSwapabi from "~~/lib/contracts/abi/GlobalSwap.json";
 import GlobalSwapFactoryabi from "~~/lib/contracts/abi/GlobalSwapFactory.json";
 import deployments from "~~/lib/contracts/deployments.json";
-import { erc20Abi } from "viem";
 import { supportedTokens, dividendTokens, Token } from "~~/components/constants/tokens";
 import { Address as AddressType } from "viem";
 import { getExchangeRates } from "~~/lib/exchangeRates";
-import { useWalletClient } from "wagmi";
 import { Address } from "viem";
 import { useSelectedTokenBalance } from "~~/lib/chainHelper";
-import { sendReconciliation } from "~~/lib/reconciliatonHelper";
+import { sendTransferOnTargetChain } from "~~/utils/targetChain"
 
 interface TransferHandlerProps {
   sender?: string;
@@ -33,6 +31,11 @@ interface TransferHandlerProps {
 interface BitcoinWallet {
   sendTransaction: (to: string, amount: number) => Promise<string>;
 }
+
+type TxResult = {
+  txHash: string;
+  receipt: any | null;
+};
 
 async function convertGbdoToSelectedTokenValue(
   selectedTokenSymbol: string,
@@ -102,194 +105,6 @@ async function convertGbdoToSelectedTokenValue(
   return tokenAmount;
 }
 
-async function sendTransferOnTargetChain(recipient: string, tamount: bigint, selectedToken: { address?: string, decimals?: number, symbol?: string,  chain?: string }, btcWallet?: BitcoinWallet) {
-  if (!selectedToken.address) throw new Error("Token address required");
-
-  const myChainSupportedTokenAddresses = new Set<Address>([
-    deployments.Copian,
-    deployments.GlobalDollarX,
-    deployments.GlobalDollar,
-    deployments.BGFFS,
-    deployments.BGFRS,
-    deployments.TGMX,
-    deployments.TGUSA,
-    deployments.Globe,
-    ...dividendTokens.map(t => t.address as Address),
-  ]);
-
-  const polyAddresses = new Set<Address>([
-    "0x5C067C80C00eCd2345b05E83A3e758eF799C40B5",
-    "0x6AE7Dfc73E0dDE2aa99ac063DcF7e8A63265108c",
-    "0xb755506531786c8ac63b756bab1ac387bacb0c04",
-  ]);
-
-  const isOnMyChain = myChainSupportedTokenAddresses.has(selectedToken.address as Address);
-  const isOnPoly = polyAddresses.has(selectedToken.address as Address);
-  const isBitcoin = selectedToken.symbol === "BTC";
-  const isOnEthChain = !isOnMyChain && !isOnPoly && !isBitcoin;
-
-
-  let selectedTokenChainId: number;
-  let chain = selectedToken.chain ?? "ethereum"; // fallback if missing
-
-  switch (chain) {
-    case "bitcoin":
-      selectedTokenChainId = 0;
-      break;
-    case "global":
-      selectedTokenChainId = 38391207;
-      break;
-    case "polygon":
-      selectedTokenChainId = 137;
-      break;
-    default:
-      selectedTokenChainId = 1;
-  }
-
-  console.log("checking3");
-
-  // Validate recipient and amount
-  const to = recipient;
-  const amount = tamount;
-
-  let receipt;
-
-  // Helper to await the chainChanged event matching the target network
-  async function waitForChainChanged(expectedChainIdHex: string): Promise<void> {
-    const start = Date.now();
-
-    while (true) {
-      if (!window.ethereum) {
-        throw new Error("No Ethereum provider found. Please install MetaMask.");
-      }
-      const currentChainId = await window.ethereum.request({ method: "eth_chainId" });
-
-      if (currentChainId === expectedChainIdHex) {
-        return;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 250)); // Poll every 250ms
-    }
-  }
-
-  async function waitForBitcoinReady(timeoutMs = 10000): Promise<void> {
-    const start = Date.now();
-
-    while (true) {
-      if (!window.xfi || !window.xfi.bitcoin) {
-        throw new Error("XDEFI Bitcoin provider not found. Please install or enable XDEFI Wallet.");
-      }
-
-      try {
-        const address = await window.xfi.bitcoin.getAddress();
-        if (address) {
-          return; // Wallet is ready
-        }
-      } catch (err) {
-        // Wallet not ready yet — keep polling
-      }
-
-      if (Date.now() - start > timeoutMs) {
-        throw new Error("Timeout waiting for XDEFI Bitcoin wallet to become ready.");
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 250)); // Poll every 250ms
-    }
-  }
-
-  if (chain === "bitcoin") {
-    if (!btcWallet) throw new Error("Bitcoin wallet not connected");
-
-    const humanAmount = formatUnits(tamount, 18);
-    const sats = parseUnits(humanAmount, 8);
-    await waitForBitcoinReady();
-    const txid = await btcWallet.sendTransaction(recipient, Number(sats));
-    console.log("Bitcoin TXID:", txid);
-    return txid;
-  } else {
-
-    if (!isAddress(to)) throw new Error("Invalid recipient address");
-    if (!amount) throw new Error("Amount missing");
-
-    const hexChainId = "0x" + selectedTokenChainId.toString(16);
-
-    if (!window.ethereum) throw new Error("MetaMask not detected");
-
-    const currentChainId = await window.ethereum.request({ method: "eth_chainId" });
-    if (currentChainId !== hexChainId) {
-      try {
-        await window.ethereum.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: hexChainId }],
-        });
-        await waitForChainChanged(hexChainId);
-      } catch (switchError: any) {
-        if (switchError.code === 4902) {
-          throw new Error("Requested chain is not available in MetaMask. Please add it manually.");
-        } else {
-          throw switchError;
-        }
-      }
-    }
-
-    console.log(selectedTokenChainId);
-
-    // Continue with contract, amount formatting and sending as you currently do:
-    const provider = new BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    const network = await provider.getNetwork();
-
-    if (Number(network.chainId) !== selectedTokenChainId) {
-      console.log(`MetaMask is connected to the wrong network: ${network.chainId}`);
-    }
-
-    const tokenContract = new ethers.Contract(selectedToken.address, erc20Abi, signer);
-
-    const humanReadable = formatUnits(amount, 18);
-    const amountBN = parseUnits(humanReadable, selectedToken.decimals);
-    
-    if (selectedToken.symbol === "ETH") {
-      const tx = await signer.sendTransaction({
-        to,
-        value: amountBN,
-        gasLimit: 30_000,
-      });
-      receipt = await tx.wait();
-    } else {
-      const tx = await tokenContract.transfer(to, amountBN, {
-        gasLimit: 80_000,
-      });
-      receipt = await tx.wait();
-    }
-    console.log("Status:", receipt.status ? "Success" : "Failed");
-  }
-  selectedTokenChainId = 38391207;
-
-  const resethexChainId = "0x" + selectedTokenChainId.toString(16);
-  const homeChainId = 38391207;
-  const homeHexChainId = "0x" + homeChainId.toString(16);
-
-
-  const resetChainId = await window.ethereum.request({ method: "eth_chainId" });
-  if (resetChainId !== homeHexChainId) {
-    try {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: resethexChainId }],
-      });
-      await waitForChainChanged(resethexChainId);
-    } catch (switchError: any) {
-      if (switchError.code === 4902) {
-        throw new Error("Requested chain is not available in MetaMask. Please add it manually.");
-      } else {
-        throw switchError;
-      }
-    }
-  }    
-
-  return receipt.transactionHash;
-}
-
 export function useXchangeHandler(config: TransferHandlerProps) {
   const {
     chainId = 0,
@@ -307,6 +122,29 @@ export function useXchangeHandler(config: TransferHandlerProps) {
   } = config;
 
   const [loading, setLoading] = useState(false);
+  const [provider, setProvider] = useState<EthereumProvider | null>(null);
+  const [walletName, setWalletName] = useState<string>("");
+  
+  useEffect(() => {
+    const ethereum = window.ethereum;
+    const xdefi = window.xfi;
+
+    if (ethereum?.isMetaMask) {
+      setWalletName("MetaMask");
+      setProvider(ethereum);
+    } else if (ethereum?.isBraveWallet) {
+      setWalletName("Brave Wallet");
+      setProvider(ethereum);
+    } else if (ethereum) {
+      setWalletName("Injected Wallet");
+      setProvider(ethereum);
+    }
+
+    if (xdefi) {
+      setWalletName("XDEFI Wallet");
+      setProvider(xdefi.ethereum);
+    }
+  }, []);
 
   const send = async () => {
     const processedAt = new Date().toISOString();
@@ -320,10 +158,6 @@ export function useXchangeHandler(config: TransferHandlerProps) {
       },
     };
 
-    /*if (!recipient || !chainId || selectedToken.decimals == null) {
-      openWalletModal?.();
-      return { success: false, error: "Missing recipient or chain info" };
-    }*/
     console.log("SafeCheck...");
 
     let txhash = "";
@@ -399,42 +233,6 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         console.log("value1", parsedValue);
         console.log("value2", parsedValue2);
 
-        /*const {
-          balanceBigInt: feeBalanceBigInt,
-          balanceBigNumber: feeBalanceBigNumber,
-          decimals: feeDecimals,
-          isLoading: feeLoading,
-        } = useSelectedTokenBalance(
-          signerAddress,
-          selectedTokenS,
-          selectedTokenChainId
-        );
-
-        if (!feeLoading && feeBalanceBigNumber !== undefined) {
-          //const requiredAmount = ethers.utils.parseUnits(value, decimals);
-          if (feeBalanceBigNumber < amountInSelectedFeeToken!) {
-            console.log(`Insufficient ${selectedToken.symbol} balance.`);
-          }
-        }*/
-
-        /*************** CROSS CHAIN TRANSFER CALL ***************/
-
-        let holdingWalletAddress;
-        if (selectedToken.symbol === "BTC"){
-          holdingWalletAddress = process.env.NEXT_PUBLIC_BITCOLLECTOR_ADDRESS!;
-        } else {        
-          holdingWalletAddress = process.env.NEXT_PUBLIC_COLLECTOR_ADDRESS!;
-        }
-
-        if (amountInSelectedFeeToken !== null) {
-          const serviceTxHashOnTarget = await sendTransferOnTargetChain(holdingWalletAddress, amountInSelectedFeeToken, {
-            address: selectedTokenS.address!,
-            decimals: selectedTokenS.decimals,
-            symbol: selectedTokenS.symbol,
-            chain: selectedTokenS.chain,
-          });
-        }
-
         let callAddressS;
         if (selectedToken.symbol === "ETH") {
           callAddressS = 0x00000000000000000000000000000000000000E0
@@ -472,10 +270,10 @@ export function useXchangeHandler(config: TransferHandlerProps) {
             parsedValue,
             callAddress2,
             parsedValue2,
-            { gasLimit: 500_000 }
+            { gasLimit: 1_000_000 }
           );
           txhash = tokenTx.hash;
-          receipt = await tokenTx.wait();
+          const receipt = await tokenTx.wait();
           console.log("AssetXchange creation confirmed");
 
           if (!receipt) throw new Error("Transaction receipt is null");
@@ -520,43 +318,27 @@ export function useXchangeHandler(config: TransferHandlerProps) {
             console.log(`Insufficient ${selectedToken.symbol} balance.`);
           }
         }
+
+        const holdingWalletAddress = swapAddress;
         
         /*************** CROSS CHAIN TRANSFER CALL ***************/
+        console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address);
 
-        const txHashOnTarget = await sendTransferOnTargetChain(holdingWalletAddress, parsedValue, {
-          address: selectedToken.address!,
-          decimals: selectedToken.decimals,
-          symbol: selectedToken.symbol,
-          chain: selectedToken.chain,
-        });
-          
-        try {
-          // Step 3: Send transaction directly to contract
-          tokenTx2 = await xchange.deposit({ gasLimit: 100_000 });
-          txhash = tokenTx2.hash;
-          receipt = await tokenTx2.wait();
-          console.log("AssetXchange deposit confirmed");
-
-          if (!receipt) throw new Error("Transaction receipt is null");
-
-          let amountToSend;
-          for (const log of receipt.logs) {
-            try {
-              const mutableTopics = [...log.topics];
-              const parsed = iface2.parseLog({ topics: mutableTopics, data: log.data });
-              if (parsed?.name === "SwapJoined") {
-                amountToSend = parsed.args.amount ?? parsed.args[0];
-                break;
-              }
-            } catch {
-              // Ignore error for non-matching logs
-            }
-          }
-    
-        } catch (err) {
-          console.error("My chain call failed:", err);
-          chainStatus = false;
+        if (!provider) {
+          throw new Error("No provider available");
         }
+        const { txHash, receipt } = await sendTransferOnTargetChain(
+          holdingWalletAddress,
+          parsedValue,
+          {
+            address: selectedToken.address!,
+            decimals: selectedToken.decimals,
+            symbol: selectedToken.symbol,
+            chain: selectedToken.chain,
+          },
+          btcWallet,
+          provider // pass provider here
+        );
 
 /*************************************************************************************************************/
       
@@ -589,115 +371,27 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         if (selectedToken.symbol === "BTC"){
           holdingWalletAddress = process.env.NEXT_PUBLIC_BITCOLLECTOR_ADDRESS!;
         } else {        
-          holdingWalletAddress = process.env.NEXT_PUBLIC_COLLECTOR_ADDRESS!;
+          holdingWalletAddress = xchangeId;
         }
 
         /*************** CROSS CHAIN TRANSFER CALL ***************/
-        const txHashOnTarget = await sendTransferOnTargetChain(holdingWalletAddress, parsedValue, {
-          address: selectedToken.address!,
-          decimals: selectedToken.decimals,
-          symbol: selectedToken.symbol,
-          chain: selectedToken.chain,
-        });
+        console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address);
 
-        // Deposit existing swap
-        const xchange = new Contract(xchangeId, GlobalSwapabi.abi, signer);
-        let amountToSendA;
-        let amountToSendB;
-        let partyA;
-        let partyB;
-        let tokenA;
-        let tokenB;
-
-        try {
-          // Step 3: Send transaction directly to contract
-          const tokenTx = await xchange.deposit({
-            gasLimit: 100_000,
-          });
-          txhash = tokenTx.hash;
-          receipt = await tokenTx.wait();
-          console.log("AssetXchange deposit confirmed");
-
-          if (!receipt) throw new Error("Transaction receipt is null");
-
-          for (const log of receipt.logs) {
-            try {
-              const mutableTopics = [...log.topics];
-              const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
-              if (parsed?.name === "SwapCompleted") {
-                amountToSendA = parsed.args.amountA ?? parsed.args[0];
-                amountToSendB = parsed.args.amountB ?? parsed.args[0];
-                partyA = parsed.args.partyA ?? parsed.args[0];
-                partyB = parsed.args.partyB ?? parsed.args[0];
-                tokenA = parsed.args.tokenA ?? parsed.args[0];
-                tokenB = parsed.args.tokenB ?? parsed.args[0];
-                break;
-              }
-            } catch {
-              // Ignore error for non-matching logs
-            }
-          }
-    
-        } catch (err) {
-          console.error("My chain call failed:", err);
-          chainStatus = false;
+        if (!provider) {
+          throw new Error("No provider available");
         }
-
-        let signerForTransfer;
-
-        isOnMyChain = myChainSupportedTokenAddresses.has(tokenA as Address);
-        isOnPoly = polyAddresses.has(tokenA as Address);
-        isBitcoin = selectedToken.symbol === "BTC";
-        isOnEthChain = !isOnMyChain && !isOnPoly && !isBitcoin;
-    
-        if (isOnMyChain) {
-          signerForTransfer = "global";
-        } else if (isOnPoly) {
-          signerForTransfer = "polygon";
-        } else if (isOnEthChain) {
-          signerForTransfer = "ethereum";
-        } else if (isBitcoin){
-          signerForTransfer = "bitcoin";
-        } else {
-          throw new Error("Unsupported token chain");
-        }
-
-        sendReconciliation({
-          apiKey: process.env.NEXT_PUBLIC_API_SECRET!,
-          to: signerAddress,
-          amount: amountToSendA,
-          tokenAddress: tokenA,
-          chain: signerForTransfer
-        }).then(({ txHash, status }) => {
-          console.log(`Refund sent! Tx: ${txHash}, Status: ${status}`);
-        }).catch(console.error);
-
-        isOnMyChain = myChainSupportedTokenAddresses.has(tokenB as Address);
-        isOnPoly = polyAddresses.has(tokenB as Address);
-        isBitcoin = selectedToken.symbol === "BTC";
-        isOnEthChain = !isOnMyChain && !isOnPoly && !isBitcoin;
-
-        if (isOnMyChain) {
-          signerForTransfer = "global";
-        } else if (isOnPoly) {
-          signerForTransfer = "polygon";
-        } else if (isOnEthChain) {
-          signerForTransfer = "ethereum";
-        } else if (isBitcoin){
-          signerForTransfer = "bitcoin";
-        } else {
-          throw new Error("Unsupported token chain");
-        }
-
-        sendReconciliation({
-          apiKey: process.env.NEXT_PUBLIC_API_SECRET!,
-          to: signerAddress,
-          amount: amountToSendB,
-          tokenAddress: tokenB,
-          chain: signerForTransfer
-        }).then(({ txHash, status }) => {
-          console.log(`Refund sent! Tx: ${txHash}, Status: ${status}`);
-        }).catch(console.error);
+        const { txHash, receipt } = await sendTransferOnTargetChain(
+          holdingWalletAddress,
+          parsedValue,
+          {
+            address: selectedToken.address!,
+            decimals: selectedToken.decimals,
+            symbol: selectedToken.symbol,
+            chain: selectedToken.chain,
+          },
+          btcWallet,
+          provider // pass provider here
+        );
 
 /********************************************************************************************************************/
 
@@ -711,7 +405,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         try {
           // Step 3: Send transaction directly to contract
           const tokenTx = await xchange.refund({
-            gasLimit:  80_000,
+            gasLimit:  200_000,
           });
           txhash = tokenTx.hash;
           receipt = await tokenTx.wait();
@@ -736,28 +430,6 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           console.error("My chain call failed:", err);
           chainStatus = false;
         }
-        
-        let signerForTransfer;
-    
-        if (isOnMyChain) {
-          signerForTransfer = "global";
-        } else if (isOnPoly) {
-          signerForTransfer = "polygon";
-        } else if (isOnEthChain) {
-          signerForTransfer = "ethereum";
-        } else {
-          throw new Error("Unsupported token chain");
-        }
-
-        sendReconciliation({
-          apiKey: process.env.NEXT_PUBLIC_API_SECRET!,
-          to: signerAddress,
-          amount: amountToSend,
-          tokenAddress: selectedToken.address,
-          chain: signerForTransfer
-        }).then(({ txHash, status }) => {
-          console.log(`Refund sent! Tx: ${txHash}, Status: ${status}`);
-        }).catch(console.error);
 
  /************************************************************************************************************************/     
         
@@ -786,21 +458,6 @@ export function useXchangeHandler(config: TransferHandlerProps) {
             console.log(`Insufficient ${selectedToken.symbol} balance.`);
           }
         }
-
-        let holdingWalletAddress;
-        if (selectedToken.symbol === "BTC"){
-          holdingWalletAddress = process.env.NEXT_PUBLIC_BITCOLLECTOR_ADDRESS!;
-        } else {        
-          holdingWalletAddress = process.env.NEXT_PUBLIC_COLLECTOR_ADDRESS!;
-        }
-
-        /*************** CROSS CHAIN TRANSFER CALL ***************/
-        const txHashOnTarget = await sendTransferOnTargetChain(holdingWalletAddress, parsedValue, {
-          address: selectedToken.address!,
-          decimals: selectedToken.decimals,
-          symbol: selectedToken.symbol,
-          chain: selectedToken.chain,
-        });
 
         let callAddressS;
         if (selectedToken.symbol === "ETH") {
@@ -839,7 +496,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
             parsedValue,
             callAddress2,
             parsedValue2,
-            { gasLimit: 500_000 }
+            { gasLimit: 1_000_000 }
           );
           txhash = tokenTx.hash;
           receipt = await tokenTx.wait();

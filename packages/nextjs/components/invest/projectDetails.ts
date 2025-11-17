@@ -39,28 +39,28 @@ export const projectDetails = {
       will develop 70 acres, dedicated to the cultivation, processing, and storage of algal based products with an initial production capability 
       of over 90,000 tons of quality algal biomass derived products per acre annually. In terms of competition, upon completion, Proposing a 
       production minimum 70,000 bpd. Well over 16 million gallons of biofuel per acre per annum.`,
-      image: "/images/usdc-project.jpg",
+      image: "/images/usdc-project.jpg", 
     pdf: "/assets/.Trans Greentech(web)",
   },
     BGFFS: {
-    title: "Clean Real Estate Buy to Sell | USA",
+    title: "Clean Real Estate Buy & Sell | USA",
     description: `Real Estate investments equipped with BG Company's clean generator virtually eliminating energy related overhead and holding cost. 
-      1 year (4 quarter) commitment before 2 year redemption period begins. Payouts are pro rata lump sum profits from the sale.`,
+      1 year (4 quarter) commitment before 1 year redemption period begins. Payouts are pro rata lump sum profits from the sale.`,
     image: "/images/usdc-project.jpg",
-    pdf: "/assets/mxinfra-project.pdf",
+    pdf: "/assets/bgbs.pdf",
   },
     BGFRS: {
     title: "Clean Real Estate Buy & Hold | USA",
     description: `Real Estate investments equipped with BG Company's clean generator virtually eliminating energy related overhead and holding cost. 
       1 year (4 quarter) commitment before 5 year redemption period begins. Payouts are made monthly based on actual rental revenue.`,
     image: "/images/usdc-project.jpg",
-    pdf: "/assets/mxinfra-project.pdf",
+    pdf: "/assets/bgbh.pdf",
   },
     BGRE: {
     title: "Clean Community | Capital Raise TBA",
-    description: "Planned Real Estate Developments built around clean energy generation with milestone payouts beginning at venture development completion.",
+    description: "Planned Real Estate Developments built around clean energy generation with milestone payouts beginning as venture development is completed.",
     image: "/images/usdc-project.jpg",
-    pdf: "/assets/mxinfra-project.pdf",
+    pdf: "/assets/bgmu.pdf",
   },
   // 
   // Add more tokens as needed

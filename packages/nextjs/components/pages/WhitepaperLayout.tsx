@@ -74,7 +74,7 @@ export default function WhitepaperLayout() {
       )}
 
       {/* Sidebar Navigation */}
-      <div className="hidden md:block fixed left-0 top-20 bottom-20 w-56 h-full bg-zinc-950 p-2 border-r border-zinc-800">
+      <div className="hidden md:block fixed left-0 top-20 bottom-20 w-70 h-full bg-zinc-950 p-2 border-r border-zinc-800">
         <h2 className="mb-6 text-lg font-light tracking-wide">WHITEPAPER</h2>
         {tabData.map(({ id, title }) => (
           <div key={id} className="relative mb-3">
@@ -94,7 +94,7 @@ export default function WhitepaperLayout() {
       </div>
 
       {/* Tab Content */}
-      <main className="ml-0 md:ml-56 px-1 py-4 transition-all">
+      <main className="ml-0 md:ml-70 px-1 py-4 transition-all">
         <motion.div
           key={activeTab}
           initial={{ opacity: 0, y: 20 }}

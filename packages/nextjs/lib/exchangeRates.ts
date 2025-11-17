@@ -104,7 +104,7 @@ const rateGuards: Record<string, { min: number; max: number; fallback?: number }
 };
 
 // Constants
-const PRIME_FACTOR = 1.481;
+const PRIME_FACTOR = 1.475;
 const UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const SMOOTHING_THRESHOLD = 0.02;
 const RATE_EXPIRY_MS = 24 * 60 * 60 * 1000;

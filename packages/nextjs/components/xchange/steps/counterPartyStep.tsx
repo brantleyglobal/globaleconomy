@@ -92,11 +92,30 @@ export default function CounterPartyStep({
 
     // On input change, update local state and debounce external update
     const handleRecipient2Change = (val: string) => {
-        setLocalRecipient2(val);
-        if (debounceTimer.current) clearTimeout(debounceTimer.current);
-        debounceTimer.current = setTimeout(() => {
-        validateAndSetRecipient2(val.trim());
-        }, 500);
+      // Always update the raw value
+      setRecipient2(val);
+  
+      // If empty, clear error
+      if (val === "") {
+        setAddressError("");
+        return;
+      }
+  
+      // If not long enough yet, mark as incomplete
+      if (val.length < 42) {
+        setAddressError("Address incomplete");
+        return;
+      }
+  
+      // Once length is correct, try to checksum/validate
+      try {
+        const checksummed = getAddress(val);
+        setRecipient2(checksummed);
+        setAddressError("");
+      } catch {
+        setRecipient2(val);
+        setAddressError("Invalid Ethereum address");
+      }
     };
 
     // On blur, immediately validate and commit
@@ -167,6 +186,13 @@ export default function CounterPartyStep({
                     </option>
                 ))}
             </select>
+            <button
+                type="button"
+                onClick={() => setShowStablecoinInfo(true)}
+                className="bg-white/10 animate-pulse backdrop-blur-md w-full mt-2 px-6 py-2 rounded-md text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
+            >
+                Supported Stablecoin
+            </button>
             <input
               type="text"
               inputMode="decimal"
@@ -250,13 +276,6 @@ export default function CounterPartyStep({
                     onClick={onBack}
                 >
                     Previous
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setShowStablecoinInfo(true)}
-                    className="bg-white/10 animate-pulse backdrop-blur-md w-full px-6 py-2 rounded-md text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
-                >
-                    Supported Stablecoin
                 </button>
                 {/*})*/}
                 <button

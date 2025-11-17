@@ -96,11 +96,30 @@ export default function InitiantStep({
 
     // On input change, update local state and debounce external update
     const handleRecipientChange = (val: string) => {
-        setLocalRecipient(val);
-        if (debounceTimer.current) clearTimeout(debounceTimer.current);
-        debounceTimer.current = setTimeout(() => {
-        validateAndSetRecipient(val.trim());
-        }, 500);
+        // Always update the raw value
+        setRecipient(val);
+
+        // If empty, clear error
+        if (val === "") {
+            setAddressError("");
+            return;
+        }
+
+        // If not long enough yet, mark as incomplete
+        if (val.length < 42) {
+            setAddressError("Address incomplete");
+            return;
+        }
+
+        // Once length is correct, try to checksum/validate
+        try {
+            const checksummed = getAddress(val);
+            setRecipient(checksummed);
+            setAddressError("");
+        } catch {
+            setRecipient(val);
+            setAddressError("Invalid Ethereum address");
+        }
     };
 
     // On blur, immediately validate and commit
@@ -199,6 +218,13 @@ export default function InitiantStep({
                         </option>
                     ))}
                 </select>
+                <button
+                    type="button"
+                    onClick={() => setShowStablecoinInfo(true)}
+                    className="bg-white/10 animate-pulse backdrop-blur-md w-full mt-2 px-6 py-2 rounded-md text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
+                >
+                    Supported Stablecoin
+                </button>
             </div>
             {/* Confirmation Details */}
                 <div className="mt-6">
@@ -238,13 +264,6 @@ export default function InitiantStep({
                     onClick={onBack}
                 >
                     Previous
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setShowStablecoinInfo(true)}
-                    className="bg-white/10 animate-pulse backdrop-blur-md px-6 py-2 rounded-md text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
-                >
-                    Supported Stablecoin
                 </button>
                 {/*})*/}
                 <button

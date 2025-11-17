@@ -55,6 +55,7 @@ export const AcquireModal: React.FC<Props> = ({
   const [selectedQuarter, setSelectedQuarter] = useState(0);
   const [depositAmount, setDepositAmount] = useState("");
   const [convertedAmount, setConvertedAmount] = useState("");
+  const [exchangeRate, setExchangeRate] = useState("");
 
   // Derive full Token object from selected symbol
   const selectedToken = supportedTokens.find(
@@ -82,17 +83,17 @@ export const AcquireModal: React.FC<Props> = ({
 
   const handleConfirm = async () => {
     if (!selectedToken) {
-      toast.error("Please select a valid token.");
+      console.log("Please select a valid token.");
       return;
     }
 
-    if (!balance) {
-      toast.error("Unable to fetch balance");
+    /*if (!balance) {
+      console.log("Unable to fetch balance");
       return;
-    }
+    }*/
 
     if (!connectedWallet) {
-      toast.error("Please connect your wallet.");
+      console.log("Please connect your wallet.");
       return;
     }
 
@@ -114,11 +115,32 @@ export const AcquireModal: React.FC<Props> = ({
       return;
     }
 
+    if (!depositAmount || depositAmount.trim() === "") {
+      console.log("Please enter a deposit amount.");
+      return;
+    }
+
+    if (!convertedAmount || convertedAmount.trim() === "") {
+      console.log("Converted amount is missing.");
+      return;
+    }
+
     console.log("Processing Transaction");
     
     try {
 
+      console.log(depositAmount);
+      console.log(convertedAmount);
+
       let receiptx = "";
+
+      const txHash = await deposit(
+        depositAmount,
+        convertedAmount,
+        selectedToken,
+        connectedWallet,
+        exchangeRate,
+      );
 
       console.log("Transaction Hash:", receiptx);
       console.log("Sending Confirmation");
@@ -187,6 +209,10 @@ export const AcquireModal: React.FC<Props> = ({
                 setSelectedTokenSymbol={setSelectedTokenSymbol}
                 depositAmount={depositAmount}
                 setDepositAmount={setDepositAmount}
+                convertedAmount={convertedAmount}
+                setConvertedAmount={setConvertedAmount}
+                exchangeRate={exchangeRate}
+                setExchangeRate={setExchangeRate}
                 userFirstName={userFirstName}
                 setUserFirstName={setUserFirstName}
                 userLastName={userLastName}

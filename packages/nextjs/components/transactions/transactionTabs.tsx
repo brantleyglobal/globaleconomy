@@ -144,13 +144,13 @@ export const TransactionTabs = () => {
   };
 
   return (
-    <div className="p-4">
+    <div className="py-2">
       {/* Mobile Dropdown */}
       <div className="md:hidden mb-4">
         <select
           value={activeTab}
           onChange={(e) => setActiveTab(e.target.value as TabKey)}
-          className="select rounded-md bg-[#09120b] w-full text-info-600 mb-4 outline-none hover:bg-white/10 border-none focus:ring-0 focus:outline-none"
+          className="select rounded-md bg-base-300  w-full text-info-600 mb-4 outline-none hover:bg-white/10 border-none focus:ring-0 focus:outline-none"
         >
           {tabs.map(tab => (
             <option key={tab} value={tab}>
