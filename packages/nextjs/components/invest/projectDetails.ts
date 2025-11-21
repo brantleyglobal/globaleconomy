@@ -62,6 +62,12 @@ export const projectDetails = {
     image: "/images/usdc-project.jpg",
     pdf: "/assets/bgmu.pdf",
   },
+    BGGRID: {
+    title: "Clean Grid Infrastructure",
+    description: "Planned Real Estate Developments built around clean energy generation with milestone payouts beginning as venture development is completed.",
+    image: "/images/usdc-project.jpg",
+    pdf: "/assets/bggrid.pdf",
+  },
   // 
   // Add more tokens as needed
 };

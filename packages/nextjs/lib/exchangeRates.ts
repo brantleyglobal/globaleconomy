@@ -85,7 +85,7 @@ const rateGuards: Record<string, { min: number; max: number; fallback?: number }
   FDUSD:{ min: 0.98, max: 1.02, fallback: 1.00 },
   FRAX: { min: 0.97, max: 1.03, fallback: 1.00 },
   PYUSD: { min: 0.98, max: 1.02, fallback: 1.00 },
-  COPx: { min: 1.00, max: 1.00, fallback: 1.00 },
+  GBDo: { min: 1.00, max: 1.00, fallback: 1.00 },
   JPYC: { min: 0.0065, max: 0.0073 }, // JPY ≈ ¥1 ≈ $0.0069
   EURC: { min: 1.08, max: 1.12 },     // EUR ≈ €1 ≈ $1.10
   EURe: { min: 1.08, max: 1.12 },
@@ -104,7 +104,7 @@ const rateGuards: Record<string, { min: number; max: number; fallback?: number }
 };
 
 // Constants
-const PRIME_FACTOR = 1.475;
+const PRIME_FACTOR = 1.386;
 const UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const SMOOTHING_THRESHOLD = 0.02;
 const RATE_EXPIRY_MS = 24 * 60 * 60 * 1000;
@@ -238,11 +238,11 @@ async function fetchRate(coin: StablecoinMeta): Promise<StablecoinRate | null> {
     return null;
   }
 
-  if (coin.symbol === "COPx") {
+  if (coin.symbol === "GBDo") {
     const gbdoRate = cachedGBDoRate ?? calculateGBDoRate(Array.from(rateCache.values()));
     return {
-      symbol: "COPx",
-      currency: "COPx",
+      symbol: "GBDo",
+      currency: "GBDo",
       rate: gbdoRate,
       network: coin.network,
       healthy: true,
@@ -386,13 +386,13 @@ export async function getExchangeRates(): Promise<{
 
   // Step 4: Apply PRIME_FACTOR and derive rateAgainstGBDo
   const ratesWithGBDo = stablecoinRates.map(r => {
-    const scaledRate = r.symbol === "COPx" ? gbdoRate : r.rate * gbdoRate;
-    const relativeRate = r.symbol === "COPx" ? 1.0 : (gbdoRate > 0 ? scaledRate / gbdoRate : 0);
+    const scaledRate = r.symbol === "GBDo" ? gbdoRate : r.rate;
+    const relativeRate = r.symbol === "GBDo" ? 1.0 : (gbdoRate > 0 ? scaledRate / gbdoRate : 0);
     //console.log(`[RateCalc] ${r.symbol}: raw=${r.rate}, scaled=${scaledRate}, rateAgainstGBDo=${relativeRate}`);
     return {
       ...r,
-      rate: scaledRate,
-      rateAgainstGBDo: relativeRate
+      rate: Number(scaledRate.toFixed(6)),
+      rateAgainstGBDo: Number(relativeRate.toFixed(6)),
     };
   });
 
@@ -400,7 +400,7 @@ export async function getExchangeRates(): Promise<{
 
   return {
     rates: ratesWithGBDo,
-    gbdoRate,
+    gbdoRate: Number(gbdoRate.toFixed(6)),
     lastUpdated: lastUpdated ?? Date.now()
   };
 }

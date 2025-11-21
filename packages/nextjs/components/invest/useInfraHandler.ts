@@ -51,6 +51,7 @@ interface UseDepositResult {
     token: Token,
     userAddress: string,
     committedQuarters: number,
+    provider: any,
   ) => Promise<string>; 
 }
 
@@ -66,30 +67,6 @@ type TxResult = {
 export function useInfra(): UseDepositResult {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [provider, setProvider] = useState<EthereumProvider | null>(null);
-  const [walletName, setWalletName] = useState<string>("");
-  
-  useEffect(() => {
-    const ethereum = window.ethereum;
-    const xdefi = window.xfi;
-
-    if (ethereum?.isMetaMask) {
-      setWalletName("MetaMask");
-      setProvider(ethereum);
-    } else if (ethereum?.isBraveWallet) {
-      setWalletName("Brave Wallet");
-      setProvider(ethereum);
-    } else if (ethereum) {
-      setWalletName("Injected Wallet");
-      setProvider(ethereum);
-    }
-
-    if (xdefi) {
-      setWalletName("XDEFI Wallet");
-      setProvider(xdefi.ethereum);
-    }
-  }, []);
-
   const btcWallet: BitcoinWallet = {
     sendTransaction: async (to, amount) => {
       if (!window.xfi?.bitcoin) {
@@ -106,58 +83,18 @@ export function useInfra(): UseDepositResult {
       token: Token,
       userAddress: string,
       committedQuarters: number,
+      provider: any,
     ): Promise<string> => {
       setIsProcessing(true);
       setError(null);
+
+      let parsedValue;
 
       try {
         if (!window.ethereum) throw new Error("Ethereum provider not found.");
 
         const iface = new Interface(smartVaultAbi.abi);
-        const parsedValue = parseUnits(amountStr, token.decimals);
-
-        const myChainSupportedTokenAddresses = new Set<Address>([
-          deployments.Copian,
-          deployments.GlobalDollarX,
-          deployments.GlobalDollar,
-          deployments.BGFFS,
-          deployments.BGFRS,
-          deployments.TGMX,
-          deployments.TGUSA,
-          deployments.Globe,
-        ]);
-        
-        const polyAddresses = new Set<Address>([
-          "0x5C067C80C00eCd2345b05E83A3e758eF799C40B5",
-          "0x6AE7Dfc73E0dDE2aa99ac063DcF7e8A63265108c",
-          "0xb755506531786c8ac63b756bab1ac387bacb0c04",
-        ]);
-    
-        const isOnMyChain = myChainSupportedTokenAddresses.has(token.address as Address);
-        const isOnPoly = polyAddresses.has(token.address as Address);
-        const isOnEthChain = !isOnMyChain && !isOnPoly;
-    
-        let selectedTokenChainId;
-        if(isOnMyChain){
-          selectedTokenChainId = 38391207;
-        }else if(isOnPoly){
-          selectedTokenChainId = 137;
-        }else{
-          selectedTokenChainId = 1;
-        }
-        
-        const { balanceBigInt, balanceBigNumber, decimals, isLoading } = useSelectedTokenBalance(
-          userAddress,
-          token,
-          selectedTokenChainId
-        );
-    
-        if (!isLoading && balanceBigNumber !== undefined) {
-          //const requiredAmount = ethers.utils.parseUnits(value, decimals);
-          if (balanceBigNumber < parsedValue) {
-            console.log(`Insufficient ${token.symbol} balance.`);
-          }
-        }
+        parsedValue = parseUnits(amountStr, token.decimals);
 
         let callAddress;
         if (token.symbol === "ETH") {
@@ -168,18 +105,11 @@ export function useInfra(): UseDepositResult {
           callAddress = token.address;
         }
 
-        const calldata = iface.encodeFunctionData("deposit", [
-          callAddress,
-          parsedValue,
-          ventureAddress.address,
-          generateTermCode(),
-        ]);
-
         let holdingWalletAddress;
         if (token.symbol === "BTC"){
           holdingWalletAddress = process.env.NEXT_PUBLIC_BITCOLLECTOR_ADDRESS!;
         } else {        
-          holdingWalletAddress = deployments.RegionInfrastructure;
+          holdingWalletAddress = process.env.NEXT_PUBLIC_REGIONINFRA!;
         }
 
         /*************** CROSS CHAIN TRANSFER CALL ***************/
@@ -207,7 +137,7 @@ export function useInfra(): UseDepositResult {
           txhash: txHash.toString() ?? "",
           contractaddress: deployments.RegionInfrastructure,
           useraddress: userAddress,
-          depositamount: amountStr,
+          depositamount: parsedValue.toString(),
           committedquarters: committedQuarters,
           paymentmethod: token.symbol,
           depositstarttime: now,
@@ -237,7 +167,7 @@ export function useInfra(): UseDepositResult {
           txhash: "",
           contractaddress: deployments.RegionInfrastructure,
           useraddress: userAddress,
-          depositamount: amountStr,
+          depositamount: parsedValue?.toString() || "",
           committedquarters: 0,
           paymentmethod: token.symbol ?? "unknown",
           depositstarttime: now,

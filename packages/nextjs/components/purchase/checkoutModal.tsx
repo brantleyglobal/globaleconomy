@@ -55,7 +55,6 @@ const publicClient = createPublicClient({
   transport: http(),
 });
 
-
 // Modal component
 const CheckoutModalBase = (
   {
@@ -78,6 +77,30 @@ const CheckoutModalBase = (
   const [termsText, setTermsText] = useState<string | null>(null);
   const [privacyText, setPrivacyText] = useState<string | null>(null);
   const [returnsText, setReturnsText] = useState<string | null>(null);
+  const [provider, setProvider] = useState<EthereumProvider | null>(null);
+  const [walletName, setWalletName] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ethereum = (window as any).ethereum;
+    const xdefi = (window as any).xfi;
+
+    if (ethereum?.isMetaMask) {
+      setWalletName("MetaMask");
+      setProvider(ethereum);
+    } else if (ethereum?.isBraveWallet) {
+      setWalletName("Brave Wallet");
+      setProvider(ethereum);
+    } else if (ethereum) {
+      setWalletName("Injected Wallet");
+      setProvider(ethereum);
+    }
+
+    if (xdefi) {
+      setWalletName("XDEFI Wallet");
+      setProvider(xdefi.ethereum);
+    }
+  }, []);
 
   const handleTermsPrevious = () => {
     if (customizeGroupKey && selectedVariations[customizeGroupKey]?.label === "Customize") {
@@ -106,19 +129,6 @@ const CheckoutModalBase = (
 
     loadLegalDocs();
   }, []);
-
- const [provider, setProvider] = useState<BrowserProvider | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      const web3Provider = new BrowserProvider(window.ethereum);
-      setProvider(web3Provider);
-    } else {
-      console.warn("No Ethereum provider found");
-      // You can still show the modal and prompt wallet connection
-    }
-  }, []);
-
 
   const { chain } = useAccount();
   const chainId = chain?.id;
@@ -227,7 +237,7 @@ const CheckoutModalBase = (
     //console.log("[Pricing] Subtotal before Fees:", subtotalGBDo);
 
     // Apply fee based on method
-    if (method === "stable") {
+    if (method === "stable" || method === "native") {
       const fee = subtotalGBDo * 0;
       subtotalGBDo += fee;
       //console.log("[Fee] Stablecoin fee applied:", fee);
@@ -240,17 +250,30 @@ const CheckoutModalBase = (
     //console.log("[Pricing] Subtotal after Fees:", subtotalGBDo);
 
     // Determine token rate
-    const effectiveSymbol = method === "cash" ? "USDC" : tokenSymbol;
-    const tokenRate = effectiveSymbol === "GBDo"
-      ? 1
-      : exchangeData.rates.find(r => r.symbol === effectiveSymbol)?.rate ?? 1;
+    // Look up token rate directly
+    const rateEntry = exchangeData.rates.find(r => r.symbol === tokenSymbol);
+    if (!rateEntry) {
+      throw new Error(`Missing rate for ${tokenSymbol}`);
+    }
 
-    //console.log(`[Pricing] Using Rate for ${effectiveSymbol}:`, tokenRate);
-    //console.log(`[Pricing] GBDo Reference Rate: ${exchangeData.gbdoRate}`);
-    const gbdoRate = await getGBDoRateFromRates();
+    // You already have gbdoRate from exchangeData
+    let gbdoRate;
+    if (tokenSymbol == "GBDo") {
+      gbdoRate = 1;
+    } else {
+      gbdoRate = exchangeData.gbdoRate;
+    }
+
+    // Use the relative rate against GBDo
+    let tokenRate;
+    if (tokenSymbol == "GBDo") {
+      tokenRate = 1;
+    } else {
+      tokenRate = rateEntry.rate;
+    }
 
     // Final calculation
-    const finalPrice = (subtotalGBDo * gbdoRate) / tokenRate;
+    const finalPrice = (subtotalGBDo * gbdoRate) / tokenRate!;
     //console.log(`[Pricing] Final Price in ${effectiveSymbol}:`, finalPrice);
 
     return Math.round(finalPrice * 100) / 100;
@@ -271,13 +294,6 @@ const CheckoutModalBase = (
 
     setField("estimatedTotal", total.toFixed(2));
     setCurrentStep(5);
-  }
-
-  async function getGBDoRateFromRates() {
-    const result = await getExchangeRates();
-    const gbdoRate = result.gbdoRate;
-    //console.log("GBDo Rate is:", gbdoRate);
-    return gbdoRate;
   }
 
   const handlePurchaseConfirm = async ({ sessionId, cancelled, new: isNew }: StripeReturnContext = {}) => {
@@ -307,17 +323,6 @@ const CheckoutModalBase = (
 
     if (isNew) {
       console.log("Starting New Checkout Session...");
-    }
-    // Fresh purchase flow — full calculation and contract initiation
-    let provider: BrowserProvider | null = null;
-
-    if (paymentMethod !== "cash") {
-      if (window.ethereum) {
-        provider = new BrowserProvider(window.ethereum);
-      } else {
-        toast.error("Wallet not connected or provider missing.");
-        return;
-      }
     }
 
     try {
@@ -400,9 +405,11 @@ const CheckoutModalBase = (
           symbol: tokenSymbol,
           address: selectedTokenMeta?.address,
           decimals: selectedTokenMeta?.decimals,
+          chain: selectedTokenMeta?.chain,
         },
         value: total.toFixed(2),
         shippingInfo,
+        provider,
       });
 
       setCurrentStep(purchaseCompleted ? 6 : 5);

@@ -16,17 +16,16 @@ export default function HelpStep({ id, onClose }: Props) {
       aria-describedby={`${id}-desc`}
     >
       <h2 id={`${id}-title`} className="text-lg font-semibold mb-2">
-        How to Use AssetXchange
+        How to Use Smart Vault Investing
       </h2>
       <p id={`${id}-desc`} className="mb-4 text-xs text-justify leading-relaxed">
-        This help section guides you through the steps required to create a new contract,
-        make a deposit, or request a refund on AssetXchange. There is 10 GBDo (approx. 10.50usd) service fee to create a contract.
-        Fees are none refundable as they are for contract creation. This fee is only collected upon contract creation.
-        Your confirmation email will contain exact details for all parties. If the values are incorrect, contact the contract creation party to resolve.
-        There are 2 transactions conducted, the fist being the transfer of your assets. While this has been confined to this platform
-        the first transaction must be conducted on your asset's chain/network, once completed and confirmed a second transaction will be conducted. 
+        This help section guides you through the steps required to invest and collect proceeds from an Smart Vault Investment,
+        make a deposit, or request a refund on AssetXchange. There is a .25% fee ($.50 minimum) that is to be deducted from depositors upon completion your investment term.
+        Fees are none refundable and are collected from each depositor equally prior to the distribution of payouts. 
+        Your confirmation email will contain exact details. If the values are incorrect, contact the admin via email submission on the 
+        contact page @ brantley-global.com/help to resolve. The first transaction must be conducted on your depositing asset's chain/network, once completed and confirmed a second transaction will be approved and conducted. 
         Associated tokens are minted, transferred to your wallet, and the entire transaction is recorded to brantley-global's ledger and database. 
-        You can always access this help by clicking the help "Icon' button.
+        You can always access this help section by clicking the help "Icon' button. There are also chain interaction details located on the "VERIFICATION PAGE" @ brantley-global.com/verifcations.
       </p>
       <div className="mb-4">
         {/*<div className="mb-4">

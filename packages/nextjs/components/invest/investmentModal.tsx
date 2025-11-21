@@ -112,6 +112,31 @@ export const InvestmentModal: React.FC<Props> = ({
   const [selectedQuarter, setSelectedQuarter] = useState(0);
   const [depositAmount, setDepositAmount] = useState("");
 
+  const [provider, setProvider] = useState<EthereumProvider | null>(null);
+  const [walletName, setWalletName] = useState<string>("");
+  
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ethereum = (window as any).ethereum;
+    const xdefi = (window as any).xfi;
+
+    if (ethereum?.isMetaMask) {
+      setWalletName("MetaMask");
+      setProvider(ethereum);
+    } else if (ethereum?.isBraveWallet) {
+      setWalletName("Brave Wallet");
+      setProvider(ethereum);
+    } else if (ethereum) {
+      setWalletName("Injected Wallet");
+      setProvider(ethereum);
+    }
+
+    if (xdefi) {
+      setWalletName("XDEFI Wallet");
+      setProvider(xdefi.ethereum);
+    }
+  }, []);
+
   // Derive full Token object from selected symbol
   const selectedToken = supportedTokens.find(
     (token) => token.symbol === selectedTokenSymbol
@@ -156,11 +181,6 @@ export const InvestmentModal: React.FC<Props> = ({
       return;
     }
 
-    if (!balance) {
-      toast.error("Unable to fetch balance");
-      return;
-    }
-
     if (!connectedWallet) {
       toast.error("Please connect your wallet.");
       return;
@@ -199,9 +219,9 @@ export const InvestmentModal: React.FC<Props> = ({
           toast.error("Please select a valid token.");
           return;
         }
-        const receiptx = await infra(depositAmount, selectedToken2, selectedToken, connectedWallet!, selectedQuarter);
+        const receiptx = await infra(depositAmount, selectedToken2, selectedToken, connectedWallet!, selectedQuarter, provider);
       } else {
-        const receiptx = await deposit(depositAmount, selectedQuarter, selectedToken, connectedWallet!);
+        const receiptx = await deposit(depositAmount, selectedQuarter, selectedToken, connectedWallet!, provider);
       }
 
       console.log("Transaction Hash:", receiptx);

@@ -60,15 +60,19 @@ export const OnStep: React.FC<Props> = ({
   const [emailError, setEmailError] = useState("");
   const [showWalletNotice, setShowWalletNotice] = useState(false);
   const [showStablecoinInfo, setShowStablecoinInfo] = useState(false);
-  const getNetwork = (symbol: string, address: string): string => {
-      if (symbol === "BTC") return "Bitcoin";
-      if (address.startsWith("0x")) {
-      // Polygon tokens often share the same address format as Ethereum
-      // If you want to manually tag Polygon tokens, you can add a symbol-based override here
+  const getNetwork = (symbol: string, address?: string): string => {
+    if (symbol === "BTC") return "Bitcoin";
+
+    if (address && address.startsWith("0x")) {
+      // Ethereum-style address
       const polygonSymbols = ["ZARP", "BRL1", "JPYC"];
-      return polygonSymbols.includes(symbol) ? "Polygon" : "Ethereum";
+      if (polygonSymbols.includes(symbol)) {
+        return "Polygon";
       }
-      return "Unknown";
+      return "Ethereum";
+    }
+
+    return "Unknown";
   };
 
   // Basic email validation regex
@@ -204,7 +208,7 @@ export const OnStep: React.FC<Props> = ({
           >
             <option value="" disabled>Select Payment Method</option>
             {supportedTokens
-              .filter(t => !["GBDo", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(t.symbol))
+              .filter(t => !["GBDo", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS", "BGGRID"].includes(t.symbol))
               .map(t => (
                 <option key={t.symbol} value={t.symbol}>
                   {t.symbol} • {t.name}
@@ -344,7 +348,7 @@ export const OnStep: React.FC<Props> = ({
         <div className="overflow-hidden max-h-[40vh] rounded-t-xl">
             <div className="overflow-y-auto max-h-[calc(40vh-20px)] px-6 py-4 space-y-4 text-sm text-gray-300">
             {supportedTokens
-                .filter(({ symbol }) => !["GBDo", "BTC", "ETH", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(symbol))
+                .filter(({ symbol }) => !["GBDo", "BTC", "ETH", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS", "BGGRID"].includes(symbol))
                 .map(({ name, symbol, address }) => (
                 <div key={symbol} className="bg-white/5 backdrop-blur-md p-4 rounded-md shadow-sm">
                     <div className="flex justify-between items-center">

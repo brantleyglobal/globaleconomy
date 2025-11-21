@@ -95,7 +95,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
       const termAbi = ["function unlockQuarter() view returns (uint16)", "function comingQuarter() view returns (uint16)"];
 
       // Select vault or infrastructure contract address based on token symbol
-      const contractAddress = ["GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(selectedToken.symbol!) ? deployments.RegionInfrastructure : deployments.SmartVault;
+      const contractAddress = ["GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS", "BGGRID"].includes(selectedToken.symbol!) ? deployments.RegionInfrastructure : deployments.SmartVault;
 
       // Contracts for term queries
       const contract = new ethers.Contract(selectedToken.address, termAbi[0], provider);
@@ -119,7 +119,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
 
       let tokenTx, receipt;
 
-      if (!["GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(selectedToken.symbol!)) {
+      if (!["GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS", "BGGRID"].includes(selectedToken.symbol!)) {
         // Check allowance for vault
         const allowance = await stablecoinContract.allowance(signerAddress, vaultContract.address);
         if (allowance.lt(balanceBefore)) {

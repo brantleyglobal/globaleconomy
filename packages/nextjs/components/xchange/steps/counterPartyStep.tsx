@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { AddressInput } from "~~/components/globalEco";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { WalletIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
@@ -77,6 +77,13 @@ export default function CounterPartyStep({
 
     // Ref to hold debounce timer
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        if (recipient2 !== localRecipient2) {
+        setLocalRecipient2(recipient2 ?? "");
+        setAddressError("");
+        }
+    }, [recipient2]);
 
     // Validate and commit address after debounce or blur
     const validateAndSetRecipient2 = (val: string) => {
@@ -295,7 +302,7 @@ export default function CounterPartyStep({
             <div className="overflow-hidden max-h-[40vh] rounded-t-xl">
                 <div className="overflow-y-auto max-h-[calc(40vh-20px)] px-6 py-4 space-y-4 text-sm text-gray-300">
                 {supportedTokens
-                    .filter(({ symbol }) => !["BTC", "ETH", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(symbol))
+                    .filter(({ symbol }) => !["BTC", "ETH", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS", "BGGRID"].includes(symbol))
                     .map(({ name, symbol, address }) => (
                     <div key={symbol} className="bg-white/5 backdrop-blur-md p-4 rounded-md shadow-sm">
                         <div className="flex justify-between items-center">

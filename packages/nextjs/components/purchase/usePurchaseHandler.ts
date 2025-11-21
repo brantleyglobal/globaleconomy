@@ -43,6 +43,7 @@ interface InitiateParams {
   };
   value: string;
   shippingInfo: ShippingInfo;
+  provider?: any,
 }
 
 interface BitcoinWallet {
@@ -219,6 +220,35 @@ async function initiateStripeCheckout(params: InitiateParams) {
   window.location.href = session.url;
 }
 
+function useWalletProvider() {
+  const [provider, setProvider] = useState<EthereumProvider | null>(null);
+  const [walletName, setWalletName] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ethereum = (window as any).ethereum;
+    const xdefi = (window as any).xfi;
+
+    if (ethereum?.isMetaMask) {
+      setWalletName("MetaMask");
+      setProvider(ethereum);
+    } else if (ethereum?.isBraveWallet) {
+      setWalletName("Brave Wallet");
+      setProvider(ethereum);
+    } else if (ethereum) {
+      setWalletName("Injected Wallet");
+      setProvider(ethereum);
+    }
+
+    if (xdefi) {
+      setWalletName("XDEFI Wallet");
+      setProvider(xdefi.ethereum);
+    }
+  }, []);
+
+  return { provider, walletName };
+}
+
 async function handleCryptoPurchase(params: InitiateParams) {
   const {
     checkoutAsset,
@@ -232,34 +262,11 @@ async function handleCryptoPurchase(params: InitiateParams) {
     tokenSymbol,
     tokenRate,
     configuration,
+    provider,
   } = params;
 
   try {
     // Step 1: Encode calldata for asset purchase
-
-    const [provider, setProvider] = useState<EthereumProvider | null>(null);
-    const [walletName, setWalletName] = useState<string>("");
-    
-    useEffect(() => {
-      const ethereum = window.ethereum;
-      const xdefi = window.xfi;
-
-      if (ethereum?.isMetaMask) {
-        setWalletName("MetaMask");
-        setProvider(ethereum);
-      } else if (ethereum?.isBraveWallet) {
-        setWalletName("Brave Wallet");
-        setProvider(ethereum);
-      } else if (ethereum) {
-        setWalletName("Injected Wallet");
-        setProvider(ethereum);
-      }
-
-      if (xdefi) {
-        setWalletName("XDEFI Wallet");
-        setProvider(xdefi.ethereum);
-      }
-    }, []);
 
     const btcWallet: BitcoinWallet = {
       sendTransaction: async (to, amount) => {
@@ -303,7 +310,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
     const { rates, gbdoRate } = await getExchangeRates();
 
     // Find selected token's rate from rates array
-    let exchangeRateFloat;
+    let exchangeRateFloat: number;
     if (selectedToken.symbol === "GBDo") {
       exchangeRateFloat = 1;
     } else if (selectedToken.symbol === "WBNB") {
@@ -319,7 +326,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
         throw new Error(`Exchange rate for token symbol ${tokenSymbol} not found`);
       }
       const tokenRate = selectedTokenRateObj.rate;
-      exchangeRateFloat = gbdoRate / tokenRate;
+      exchangeRateFloat = (gbdoRate / tokenRate);
     }
     console.log("exchangeRateFloat (gbdoRate / tokenRate):", exchangeRateFloat);
 
@@ -331,7 +338,11 @@ async function handleCryptoPurchase(params: InitiateParams) {
     // Also parse with limited 2 decimals (for display rounding / testing)
     const totalTokenAmountF = parseUnits(totalTokenAmountFloat.toFixed(2), selectedToken.decimals);
 
-    const exchangeRate = parseUnits(exchangeRateFloat.toFixed(18), selectedToken.decimals);
+    const precision = selectedToken.decimals; // e.g. 6, 8, 10
+    const exchangeRateStr = exchangeRateFloat.toFixed(precision);
+    const exchangeRate = parseUnits(exchangeRateStr, precision);
+
+    console.log(exchangeRate);
 
     // Format totalTokenAmountF back to float for display
     const totalTokenAmountNumber = parseFloat(formatUnits(totalTokenAmountF, 18));
@@ -431,7 +442,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
       receipthash: receipt?.blockHash || "",
       useraddress: userAddress,
       asset: checkoutAsset.id,
-      amount: totalTokenAmountDisplay,
+      amount: totalTokenAmount,
       exchangerate: tokenRate,
       quantity,
       configs: serializedConfig,

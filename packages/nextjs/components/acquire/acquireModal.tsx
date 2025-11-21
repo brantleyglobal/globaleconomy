@@ -56,6 +56,30 @@ export const AcquireModal: React.FC<Props> = ({
   const [depositAmount, setDepositAmount] = useState("");
   const [convertedAmount, setConvertedAmount] = useState("");
   const [exchangeRate, setExchangeRate] = useState("");
+  const [provider, setProvider] = useState<EthereumProvider | null>(null);
+  const [walletName, setWalletName] = useState<string>("");
+  
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ethereum = (window as any).ethereum;
+    const xdefi = (window as any).xfi;
+
+    if (ethereum?.isMetaMask) {
+      setWalletName("MetaMask");
+      setProvider(ethereum);
+    } else if (ethereum?.isBraveWallet) {
+      setWalletName("Brave Wallet");
+      setProvider(ethereum);
+    } else if (ethereum) {
+      setWalletName("Injected Wallet");
+      setProvider(ethereum);
+    }
+
+    if (xdefi) {
+      setWalletName("XDEFI Wallet");
+      setProvider(xdefi.ethereum);
+    }
+  }, []);
 
   // Derive full Token object from selected symbol
   const selectedToken = supportedTokens.find(
@@ -140,6 +164,7 @@ export const AcquireModal: React.FC<Props> = ({
         selectedToken,
         connectedWallet,
         exchangeRate,
+        provider,
       );
 
       console.log("Transaction Hash:", receiptx);

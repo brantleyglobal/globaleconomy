@@ -167,7 +167,7 @@ export function ConfirmStep({
                 console.log("click confirmed")
                 onConfirm();
               }}
-              disabled={!connectedWallet || isProcessing}
+              disabled={!connectedWallet || isProcessing || disabled}
              >
               {isProcessing ? "Processing..." : "CONFIRM"}
             </button>

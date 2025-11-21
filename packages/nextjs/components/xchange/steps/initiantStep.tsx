@@ -20,8 +20,6 @@ type Props = {
   setUserLastName: (v: string) => void;
   userEmail: string;
   setUserEmail: (v: string) => void;
-  selectedTokenSymbolS: string;
-  setSelectedTokenSymbolS: (v: string) => void;
   onHelpToggle: () => void;
   onNext: () => void;
   onBack: () => void;
@@ -40,8 +38,6 @@ export default function InitiantStep({
   setUserLastName,
   userEmail,
   setUserEmail,
-  selectedTokenSymbolS,
-  setSelectedTokenSymbolS,
   onHelpToggle,
   onNext,
   onBack,
@@ -150,7 +146,7 @@ export default function InitiantStep({
     };
 
     const isDisabled =
-    recipient === "" || amount === "" || selectedTokenSymbol === "" || selectedTokenSymbolS === "";
+    recipient === "" || amount === "" || selectedTokenSymbol === "";
 
     return (
         <div>
@@ -200,31 +196,6 @@ export default function InitiantStep({
                     value={amount}
                     onChange={e => setAmount(e.target.value)}
                 />
-            </div>
-            <div>
-                <select
-                    className="select rounded-md mt-2 bg-black w-full text-primary outline-none hover:bg-secondary/5 border-none focus:ring-0"
-                    value={selectedTokenSymbolS}
-                    onChange={(e) => setSelectedTokenSymbolS(e.target.value)}
-                >
-                    <option value="" disabled>
-                    {supportedTokens.length === 0 ? "-- No Tokens Available --" : "Service Payment Method"}
-                    </option>
-                    {supportedTokens
-                    .filter(t => t.symbol !== "GBDx" && t.symbol !== "GLB" && t.symbol !==  "BGFFS" && t.symbol !== "BGFRS" && t.symbol !== "TGMX" && t.symbol !== "TGUSA" && t.symbol !== "COPx")
-                    .map((token) => (
-                        <option key={token.symbol} value={token.symbol}>
-                        {token.symbol} • {token.name}
-                        </option>
-                    ))}
-                </select>
-                <button
-                    type="button"
-                    onClick={() => setShowStablecoinInfo(true)}
-                    className="bg-white/10 animate-pulse backdrop-blur-md w-full mt-2 px-6 py-2 rounded-md text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
-                >
-                    Supported Stablecoin
-                </button>
             </div>
             {/* Confirmation Details */}
                 <div className="mt-6">
@@ -282,7 +253,7 @@ export default function InitiantStep({
                 <div className="overflow-hidden max-h-[40vh] rounded-t-xl">
                     <div className="overflow-y-auto max-h-[calc(40vh-20px)] px-6 py-4 space-y-4 text-sm text-gray-300">
                     {supportedTokens
-                        .filter(({ symbol }) => !["BTC", "ETH", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS"].includes(symbol))
+                        .filter(({ symbol }) => !["BTC", "ETH", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "BGFFS", "BGFRS", "BGGRID"].includes(symbol))
                         .map(({ name, symbol, address }) => (
                         <div key={symbol} className="bg-white/5 backdrop-blur-md p-4 rounded-md shadow-sm">
                             <div className="flex justify-between items-center">

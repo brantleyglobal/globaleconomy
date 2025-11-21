@@ -48,7 +48,8 @@ interface UseDepositResult {
     amountStr: string,
     committedQuarters: number,
     token: Token,
-    userAddress: string
+    userAddress: string,
+    provider: any,
   ) => Promise<string>; // returns tx hash
 }
 
@@ -59,30 +60,6 @@ interface BitcoinWallet {
 export function useDeposit(): UseDepositResult {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [provider, setProvider] = useState<EthereumProvider | null>(null);
-  const [walletName, setWalletName] = useState<string>("");
-  
-  useEffect(() => {
-    const ethereum = window.ethereum;
-    const xdefi = window.xfi;
-
-    if (ethereum?.isMetaMask) {
-      setWalletName("MetaMask");
-      setProvider(ethereum);
-    } else if (ethereum?.isBraveWallet) {
-      setWalletName("Brave Wallet");
-      setProvider(ethereum);
-    } else if (ethereum) {
-      setWalletName("Injected Wallet");
-      setProvider(ethereum);
-    }
-
-    if (xdefi) {
-      setWalletName("XDEFI Wallet");
-      setProvider(xdefi.ethereum);
-    }
-  }, []);
-
   const btcWallet: BitcoinWallet = {
     sendTransaction: async (to, amount) => {
       if (!window.xfi?.bitcoin) {
@@ -97,15 +74,19 @@ export function useDeposit(): UseDepositResult {
       amountStr: string,
       committedQuarters: number,
       token: Token,
-      userAddress: string
+      userAddress: string,
+      provider: any,
     ): Promise<string> => {
       setIsProcessing(true);
       setError(null);
 
+      let parsedValue;
+      console.log("Deposit Initated");
+
       try {
 
         const iface = new Interface(smartVaultAbi.abi);
-        const parsedValue = parseUnits(amountStr, 18);
+        parsedValue = parseUnits(amountStr, 18);
 
         let callAddress;
         if (token.symbol === "ETH") {
@@ -116,18 +97,13 @@ export function useDeposit(): UseDepositResult {
           callAddress = token.address;
         }
 
-        const calldata = iface.encodeFunctionData("deposit", [
-          callAddress,
-          parsedValue,
-          committedQuarters,
-          generateTermCode(),
-        ]);
+        console.log("Deposit Initated");
 
         let holdingWalletAddress;
         if (token.symbol === "BTC"){
           holdingWalletAddress = process.env.NEXT_PUBLIC_BITCOLLECTOR_ADDRESS!;
         } else {        
-          holdingWalletAddress = deployments.SmartVault;
+          holdingWalletAddress = process.env.NEXT_PUBLIC_SMARTVAULT!;
         }
 
         /*************** CROSS CHAIN TRANSFER CALL ***************/
@@ -155,7 +131,7 @@ export function useDeposit(): UseDepositResult {
           txhash: txHash.toString() ?? "",
           contractaddress: deployments.SmartVault,
           useraddress: userAddress,
-          depositamount: amountStr,
+          depositamount: parsedValue.toString(),
           committedquarters: committedQuarters,
           paymentmethod: token.symbol,
           depositstarttime: now,
@@ -184,7 +160,7 @@ export function useDeposit(): UseDepositResult {
           txhash: "",
           contractaddress: deployments.SmartVault,
           useraddress: userAddress,
-          depositamount: amountStr,
+          depositamount: parsedValue?.toString() || "",
           committedquarters: committedQuarters,
           paymentmethod: token.symbol ?? "unknown",
           depositstarttime: now,
@@ -211,5 +187,5 @@ export function useDeposit(): UseDepositResult {
     []
   );
 
-  return { isProcessing, error, deposit };
+  return { isProcessing, error, deposit};
 }

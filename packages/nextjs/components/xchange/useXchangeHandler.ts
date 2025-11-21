@@ -10,14 +10,13 @@ import { Address as AddressType } from "viem";
 import { getExchangeRates } from "~~/lib/exchangeRates";
 import { Address } from "viem";
 import { useSelectedTokenBalance } from "~~/lib/chainHelper";
-import { sendTransferOnTargetChain } from "~~/utils/targetChain"
+import { sendTransferOnTargetChain, CHAINS, switchOrAddChain } from "~~/utils/targetChain"
 
 interface TransferHandlerProps {
   sender?: string;
   chainId?: number;
   selectedToken?: Token;
   selectedToken2?: Token;
-  selectedTokenS?: Token;
   amount?: string;
   amount2?: string;
   recipient?: AddressType;
@@ -25,17 +24,13 @@ interface TransferHandlerProps {
   xchangeId?: string;
   isRefundSelected?: boolean;
   isNewContractSelected?: boolean;
+  provider?: any;
   openWalletModal?: () => void;
 }
 
 interface BitcoinWallet {
   sendTransaction: (to: string, amount: number) => Promise<string>;
 }
-
-type TxResult = {
-  txHash: string;
-  receipt: any | null;
-};
 
 async function convertGbdoToSelectedTokenValue(
   selectedTokenSymbol: string,
@@ -110,7 +105,6 @@ export function useXchangeHandler(config: TransferHandlerProps) {
     chainId = 0,
     selectedToken = {} as Token,
     selectedToken2 = {} as Token,
-    selectedTokenS = {} as Token,
     amount = "",
     amount2 = "",
     recipient = undefined,
@@ -118,33 +112,11 @@ export function useXchangeHandler(config: TransferHandlerProps) {
     xchangeId = "",
     isRefundSelected = false,
     isNewContractSelected = false,
+    provider = undefined,
     openWalletModal,
   } = config;
 
   const [loading, setLoading] = useState(false);
-  const [provider, setProvider] = useState<EthereumProvider | null>(null);
-  const [walletName, setWalletName] = useState<string>("");
-  
-  useEffect(() => {
-    const ethereum = window.ethereum;
-    const xdefi = window.xfi;
-
-    if (ethereum?.isMetaMask) {
-      setWalletName("MetaMask");
-      setProvider(ethereum);
-    } else if (ethereum?.isBraveWallet) {
-      setWalletName("Brave Wallet");
-      setProvider(ethereum);
-    } else if (ethereum) {
-      setWalletName("Injected Wallet");
-      setProvider(ethereum);
-    }
-
-    if (xdefi) {
-      setWalletName("XDEFI Wallet");
-      setProvider(xdefi.ethereum);
-    }
-  }, []);
 
   const send = async () => {
     const processedAt = new Date().toISOString();
@@ -171,51 +143,28 @@ export function useXchangeHandler(config: TransferHandlerProps) {
     
     if (!selectedToken.address) {
       throw new Error("Token address is undefined");
-    }
+    }       
 
-    const myChainSupportedTokenAddresses = new Set<Address>([
-      deployments.Copian,
-      deployments.GlobalDollarX,
-      deployments.GlobalDollar,
-      deployments.BGFFS,
-      deployments.BGFRS,
-      deployments.TGMX,
-      deployments.TGUSA,
-      deployments.Globe,
-    ]);
-    
-    const polyAddresses = new Set<Address>([
-      "0x5C067C80C00eCd2345b05E83A3e758eF799C40B5",
-      "0x6AE7Dfc73E0dDE2aa99ac063DcF7e8A63265108c",
-    ]);
-
-    let isOnMyChain;
-    let isOnPoly;
-    let isOnEthChain;
-    let isBitcoin;
-
-    isOnMyChain = myChainSupportedTokenAddresses.has(selectedToken.address as Address);
-    isOnPoly = polyAddresses.has(selectedToken.address as Address);
-    isBitcoin = selectedToken.symbol === "BTC";
-    isOnEthChain = !isOnMyChain && !isOnPoly && !isBitcoin;
-
-    let selectedTokenChainId;
-    if(isOnMyChain){
-      selectedTokenChainId = 38391207;
-    }else if(isOnPoly){
-      selectedTokenChainId = 137;
-    }else{
-      selectedTokenChainId = 1;
-    }        
+    let parsedValue;
+    let parsedValue2;
 
     try {
       console.log("Executing...");
       if (!window.ethereum) {
         throw new Error("No Ethereum provider found. Please install MetaMask.");
       }
-      const provider = new BrowserProvider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      const signer = await provider.getSigner();
+      const activeProvider = provider || window.ethereum;
+      if (!activeProvider) throw new Error("No wallet provider available");
+    
+      const chainInfo = CHAINS.global;
+      if (!chainInfo) throw new Error(`Unknown chain: ${selectedToken.chain}`);
+    
+      const hexChainId = "0x" + chainInfo.chainId.toString(16);
+    
+      // Ethereum‑style chains
+      await switchOrAddChain(activeProvider, chainInfo);
+
+      const signer = await activeProvider.getSigner();
       const signerAddress = await signer.getAddress();
       console.log("Connected wallet:", signerAddress);
 
@@ -224,23 +173,12 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
         const xchangeFactory = new Contract(deployments.GlobalSwapFactory, GlobalSwapFactoryabi.abi, signer);
 
-        const amountInSelectedFeeToken = await convertGbdoToSelectedTokenValue(selectedTokenS.symbol, "10");
-
         const iface = new Interface(GlobalSwapFactoryabi.abi);
         const iface2 = new Interface(GlobalSwapabi.abi);
-        const parsedValue = parseUnits(amount, 18);
-        const parsedValue2 = parseUnits(amount2, 18);
+        parsedValue = parseUnits(amount, 18);
+        parsedValue2 = parseUnits(amount2, 18);
         console.log("value1", parsedValue);
         console.log("value2", parsedValue2);
-
-        let callAddressS;
-        if (selectedToken.symbol === "ETH") {
-          callAddressS = 0x00000000000000000000000000000000000000E0
-        } else if (selectedToken.symbol === "BTC"){
-          callAddressS = 0x00000000000000000000000000000000000000b0;
-        } else {
-          callAddressS = selectedToken.address;
-        }
 
         let callAddress;
         if (selectedToken.symbol === "ETH") {
@@ -263,14 +201,13 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         try {
           // Step 3: Send transaction directly to contract
           const tokenTx = await xchangeFactory.createSwap(
-            callAddressS,
             recipient,
             recipient2,
             callAddress,
             parsedValue,
             callAddress2,
             parsedValue2,
-            { gasLimit: 1_000_000 }
+            { gasLimit: 1_500_000 }
           );
           txhash = tokenTx.hash;
           const receipt = await tokenTx.wait();
@@ -306,20 +243,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
         const amountInSelectedToken = await convertGbdoToSelectedTokenValue(selectedToken.symbol, decimalString);
 
-        const { balanceBigInt, balanceBigNumber, decimals, isLoading } = useSelectedTokenBalance(
-          signerAddress,
-          selectedToken,
-          selectedTokenChainId
-        );
-
-        if (!isLoading && balanceBigNumber !== undefined) {
-          //const requiredAmount = ethers.utils.parseUnits(value, decimals);
-          if (balanceBigNumber < amountInSelectedToken!) {
-            console.log(`Insufficient ${selectedToken.symbol} balance.`);
-          }
-        }
-
-        const holdingWalletAddress = swapAddress;
+        const holdingWalletAddress = process.env.NEXT_PUBLIC_XCHANGE!;
         
         /*************** CROSS CHAIN TRANSFER CALL ***************/
         console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address);
@@ -349,29 +273,11 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
         const parsedValue = parseUnits(amount, 18);
 
-        const {
-          balanceBigInt: mainBalanceBigInt,
-          balanceBigNumber: mainBalanceBigNumber,
-          decimals: mainDecimals,
-          isLoading: mainLoading,
-        }= useSelectedTokenBalance(
-          signerAddress,
-          selectedToken,
-          selectedTokenChainId
-        );
-
-        if (!mainLoading && mainBalanceBigNumber !== undefined) {
-          //const requiredAmount = ethers.utils.parseUnits(value, decimals);
-          if (mainBalanceBigNumber < parsedValue!) {
-            console.log(`Insufficient ${selectedToken.symbol} balance.`);
-          }
-        }
-
         let holdingWalletAddress;
         if (selectedToken.symbol === "BTC"){
           holdingWalletAddress = process.env.NEXT_PUBLIC_BITCOLLECTOR_ADDRESS!;
         } else {        
-          holdingWalletAddress = xchangeId;
+          holdingWalletAddress = process.env.NEXT_PUBLIC_XCHANGE!;
         }
 
         /*************** CROSS CHAIN TRANSFER CALL ***************/
@@ -441,32 +347,9 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         // New swap xchange fallback
         const parsedValue = parseUnits(amount, 18);
         const parsedValue2 = parseUnits(amount2, 18);
-        const amountInSelectedFeeToken = await convertGbdoToSelectedTokenValue(selectedTokenS.symbol, "10");
 
 
         const iface = new Interface(GlobalSwapFactoryabi.abi);
-
-        const { balanceBigInt, balanceBigNumber, decimals, isLoading } = useSelectedTokenBalance(
-          signerAddress,
-          selectedToken,
-          selectedTokenChainId
-        );
-
-        if (!isLoading && balanceBigNumber !== undefined) {
-          //const requiredAmount = ethers.utils.parseUnits(value, decimals);
-          if (balanceBigNumber < amountInSelectedFeeToken!) {
-            console.log(`Insufficient ${selectedToken.symbol} balance.`);
-          }
-        }
-
-        let callAddressS;
-        if (selectedToken.symbol === "ETH") {
-          callAddressS = 0x00000000000000000000000000000000000000E0
-        } else if (selectedToken.symbol === "BTC"){
-          callAddressS = 0x00000000000000000000000000000000000000b0;
-        } else {
-          callAddressS = selectedToken.address;
-        }
 
         let callAddress;
         if (selectedToken.symbol === "ETH") {
@@ -489,14 +372,13 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         try {
           // Step 3: Send transaction directly to contract
           const tokenTx = await xchangeFactory.createSwap(
-            callAddressS,
             recipient,
             recipient2,
             callAddress,
             parsedValue,
             callAddress2,
             parsedValue2,
-            { gasLimit: 1_000_000 }
+            { gasLimit: 1_500_000 }
           );
           txhash = tokenTx.hash;
           receipt = await tokenTx.wait();
@@ -525,8 +407,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
       }
 
       let paymentmethod = "Unknown";
-      if (selectedTokenS?.symbol) paymentmethod = selectedTokenS.symbol;
-      else if (selectedToken2?.symbol) paymentmethod = selectedToken2.symbol;
+      if (selectedToken2?.symbol) paymentmethod = selectedToken2.symbol;
       else if (selectedToken?.symbol) paymentmethod = selectedToken.symbol;
 
       if ( isNewContractSelected! ) {
@@ -536,9 +417,9 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           useraddress: signerAddress,
           initiator: recipient || "",
           counterparty: recipient2 || "",
-          amounta: amount ? parseFloat(amount) : null,
-          amountb: amount2 ? parseFloat(amount2) : null,
-          paymentmethod: JSON.stringify([selectedToken?.symbol, selectedToken2?.symbol, selectedTokenS?.symbol].filter(Boolean)),
+          amounta: parsedValue,
+          amountb: parsedValue2,
+          paymentmethod: JSON.stringify([selectedToken?.symbol, selectedToken2?.symbol].filter(Boolean)),
           refund: isRefundSelected ? 1 : 0,
           newcontract: isNewContractSelected ? 1 : 0,
           status: "accepted",
@@ -576,15 +457,15 @@ export function useXchangeHandler(config: TransferHandlerProps) {
       }
 
         //****Deposit Log Exception*****//
-      if (tokenTx2 || !isNewContractSelected) {
+      if (tokenTx2! || !isNewContractSelected) {
           const xchangePayload = {
           txhash,
           contractaddress: swapAddress,
           useraddress: signerAddress,
           initiator: "",
           counterparty: "",
-          amounta: amount ? parseFloat(amount) : "",
-          amountb: "",
+          amounta: "",
+          amountb: parsedValue,
           paymentmethod: selectedToken.symbol,
           refund: 0,
           newcontract: 0,

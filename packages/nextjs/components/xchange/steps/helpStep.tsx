@@ -20,10 +20,12 @@ export default function HelpStep({ id, onClose }: Props) {
       </h2>
       <p id={`${id}-desc`} className="mb-4 text-xs text-justify leading-relaxed">
         This help section guides you through the steps required to create a new contract,
-        make a deposit, or request a refund on AssetXchange. There is 10 GBDo (approx. 10.50usd) service fee to create a contract.
-        Fees are none refundable as they are for contract creation. This fee is only collected upon contract creation.
-        Your confirmation email will contain exact details for all parties. If the values are incorrect, contact the contract creation party to resolve.
-        You can always access this help by clicking the help "Icon' button.
+        make a deposit, or request a refund on AssetXchange. There is a .5% fee ($.50 minimum) that is to be deducted from depositors upon completion of the swap contract or refund.
+        Fees are none refundable and are collected from each depositor equally. If a refund is requested the a .25% ($.50 minimum) refund fee is deducted from the refund amount.
+        The process involves 4 stages, swap creation, deposit which must take place on the network of the token asset you elect to use, completion which logs deposits from each party and 
+        marks for payout, and lastly payouts or refund based on party requests. Your confirmation email will contain exact details for all parties. If the 
+        values are incorrect, contact the contract creation party to resolve. If you are the initiating party, contact an admin at brantley-global.com/help.
+        You can always access this help by clicking the help "Icon' button. There are also chain interaction details located on the "VERIFICATION PAGE" @ brantley-global.com/verifcations.
       </p>
       <div className="mb-4">
         <h3 className="font-semibold mb-2">New Xchange Contract Creation</h3>

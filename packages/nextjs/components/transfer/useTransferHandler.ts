@@ -76,8 +76,9 @@ export function useTransferHandler(config: TransferHandlerProps) {
   const [walletName, setWalletName] = useState<string>("");
 
   useEffect(() => {
-    const ethereum = window.ethereum;
-    const xdefi = window.xfi;
+    if (typeof window === "undefined") return;
+    const ethereum = (window as any).ethereum;
+    const xdefi = (window as any).xfi;
 
     if (ethereum?.isMetaMask) {
       setWalletName("MetaMask");
@@ -130,20 +131,17 @@ export function useTransferHandler(config: TransferHandlerProps) {
       console.log("Amount exceeds available balance");
     }
 
-    try {
+    try {   
+          
+      const holdingWalletAddress = sender;
 
-      let holdingWalletAddress;
-      if (selectedToken.symbol === "BTC"){
-        holdingWalletAddress = process.env.NEXT_PUBLIC_BITCOLLECTOR_ADDRESS!;
-      } else {        
-        holdingWalletAddress = process.env.NEXT_PUBLIC_COLLECTOR_ADDRESS!;
-      }
-
-      console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address);
+      console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address, parsedValue, holdingWalletAddress);
 
       if (!provider) {
-        throw new Error("No provider available");
+        await window.ethereum?.request({ method: "eth_requestAccounts" });
+        // then setProvider again
       }
+
       const { txHash, receipt } = await sendTransferOnTargetChain(
         holdingWalletAddress,
         parsedValue,

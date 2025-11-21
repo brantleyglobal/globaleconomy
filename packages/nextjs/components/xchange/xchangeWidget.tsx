@@ -11,8 +11,9 @@ import DepositOrRefundStep from "~~/components/xchange/steps/depositRefundStep";
 import ReviewStep from "~~/components/xchange/steps/ReviewStep";
 import HelpStep from "~~/components/xchange/steps/helpStep";
 import { DoneStep } from "~~/components/xchange/steps/doneStep";
-//import { useConnectModal } from '@rainbow-me/rainbowkit';
+import { useXchangeHandler } from "~~/components/xchange/useXchangeHandler";
 import { useAccount } from "wagmi";
+import { supportedTokens, dividendTokens, Token } from "~~/components/constants/tokens";
 
 enum ModalStep {
   SelectionStep = 0,
@@ -30,7 +31,7 @@ type GlobalXchangeModalProps = {
   openWalletModal: () => void;
 };
 
-export const GlobalXchangeModal = ({ isOpen, onClose }: GlobalXchangeModalProps) => {
+export const GlobalXchangeModal = ({ isOpen, onClose, openWalletModal }: GlobalXchangeModalProps) => {
   const [step, setStep] = useState<ModalStep>(ModalStep.SelectionStep);
   const [isHelpMode, setIsHelpMode] = useState(false);
 
@@ -43,14 +44,18 @@ export const GlobalXchangeModal = ({ isOpen, onClose }: GlobalXchangeModalProps)
 
   // New contract step 1
   const [recipient, setRecipient] = useState<AddressType | undefined>(undefined);
+  const [recipient2, setRecipient2] = useState<AddressType | undefined>(undefined);
   const [selectedTokenSymbol, setSelectedTokenSymbol] = useState("");
   const [selectedTokenSymbolS, setSelectedTokenSymbolS] = useState("");
-  const [amount, setAmount] = useState("");
-
-  // New contract step 2
-  const [recipient2, setRecipient2] = useState<AddressType | undefined>(undefined);
   const [selectedTokenSymbol2, setSelectedTokenSymbol2] = useState("");
   const [amount2, setAmount2] = useState("");
+  const [amount, setAmount] = useState("");
+
+  const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+  const [selectedToken2, setSelectedToken2] = useState<Token | null>(null);
+
+  // New contract step 2
+ 
   const [userFirstName, setUserFirstName] = useState("");
   const [userLastName, setUserLastName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -67,6 +72,30 @@ export const GlobalXchangeModal = ({ isOpen, onClose }: GlobalXchangeModalProps)
   // Wallet state from wagmi
   const [address, setAddress] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const { chain } = useAccount();
+  const [provider, setProvider] = useState<EthereumProvider | null>(null);
+  const [walletName, setWalletName] = useState<string>("");
+  
+  useEffect(() => {
+    const ethereum = window.ethereum;
+    const xdefi = window.xfi;
+
+    if (ethereum?.isMetaMask) {
+      setWalletName("MetaMask");
+      setProvider(ethereum);
+    } else if (ethereum?.isBraveWallet) {
+      setWalletName("Brave Wallet");
+      setProvider(ethereum);
+    } else if (ethereum) {
+      setWalletName("Injected Wallet");
+      setProvider(ethereum);
+    }
+
+    if (xdefi) {
+      setWalletName("XDEFI Wallet");
+      setProvider(xdefi.ethereum);
+    }
+  }, []);
 
   // RainbowKit modal control hook
   //const { openConnectModal } = useConnectModal();
@@ -98,6 +127,23 @@ export const GlobalXchangeModal = ({ isOpen, onClose }: GlobalXchangeModalProps)
     }
   }
 
+  function getTokenBySymbol(symbol: string): Token | undefined {
+    return [...supportedTokens, ...dividendTokens].find(
+      (t) => t.symbol === symbol
+    );
+  }
+
+  useEffect(() => {
+    const tokenObj = getTokenBySymbol(selectedTokenSymbol);
+    setSelectedToken(tokenObj ?? null);
+  }, [selectedTokenSymbol]);
+
+  // Whenever selectedTokenSymbol2 changes:
+  useEffect(() => {
+    const tokenObj2 = getTokenBySymbol(selectedTokenSymbol2);
+    setSelectedToken2(tokenObj2 ?? null);
+  }, [selectedTokenSymbol2]);
+
   const goToReview = () => {
     setSavedStep(step);
     setStep(ModalStep.ReviewStep);
@@ -111,6 +157,22 @@ export const GlobalXchangeModal = ({ isOpen, onClose }: GlobalXchangeModalProps)
       setStep(ModalStep.SelectionStep); // fallback if none saved
     }
   };
+
+  const { send } = useXchangeHandler({
+    sender: address || "",
+    chainId: chain?.id,
+    selectedToken: selectedToken ?? undefined,
+    selectedToken2: selectedToken2 ?? undefined,
+    amount,
+    amount2,
+    recipient,
+    recipient2,
+    xchangeId,
+    isRefundSelected,
+    isNewContractSelected,
+    provider,
+    openWalletModal,
+  });
 
   useEffect(() => {
     fetch("/legal/privacy-policy.txt")
@@ -249,8 +311,6 @@ export const GlobalXchangeModal = ({ isOpen, onClose }: GlobalXchangeModalProps)
               setUserLastName={setUserLastName}
               userEmail={userEmail}
               setUserEmail={setUserEmail}
-              selectedTokenSymbolS={selectedTokenSymbolS}
-              setSelectedTokenSymbolS={setSelectedTokenSymbolS}
               onHelpToggle={() => setIsHelpMode(true)}
               onNext={() => setStep(ModalStep.CounterPartyStep)}
               onBack={() => setStep(ModalStep.AgreementStep)}

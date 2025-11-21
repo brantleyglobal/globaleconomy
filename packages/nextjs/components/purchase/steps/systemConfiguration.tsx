@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { AssetVariation } from "../purchase/checkoutModal";
+import type { AssetVariation } from "~~/components/purchase/checkoutModal";
 
 type Props = {
   currentStep: number;
@@ -94,11 +94,21 @@ export const SystemConfigurationStep: React.FC<Props> = ({
             : variationGroups.xpanel && renderVariationGroup("xpanel", "xpanel", "GBDo")}
 
           {variationGroups.etie
-            ? renderVariationGroup("etie", "etie", "USD")
-            : variationGroups.xtie && renderVariationGroup("xtie", "xtie", "USD")}
+            ? renderVariationGroup("etie", "etie", "GBDo")
+            : variationGroups.xtie && renderVariationGroup("xtie", "xtie", "GBDo")}
 
           {variationGroups.monitoring &&
-            renderVariationGroup("monitoring", "monitoring", "USD")}
+            renderVariationGroup("monitoring", "monitoring", "GBDo")}
+
+          {/* 📢 Volume Orders Section */}
+          <div className="bg-black/40 border border-info-400 rounded-md mt-4 p-1 text-center">
+            <p className="text-sm text-info-300">
+              For <span className="font-semibold text-info">volume or bulk orders</span>, 
+              please <a href="mailto:sales@brantley-global.com" className="underline hover:text-secondary">
+                contact directly
+              </a>.
+            </p>
+          </div>
         </div>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 py-4 border-t bg-transparent w-full">
           <button

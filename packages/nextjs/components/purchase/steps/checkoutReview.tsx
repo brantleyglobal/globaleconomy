@@ -80,7 +80,12 @@ export const CheckoutReviewStep: React.FC<Props> = ({
     setLoadingRate(true);
     getExchangeRates()
       .then(({ rates }) => {
-        const rate = rates.find(r => r.symbol === tokenSymbol)?.rate ?? 1;
+        let rate;
+        if ( tokenSymbol === "GBDo") {
+          rate = 1;
+        } else {
+          rate = rates.find(r => r.symbol === tokenSymbol)?.rate ?? 1;
+        }
         setTokenRate(rate);
       })
       .catch(() => setTokenRate(1)) // fallback rate
@@ -114,10 +119,16 @@ export const CheckoutReviewStep: React.FC<Props> = ({
     if (!shippingInfo?.country) return 0;
     const region = mapCountryToRegion(shippingInfo.country);
     const category = determineCategory(quantity, checkoutAsset.variant);
+    
+    let gbdoRate;
+    if  (tokenSymbol == "GBDo"){
+      gbdoRate = 1;
+    } else {
+      gbdoRate = await getGBDoRateFromRates();
+    }
     const rate = shippingRates.find(
       (r) => r.region === region && r.category === category
     );
-    const gbdoRate = await getGBDoRateFromRates();
     const shippingTotal = (((rate ? rate.Rate : 0) * quantity) * gbdoRate) / tokenRate;
     return shippingTotal; // convert cents to dollars
   }
@@ -141,7 +152,7 @@ export const CheckoutReviewStep: React.FC<Props> = ({
           <p className="text-white/80 tracking-wide text-xs font-semibold">
             Method: <span className="font-semibold text-white">{tokenSymbol}</span>
           </p>
-          {paymentMethod === "stable" && (
+          {paymentMethod === "stable" && tokenSymbol !== "GBDo" && (
             <p>
               Protocol Fee:{" "}
               <span className="font-semibold text-white">
@@ -157,7 +168,7 @@ export const CheckoutReviewStep: React.FC<Props> = ({
           <p className="text-white/80 tracking-wide text-xs font-semibold">
             Product Total:{" "}
             <span className="bg-ghost text-white px-2 py-1 rounded-full font-semibold">
-              {(((Number(estimatedTotal) / 10025)) * 10_000).toFixed(2)} {paymentMethod === "cash" ? "USD" : tokenSymbol}
+              {Number(estimatedTotal).toFixed(2)} {paymentMethod === "cash" ? "GBDo" : tokenSymbol}
             </span>
           </p>
           <p className="text-white/80 tracking-wide text-xs font-semibold">

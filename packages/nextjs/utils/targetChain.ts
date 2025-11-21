@@ -6,7 +6,7 @@ interface BitcoinWallet {
   sendTransaction: (to: string, amount: number) => Promise<string>;
 }
 
-interface ChainInfo {
+export interface ChainInfo {
   chainId: number;
   chainName: string;
   rpcUrls: string[];
@@ -14,7 +14,7 @@ interface ChainInfo {
   blockExplorerUrls?: string[];
 }
 
-const CHAINS: Record<string, ChainInfo> = {
+export const CHAINS: Record<string, ChainInfo> = {
   ethereum: {
     chainId: 1,
     chainName: "Ethereum Mainnet",
@@ -32,7 +32,7 @@ const CHAINS: Record<string, ChainInfo> = {
   global: {
     chainId: 38391207,
     chainName: "GlobalChain",
-    rpcUrls: ["https://your-global-rpc-url"],
+    rpcUrls: ["https://rpc.brantley-global.com"],
     nativeCurrency: { name: "GBDo", symbol: "GBDo", decimals: 18 },
     blockExplorerUrls: ["https://brantley-global.com/dashboard"],
   },
@@ -65,42 +65,54 @@ async function waitForChainChanged(provider: any, expectedChainIdHex: string, ti
   });
 }
 
-async function switchOrAddChain(provider: any, chain: ChainInfo): Promise<void> {
-  const hexChainId = "0x" + chain.chainId.toString(16);
+export function normalizeChainId(chainId: number | string): string {
+  if (typeof chainId === "number") return "0x" + chainId.toString(16);
+  if (typeof chainId === "string") {
+    return chainId.startsWith("0x")
+      ? "0x" + parseInt(chainId, 16).toString(16) // normalize hex
+      : "0x" + parseInt(chainId, 10).toString(16);
+  }
+  throw new Error("Invalid chainId");
+}
+
+export async function switchOrAddChain(provider: any, chain: ChainInfo): Promise<void> {
+  const targetHex = normalizeChainId(chain.chainId);
+
+  const currentChainId = normalizeChainId(await provider.request({ method: "eth_chainId" }));
+  const currentxChainId = await provider.request({ method: "eth_chainId" });
+  console.log("Current chainId from provider:", currentxChainId, "Target:", targetHex);
+
+  if (currentChainId === targetHex) return;
 
   try {
-    const currentChainId = await provider.request({ method: "eth_chainId" });
-    if (currentChainId === hexChainId) return;
-
     await provider.request({
       method: "wallet_switchEthereumChain",
-      params: [{ chainId: hexChainId }],
+      params: [{ chainId: targetHex }],
     });
-
-    // 🔎 Wait until the wallet actually reports the new chain
-    await waitForChainChanged(provider, hexChainId);
-
   } catch (err: any) {
     if (err.code === 4902) {
-      if (chain.chainId === 1 || chain.chainId === 137) {
-        throw new Error(`Chain ${chain.chainName} should already exist in wallet`);
-      }
       await provider.request({
         method: "wallet_addEthereumChain",
         params: [chain],
       });
       await provider.request({
         method: "wallet_switchEthereumChain",
-        params: [{ chainId: hexChainId }],
+        params: [{ chainId: targetHex }],
       });
-
-      // 🔎 Wait again after adding
-      await waitForChainChanged(provider, hexChainId);
-
     } else {
       throw err;
     }
   }
+
+  // Poll until chainId matches
+  let attempts = 0;
+  while (attempts < 15) {
+    const id = normalizeChainId(await provider.request({ method: "eth_chainId" }));
+    if (id === targetHex) return;
+    await new Promise(res => setTimeout(res, 1000));
+    attempts++;
+  }
+  throw new Error("Timeout waiting for chain switch");
 }
 
 function rescaleAmount(amount: bigint, fromDecimals: number, toDecimals: number): string {
@@ -138,8 +150,22 @@ export async function sendTransferOnTargetChain(
     return { txHash: txid, receipt: null };
   }
 
+  const hexChainId = "0x" + chainInfo.chainId.toString(16);
+
   // Ethereum‑style chains
   await switchOrAddChain(activeProvider, chainInfo);
+
+  // Instead of waiting on raw hex, normalize
+  //await waitForChainChanged(activeProvider, normalizeChainId(chainInfo.chainId));
+
+  const verifiedChainId = normalizeChainId(
+    await activeProvider.request({ method: "eth_chainId" })
+  );
+
+  if (verifiedChainId !== normalizeChainId(chainInfo.chainId)) {
+    console.error(`Wallet not on target chain ${chainInfo.chainName}, aborting transaction`);
+    throw new Error(`Wallet not on target chain ${chainInfo.chainName}, aborting transaction`);
+  }
 
   const web3 = new Web3(activeProvider);
   const accounts = await web3.eth.getAccounts();
@@ -149,6 +175,7 @@ export async function sendTransferOnTargetChain(
   if (selectedToken.symbol === "ETH" || selectedToken.symbol === "GBDo") {
     // Native transfer: input is already 18 decimals, chain uses 18 → no rescale
     const value = rescaleAmount(tamount, 18, chainInfo.nativeCurrency.decimals);
+    
     receipt = await web3.eth.sendTransaction({
       from,
       to: recipient,
