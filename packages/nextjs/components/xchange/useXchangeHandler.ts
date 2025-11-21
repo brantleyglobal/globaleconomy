@@ -363,10 +363,10 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         let callAddress2;
         if (selectedToken.symbol === "ETH") {
           callAddress2 = 0x00000000000000000000000000000000000000E0
-        } else if (selectedToken.symbol === "BTC"){
+        } else if (selectedToken2.symbol === "BTC"){
           callAddress2 = 0x00000000000000000000000000000000000000b0;
         } else {
-          callAddress2 = selectedToken.address;
+          callAddress2 = selectedToken2.address;
         }
 
         try {
