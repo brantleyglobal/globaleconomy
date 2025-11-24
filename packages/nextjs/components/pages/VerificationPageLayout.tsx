@@ -209,34 +209,46 @@ export default function VerificationLayout() {
               <button
                 onClick={async () => {
                   try {
-                    // Fetch proxy stub code
-                    const proxyCode = await provider.getCode(address);
-
-                    // Resolve implementation
-                    const { implAddress, implCode } = await getImplementationCode(provider, address);
-
                     const compiled = abiData[CurrentContract]?.compiledBytecode;
                     let matchStatus = "Not verified yet";
 
-                    if (compiled) {
-                      matchStatus = implCode === compiled ? "MATCH" : "MISMATCH";
+                    if (CurrentContract === "GlobalSwap" || CurrentContract === "GlobalSwapFactory") {
+                      // Non‑proxy contracts
+                      const code = await provider.getCode(address);
+                      if (compiled) {
+                        matchStatus = code === compiled ? "MATCH" : "MISMATCH";
+                      }
+                      setAbiData(prev => ({
+                        ...prev,
+                        [CurrentContract]: {
+                          ...(prev[CurrentContract] || {}),
+                          onChainBytecode: code,
+                          matchStatus,
+                        },
+                      }));
+                    } else {
+                      // Proxy contracts
+                      const proxyCode = await provider.getCode(address);
+                      const { implAddress, implCode } = await getImplementationCode(provider, address);
+                      if (compiled) {
+                        matchStatus = implCode === compiled ? "MATCH" : "MISMATCH";
+                      }
+                      setAbiData(prev => ({
+                        ...prev,
+                        [CurrentContract]: {
+                          ...(prev[CurrentContract] || {}),
+                          proxyBytecode: proxyCode,
+                          implementationAddress: implAddress,
+                          onChainBytecode: implCode,
+                          matchStatus,
+                        },
+                      }));
                     }
-
-                    setAbiData(prev => ({
-                      ...prev,
-                      [CurrentContract]: {
-                        ...(prev[CurrentContract] || {}),
-                        proxyBytecode: proxyCode,
-                        implementationAddress: implAddress,
-                        onChainBytecode: implCode,
-                        matchStatus,
-                      },
-                    }));
                   } catch (err) {
                     console.error("Failed to fetch bytecode:", err);
                   }
                 }}
-                className="px-3 py-1 mt-2 mb-2 text-sm rounded-md bg-white/10 hover:bg-white/20 transition-colors text-zinc-200"              >
+                className="px-3 py-1 mt-2 mb-2 text-sm rounded-md bg-white/10 hover:bg-white/20 transition-colors text-zinc-200">
                 Fetch On-chain Bytecode
               </button>
                 <pre className="bg-black/70 p-3 text-xs rounded-md overflow-x-auto mt-2">
