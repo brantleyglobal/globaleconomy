@@ -12,8 +12,8 @@ const stablecoinSymbols = [
 const symbolImageGroups: { [pattern: string]: string } = {
   "^GBD\\d+$": "https://brantley-global.com/tokens/Div.png",
   "^TG": "https://brantley-global.com/tokens/Fuel.png",
-  "^BGF": "https://brantley-global.com/tokens/RE.png",
-  "^BGGRID": "https://brantley-global.com/tokens/CE.png",
+  "^CRE": "https://brantley-global.com/tokens/RE.png",
+  "^CGRi": "https://brantley-global.com/tokens/CE.png",
   "^GLB": "https://brantley-global.com/tokens/globe.png",
   "^GBDo": "https://brantley-global.com/tokens/GBDx.png",
   "^GBDx": "https://brantley-global.com/tokens/GBDx.png",

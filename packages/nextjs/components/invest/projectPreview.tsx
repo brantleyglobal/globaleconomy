@@ -1,5 +1,3 @@
-// src/components/ProjectPreview.tsx
-
 import React from "react";
 
 export const ProjectPreview = ({
@@ -10,12 +8,18 @@ export const ProjectPreview = ({
 }: {
   title: string;
   description: string;
-  image: string;
+  image?: string;
   pdf: string;
 }) => (
   <div className="bg-black border border-white/10 rounded-xl p-4 space-y-4">
     <h3 className="text-lg font-light text-white">{title}</h3>
-    {/*<img src={image} alt="Coming Soon" className="rounded-md w-full object-cover" />*/}
+    {image && (
+      <img
+        src={image}
+        alt="Project preview"
+        className="rounded-md w-full object-cover"
+      />
+    )}
     <p className="text-white/50 text-justify text-sm">{description}</p>
     <a
       href={pdf}

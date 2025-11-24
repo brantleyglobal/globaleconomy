@@ -93,16 +93,16 @@ export const supportedTokens = [
     chain: "global",
   },
   {
-    name: "BG REAL ESTATE BUY TO SELL",
-    symbol: "BGFFS",
+    name: "BG CLEAN REAL ESTATE",
+    symbol: "CREs",
     address: deployments.BGFFS,
     decimals: 18,
     isNative: false,
     chain: "global",
   },
   {
-    name: "BG REAL ESTATE BUY TO HOLD",
-    symbol: "BGFRS",
+    name: "BG CLEAN REAL ESTATE",
+    symbol: "CREh",
     address: deployments.BGFRS,
     decimals: 18,
     isNative: false,
@@ -110,7 +110,7 @@ export const supportedTokens = [
   },
   {
     name: "BG CLEAN GRID",
-    symbol: "BGGRID",
+    symbol: "CGRi",
     address: deployments.BGGRID,
     decimals: 18,
     isNative: false,
@@ -156,14 +156,14 @@ export const supportedTokens = [
     isNative: false,
     chain: "bitcoin",
   },*/
-  {
+  /*{
     name: "Wrapped Binance Coin",
     symbol: "WBNB",
     address: "0xB8c77482e45F1F44dE1745F52C74426C631bDD52",
     decimals: 18,
     isNative: false,
     chain: "ethereum",
-  },
+  },*/
   {
     name: "Dai Stablecoin",
     symbol: "DAI",
@@ -316,14 +316,14 @@ export const supportedTokens = [
     isNative: false,
     chain: "ethereum",
   },
-  {
+  /*{
     name: "Wrapped Ethtereum",
     symbol: "WETH",
     address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
     decimals: 18,
     isNative: false,
     chain: "ethereum",
-  },
+  },*/
 ];
 
 export const dividendTokens = [
@@ -353,16 +353,16 @@ export const dividendTokens = [
     chain: "global",
   },
   {
-    name: "BG REAL ESTATE BUY TO SELL",
-    symbol: "BGFFS",
+    name: "BG CLEAN REAL ESTATE",
+    symbol: "CREs",
     address: deployments.BGFFS,
     decimals: 18,
     isNative: false,
     chain: "global",
   },
   {
-    name: "BG REAL ESTATE BUY TO HOLD",
-    symbol: "BGFRS",
+    name: "BG CLEAN REAL ESTATE",
+    symbol: "CREh",
     address: deployments.BGFRS,
     decimals: 18,
     isNative: false,
@@ -370,7 +370,7 @@ export const dividendTokens = [
   },
   {
     name: "BG CLEAN GRID",
-    symbol: "BGGRID",
+    symbol: "CGRi",
     address: deployments.BGGRID,
     decimals: 18,
     isNative: false,

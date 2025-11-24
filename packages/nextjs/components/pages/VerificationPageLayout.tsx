@@ -17,13 +17,12 @@ interface DeploymentArtifact {
 type ContractName = keyof typeof contracts;
 
 const contracts = {
+  AcquisitionGateway: deployments.AcquisitionGateway,
   GlobalSwap: deployments.GlobalSwap,
   GlobalSwapFactory: deployments.GlobalSwapFactory,
   AssetPurchase: deployments.AssetPurchase,
-  AcquisitionGateway: deployments.AcquisitionGateway,
   SmartVault: deployments.SmartVault,
   RegionInfrastructure: deployments.RegionInfrastructure,
-  TransferTracker: deployments.TransferTracker,
 };
 
 const contractTabs = [
@@ -33,7 +32,6 @@ const contractTabs = [
   { id: "RegionInfrastructure", label: "REGION DEVELOPMENT" },
   { id: "GlobalSwap", label: "ASSET XCHANGE" },
   { id: "GlobalSwapFactory", label: "ASSET XCHANGE FACTORY" },
-  { id: "TransferTracker", label: "TRANSFER TRACKER" },
 ];
 
 
@@ -82,18 +80,10 @@ export default function VerificationLayout() {
     Object.keys(contracts)[0] as ContractName
   );
 
-  const [onChainBytecode, setOnChainBytecode] = useState<string>("");
-  const [abiHash, setAbiHash] = useState<string>("");
-  const [artifact, setArtifact] = useState<any>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [abiData, setAbiData] = useState<Record<string, any>>({});
 
   const provider = new ethers.JsonRpcProvider("https://rpc.brantley-global.com");
-
-  async function fetchAbi(address: string) {
-    const code = await provider.getCode(address);
-    console.log("Bytecode:", code);
-  }
 
   const CurrentContract: ContractName = activeContract;
   const address = contracts[CurrentContract];
@@ -107,14 +97,13 @@ export default function VerificationLayout() {
         if (!res.ok) {
           throw new Error(`Failed to load artifact: ${res.status}`);
         }
-        console.log(CurrentContract);
-        const artifact = await res.json(); // only once
+        const artifact = await res.json();
         setAbiData(prev => ({
           ...prev,
           [CurrentContract]: {
             ...(prev[CurrentContract] || {}),
             abi: artifact.abi,
-            compiledBytecode: artifact.deployedBytecode || artifact.bytecode,
+            compiledBytecode: artifact.deployedBytecode, // <-- only runtime code
             abiHash: crypto.SHA256(JSON.stringify(artifact.abi)).toString(),
           },
         }));
@@ -124,6 +113,24 @@ export default function VerificationLayout() {
     };
     loadArtifact();
   }, [CurrentContract]);
+
+  async function getImplementationCode(provider: ethers.JsonRpcProvider, proxyAddress: string) {
+    // EIP‑1967 implementation slot
+    const implSlot =
+      "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+
+    // Read raw storage value at that slot
+    const raw = await provider.getStorage(proxyAddress, implSlot);
+
+    // Last 20 bytes = implementation address
+    const implAddress = ethers.getAddress("0x" + raw.slice(26));
+
+    // Fetch runtime code at implementation
+    const implCode = await provider.getCode(implAddress);
+
+    return { implAddress, implCode };
+  }
+
 
   return (
     <div className="relative bg-black text-white min-h-screen">
@@ -202,12 +209,27 @@ export default function VerificationLayout() {
               <button
                 onClick={async () => {
                   try {
-                    const code = await provider.getCode(address);
+                    // Fetch proxy stub code
+                    const proxyCode = await provider.getCode(address);
+
+                    // Resolve implementation
+                    const { implAddress, implCode } = await getImplementationCode(provider, address);
+
+                    const compiled = abiData[CurrentContract]?.compiledBytecode;
+                    let matchStatus = "Not verified yet";
+
+                    if (compiled) {
+                      matchStatus = implCode === compiled ? "MATCH" : "MISMATCH";
+                    }
+
                     setAbiData(prev => ({
                       ...prev,
                       [CurrentContract]: {
                         ...(prev[CurrentContract] || {}),
-                        onChainBytecode: code,
+                        proxyBytecode: proxyCode,
+                        implementationAddress: implAddress,
+                        onChainBytecode: implCode,
+                        matchStatus,
                       },
                     }));
                   } catch (err) {

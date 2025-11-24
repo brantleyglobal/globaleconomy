@@ -33,6 +33,7 @@ function useIsMobile(breakpoint = 1024) {
 const menuLinks = [
   { label: "ABOUT", href: "/about" },
   { label: "ENERGY ORDER", href: "/energy-order" },
+  { label: "PLANNED DEVELOPMENTS", href: "/developments" },
   { label: "WHITEPAPER", href: "/whitepaper" },
   { label: "VERIFCATIONS", href: "/verification" },
   { label: "HELP", href: "/help" },
@@ -117,17 +118,17 @@ export const Header = () => {
               >
                 TRANSFER
               </button>
-              {menuLinks.map(({ label, href }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`hover:text-primary transition ${
-                    pathname === href ? "text-primary font-medium" : "text-white"
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
+
+              {/* RESOURCES dropdown (desktop only) */}
+              <ResourcesDropdown pathname={pathname} />
+
+              {/* HELP after RESOURCES */}
+              <Link
+                href="/help"
+                className={`hover:text-primary transition ${pathname === "/help" ? "text-primary font-medium" : "text-white"}`}
+              >
+                HELP
+              </Link>
               <button
                 onClick={() => setModalState(s => ({ ...s, invest: true }))}
                 className="text-white hover:text-primary transition"
@@ -267,3 +268,106 @@ export const Header = () => {
     </>
   );
 };
+
+function ResourcesDropdown({ pathname }: { pathname: string | null }) {
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<number | null>(null);
+
+  const clearCloseTimer = () => {
+    if (closeTimer.current) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+
+  const delayedClose = () => {
+    clearCloseTimer();
+    closeTimer.current = window.setTimeout(() => setOpen(false), 150);
+  };
+
+  useEffect(() => {
+    // Close on route change
+    setOpen(false);
+    clearCloseTimer();
+  }, [pathname]);
+
+  return (
+    <div className="relative">
+      {/* Trigger */}
+      <button
+        className="text-white hover:text-primary transition text-xs font-light"
+        onMouseEnter={() => {
+          clearCloseTimer();
+          setOpen(true);
+        }}
+        onMouseLeave={delayedClose}
+        onClick={() => setOpen(o => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        RESOURCES
+      </button>
+
+      {/* Dropdown panel directly below */}
+      {open && (
+        <div
+          className="absolute left-0 top-full mt-2 w-56 rounded-md border border-white/10 bg-black/95 shadow-lg z-50"
+          role="menu"
+          onMouseEnter={() => {
+            clearCloseTimer();
+            setOpen(true);
+          }}
+          onMouseLeave={delayedClose}
+        >
+          <ul className="py-2 text-xs">
+            <li>
+              <Link
+                href="/about"
+                className="block px-4 py-2 text-white hover:text-primary hover:bg-white/5 transition"
+                role="menuitem"
+              >
+                ABOUT
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/verification"
+                className="block px-4 py-2 text-white hover:text-primary hover:bg-white/5 transition"
+                role="menuitem"
+              >
+                VERIFICATIONS
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/whitepaper"
+                className="block px-4 py-2 text-white hover:text-primary hover:bg-white/5 transition"
+                role="menuitem"
+              >
+                WHITEPAPER
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/energy-order"
+                className="block px-4 py-2 text-white hover:text-primary hover:bg-white/5 transition"
+                role="menuitem"
+              >
+                ENERGY ORDER
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/developments"
+                className="block px-4 py-2 text-white hover:text-primary hover:bg-white/5 transition"
+                role="menuitem"
+              >
+                PLANNED DEVELOPMENTS
+              </Link>
+            </li>
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
