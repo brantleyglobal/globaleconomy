@@ -20,7 +20,9 @@ export const ProjectPreview = ({
         className="rounded-md w-full object-cover"
       />
     )}
-    <p className="text-white/50 text-justify text-sm">{description}</p>
+    <div className="text-white/50 text-justify text-sm whitespace-pre-line">
+      {description}
+    </div>
     <a
       href={pdf}
       target="_blank"

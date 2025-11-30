@@ -247,9 +247,8 @@ export const DividendRedeemModal = ({ openWalletModal }: FaucetProps) => {
       {step === 0 && (
         <>
           <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-1 sm:space-y-0">
+            <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-light text-primary">INVESTMENT REDEMPTION</h3>
-                <p className="text-xs text-gray-400">Returning what belongs</p>
             </div>
             <div className="space-y-1">
               <span className="text-xs mb-4 font-light">SELECT DIVIDEND TOKEN</span>

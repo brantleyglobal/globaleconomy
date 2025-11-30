@@ -16,50 +16,48 @@ export const projectDetails = {
   },
     TGUSA: {
     title: "TRANS-GREENTECH US REFINERY & DEPOT | Capital Raise TBA",
-    description: `Servicing multiple markets, using algae to produce biofuel, valuable feed & nutraceuticals, and fertilizer. 
-      Supported by practices that are environmentally friendly, technology driven, economically profitable, and address several 
-      growing concerns. Using reverse water treatment practices, hydro-processing, and CO2 extraction in tandem with today’s automation 
-      & controls and business applications, operations will cultivate, harvest, and process algae to produce algal oil 
-      which will be refined and marketed as middle distillate biofuel; and biomass which will be marketed as animal feed products, organic 
-      fertilizer, and dietary supplements. Modeled similar to farms producing alternative fuels from the cultivation of crops, Trans GreenTech 
-      will develop 70 acres, dedicated to the cultivation, processing, and storage of algal based products with an initial production capability 
-      of over 90,000 tons of quality algal biomass derived products per acre annually. In terms of competition, upon completion, Proposing a 
-      production minimum 70,000 bpd. Well over 16 million gallons of biofuel per acre per annum.`,
+    description: `Trans GreenTech is developing algae‑based energy farms that serve multiple markets by producing biofuel, animal feed, nutraceuticals, and organic fertilizer. Our operations are built on environmentally sustainable practices, advanced technology, and profitable economics, directly addressing several global concerns.
+
+    Through reverse water treatment, hydro‑processing, and CO₂ extraction — combined with modern automation, controls, and business applications — we cultivate, harvest, and process algae into two primary product streams: algal oil, refined into middle‑distillate biofuel, and algal biomass, marketed as animal feed, fertilizer, and dietary supplements.
+
+    Modeled after crop‑based alternative fuel farms, Trans GreenTech will develop 70 acres dedicated to cultivation, processing, and storage of algae‑derived products. Initial capacity is projected at more than 90,000 tons of high‑quality biomass per acre annually, supporting a minimum of 70,000 barrels per day of production — equivalent to over 16 million gallons of biofuel per acre each year.`,
     image: "/assets/images/tg-project.png",
     pdf: "/assets/.Trans Greentech(web)", 
   },
     TGMX: {
     title: "TRANS-GREENTECH MX REFINERY & DEPOT | Capital Raise TBA",
-    description: `Servicing multiple markets, using algae to produce biofuel, valuable feed & nutraceuticals, and fertilizer. 
-      Supported by practices that are environmentally friendly, technology driven, economically profitable, and address several 
-      growing concerns. Using reverse water treatment practices, hydro-processing, and CO2 extraction in tandem with today’s automation 
-      & controls and business applications, operations will cultivate, harvest, and process algae to produce algal oil 
-      which will be refined and marketed as middle distillate biofuel; and biomass which will be marketed as animal feed products, organic 
-      fertilizer, and dietary supplements. Modeled similar to farms producing alternative fuels from the cultivation of crops, Trans GreenTech 
-      will develop 70 acres, dedicated to the cultivation, processing, and storage of algal based products with an initial production capability 
-      of over 90,000 tons of quality algal biomass derived products per acre annually. In terms of competition, upon completion, Proposing a 
-      production minimum 70,000 bpd. Well over 16 million gallons of biofuel per acre per annum.`,
+    description: `Trans GreenTech is developing algae‑based energy farms that serve multiple markets by producing biofuel, animal feed, nutraceuticals, and organic fertilizer. Our operations are built on environmentally sustainable practices, advanced technology, and profitable economics, directly addressing several global concerns.
+
+    Through reverse water treatment, hydro‑processing, and CO₂ extraction — combined with modern automation, controls, and business applications — we cultivate, harvest, and process algae into two primary product streams: algal oil, refined into middle‑distillate biofuel, and algal biomass, marketed as animal feed, fertilizer, and dietary supplements.
+
+    Modeled after crop‑based alternative fuel farms, Trans GreenTech will develop 70 acres dedicated to cultivation, processing, and storage of algae‑derived products. Initial capacity is projected at more than 90,000 tons of high‑quality biomass per acre annually, supporting a minimum of 70,000 barrels per day of production — equivalent to over 16 million gallons of biofuel per acre each year.`,
       image: "/assets/images/tg-project.png", 
     pdf: "/assets/.Trans Greentech(web)",
   },
     CREs: {
     title: "Clean Real Estate Buy & Sell | USA",
-    description: `Real Estate investments equipped with BG Company's clean generator virtually eliminating energy related overhead and holding cost. 
-      1 year (4 quarter) commitment before 1 year redemption period begins. Payouts are pro rata lump sum profits from the sale.`,
-    image: "/images/usdc-project.jpg",
+    description: `BG Company offers a pooled real estate investment model powered by its clean energy generator, designed to virtually eliminate 
+      energy‑related overhead and holding costs. Investors collectively participate in a one‑year (four‑quarter) term, after which a one‑year 
+      redemption period begins. Profits are distributed on a pro rata basis to all participants in the pool, with lump‑sum payouts made following 
+      the sale.`,
+    image: "",
     pdf: "/assets/bgbs.pdf",
   },
     CREh: {
     title: "Clean Real Estate Buy & Hold | USA",
-    description: `Real Estate investments equipped with BG Company's clean generator virtually eliminating energy related overhead and holding cost. 
-      1 year (4 quarter) commitment before 5 year redemption period begins. Payouts are made monthly based on actual rental revenue.`,
-    image: "/images/usdc-project.jpg",
+    description: `Pooled real estate investments powered by BG Company’s clean energy generator, designed to virtually eliminate energy-related overhead and 
+      holding costs. Investors commit to a one-year (four-quarter) term, after which a five-year redemption period begins. Monthly payouts are 
+      distributed based on actual rental revenue.`,
+    image: "",
     pdf: "/assets/bgbh.pdf",
   },
     CGRi: {
     title: "Clean Grid Infrastructure",
-    description: "Planned Real Estate Developments built around clean energy generation with milestone payouts beginning as venture development is completed.",
-    image: "/images/usdc-project.jpg",
+    description: `Planned real estate energy farms function as decentralized power stations, similar in concept to solar farms but designed for vertical 
+      growth, much like server farms. Each farm acts as a central hub that continuously supplies clean energy to surrounding developments. Because the 
+      system is decentralized, major grid outages do not disrupt the network — only the individual station it connects to. This ensures uninterrupted power 
+      for supported projects, with milestone payouts beginning as each stage of development is completed.`,
+    image: "",
     pdf: "/assets/bggrid.pdf",
   },
   // 

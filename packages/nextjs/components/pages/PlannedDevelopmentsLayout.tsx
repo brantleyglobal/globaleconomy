@@ -41,6 +41,7 @@ const projects = [
       "/assets/images/tg-project2.png",
       "/assets/images/tg-project3.png",
       "/assets/images/tg-project4.png",
+      "/assets/images/tg-project5.png",
     ],
   },
 ];
@@ -50,7 +51,7 @@ export default function ProposedDevelopments() {
     <main className="bg-black text-white min-h-screen font-sans">
       {/* Hero */}
       <section className="py-16 text-center border-b border-white/10">
-        <h1 className="text-3xl sm:text-5xl font-light tracking-wide mb-4 text-primary">
+        <h1 className="text-2xl sm:text-4xl font-light tracking-wide mb-4 text-primary">
         PROPOSED DEVELOPMENTS
         </h1>
         <p className="text-gray-400">Not just talking about the future, but creating it.</p>

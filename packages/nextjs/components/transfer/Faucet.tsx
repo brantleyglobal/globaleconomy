@@ -339,9 +339,8 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
           {step === 0 && (
             <>
               <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-1 sm:space-y-0">
-                  <h3 className="text-xl font-light text-primary">ASSET TRANSFER</h3>
-                  <p className="text-xs text-gray-400">Securely move your assets</p>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-light text-primary">ASSET TRANSFER</h2>
                   <button
                     onClick={toggleHelp}
                     aria-label="Toggle help"
@@ -361,7 +360,7 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
                     <option value="" disabled>
                       {mergedTokens.length === 0
                         ? "-- No Tokens Available --"
-                        : "CounterParty Token to Deposit"}
+                        : "Select Token to Transfer"}
                     </option>
                     {mergedTokens
                       .filter(

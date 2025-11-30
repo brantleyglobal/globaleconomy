@@ -39,25 +39,28 @@ export default function HelpStep({ id, onClose }: Props) {
         </ul>
         </div>*/}
         <div className="mb-4">
-          <h3 className="font-semibold mb-2">Regional Ventures Trading</h3>
+          <h3 className="font-semibold mb-2">Term Investing</h3>
           <ul className="list-disc list-inside text-xs space-y-1">
-            <li>Selection: Choose "Regional Assets" from the initial options.</li>
-            <li>You will be redirected to the Trading Dashboard.</li>
-            <li>You trade the same as any currency pair by choosing the available pair to GBDo.</li>
+            <li>Selection: Choose "Term Investing" from the initial options.</li>
+            <li>Select the currency you would like to invest.</li>
+            <li>Select the number of quarters you would like to invest. Terms are in annual quarters (3 months equals a quarter) with a 2 quarter minimum.</li>
+            <li>Enter the amount you wish to invest.</li>
             <li>There is a .25% fee to enter and exit all trades. Plan accordingly</li>
-            <li>Track your assets from the Trading Dashboard at any time.</li>
+            <li>Track your assets from the Transactions Dashboard at any time.</li>
           </ul>
         </div>
         <div className="mb-4">
-          <h3 className="font-semibold mb-2">Speculative Pair Trading</h3>
+          <h3 className="font-semibold mb-2">Regional Ventures Investing</h3>
           <ul className="list-disc list-inside text-xs space-y-1">
-            <li>Selection: Choose "Speculative" from the initial options.</li>
-            <li>You will be redirected to the Trading Dashboard.</li>
-            <li>You trade the same as any currency pair by choosing the available pair to GBDo.</li>
-            <li>There is a .25% fee to enter and exit all trades. Plan accordingly</li>
-            <li>Track your assets from the Trading Dashboard at any time.</li>
+            <li>Selection: Choose "Regional Investing" from the initial options.</li>
+            <li>Select the venture you would like to invest in. Please be mindful of the terms outlined in the description and downloadable pdf.</li>
+            <li>Select the currency you would like to invest.</li>
+            <li>Enter the amount you wish to invest.</li>
+            <li>There is a .25% fee to enter and exit all investments. Plan accordingly</li>
+            <li>Track your assets from the Transactions Dashboard at any time.</li>
           </ul>
         </div>
+        
       </div>
       <button
         onClick={onClose}
