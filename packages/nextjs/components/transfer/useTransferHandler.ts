@@ -135,7 +135,7 @@ export function useTransferHandler(config: TransferHandlerProps) {
           
       const holdingWalletAddress = sender;
 
-      console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address, parsedValue, holdingWalletAddress);
+      //console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address, parsedValue, holdingWalletAddress);
 
       if (!provider) {
         await window.ethereum?.request({ method: "eth_requestAccounts" });

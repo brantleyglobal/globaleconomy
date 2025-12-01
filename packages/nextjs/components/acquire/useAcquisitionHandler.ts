@@ -79,9 +79,9 @@ export function useDeposit(): UseDepositResult {
         parsedValue = parseUnits(String(amountStr), 18);
         parsedValue2 = parseUnits(String(amountoutStr), 18);
         const exchangeRate = parseUnits(String(rate), 18);
-        console.log(parsedValue);
-        console.log(parsedValue2);
-        console.log(rate);
+        //console.log(parsedValue);
+        //console.log(parsedValue2);
+        //console.log(rate);
 
         let callAddress;
         if (token.symbol === "ETH") {

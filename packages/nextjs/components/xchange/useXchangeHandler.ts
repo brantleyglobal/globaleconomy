@@ -168,7 +168,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
       const signer = await provider.getSigner();
       const signerAddress = await signer.getAddress();
-      console.log("Connected wallet:", signer);
+      //console.log("Connected wallet:", signer);
 
       if (signerAddress === recipient && isNewContractSelected!) {
         console.log("Creating AssetXchange Contract");
@@ -179,8 +179,8 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         const iface2 = new Interface(GlobalSwapabi.abi);
         parsedValue = parseUnits(amount, 18);   // bigint
         parsedValue2 = parseUnits(amount2, 18); // bigint
-        console.log("value1", parsedValue);
-        console.log("value2", parsedValue2);
+        //console.log("value1", parsedValue);
+        //console.log("value2", parsedValue2);
 
         let callAddress;
         if (selectedToken.symbol === "ETH") {
@@ -248,7 +248,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         const holdingWalletAddress = process.env.NEXT_PUBLIC_XCHANGE!;
         
         /*************** CROSS CHAIN TRANSFER CALL ***************/
-        console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address);
+        //console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address);
 
         if (!provider) {
           throw new Error("No provider available");
@@ -269,7 +269,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
       /*************************************************************************************************************/
       
       } else if (xchangeId! && !isRefundSelected && !isNewContractSelected) {//failing in the following if block
-        console.log("Depositing to Contract: ", xchangeId);
+        //console.log("Depositing to Contract: ", xchangeId);
 
         const iface = new Interface(GlobalSwapabi.abi);
 
@@ -283,7 +283,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         }
 
         /*************** CROSS CHAIN TRANSFER CALL ***************/
-        console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address);
+        //console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address);
 
         if (!provider) {
           throw new Error("No provider available");
@@ -304,7 +304,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
       /********************************************************************************************************************/
 
       } else if (xchangeId! && isRefundSelected!) {
-        console.log("Refunding from Contract: ", xchangeId);
+        //console.log("Refunding from Contract: ", xchangeId);
         const iface = new Interface(GlobalSwapabi.abi);
 
         // Deposit existing swap

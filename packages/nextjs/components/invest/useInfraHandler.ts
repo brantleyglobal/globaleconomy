@@ -113,7 +113,7 @@ export function useInfra(): UseDepositResult {
         }
 
         /*************** CROSS CHAIN TRANSFER CALL ***************/
-        console.log("Selected token:", token.symbol, token.chain, token.address);
+        //console.log("Selected token:", token.symbol, token.chain, token.address);
 
         if (!provider) {
           throw new Error("No provider available");
