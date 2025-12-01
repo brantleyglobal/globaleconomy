@@ -68,6 +68,23 @@ export const WalletAutoAdd = () => {
             }],
           });
 
+          // Wait until MetaMask emits chainChanged before continuing
+          await new Promise<void>((resolve, reject) => {
+            function handler(newChainId: string) {
+              if (parseInt(newChainId, 16) === GLOBALCHAIN.id) {
+                window.ethereum.removeListener("chainChanged", handler);
+                resolve();
+              }
+            }
+            window.ethereum.on("chainChanged", handler);
+
+            // optional timeout
+            setTimeout(() => {
+              window.ethereum.removeListener("chainChanged", handler);
+              reject(new Error("Timeout waiting for chainChanged"));
+            }, 10000);
+          });
+
           // Add tokens after chain is added
           for (const token of TOKENS) {
             await addTokenToWallet(token);

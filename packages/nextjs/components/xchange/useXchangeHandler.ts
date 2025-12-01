@@ -263,12 +263,12 @@ export function useXchangeHandler(config: TransferHandlerProps) {
             chain: selectedToken.chain,
           },
           btcWallet,
-          provider // pass provider here
+          window.ethereum // pass provider here
         );
 
       /*************************************************************************************************************/
       
-      } else if (xchangeId! && !isRefundSelected && !isNewContractSelected) {
+      } else if (xchangeId! && !isRefundSelected && !isNewContractSelected) {//failing in the following if block
         console.log("Depositing to Contract: ", xchangeId);
 
         const iface = new Interface(GlobalSwapabi.abi);
@@ -298,7 +298,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
             chain: selectedToken.chain,
           },
           btcWallet,
-          provider // pass provider here
+          window.ethereum // pass provider here
         );
 
       /********************************************************************************************************************/
