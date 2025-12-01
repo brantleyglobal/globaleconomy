@@ -54,7 +54,7 @@ export default function AboutLayout() {
       <section
         className="relative bg-black px-6 py-12 md:px-16"
         style={{
-          backgroundImage: "url('/logo.png')",
+          backgroundImage: "url('/emblemA.png')",
           backgroundAttachment: "fixed",
           backgroundPosition: "center",
           backgroundSize: "cover",

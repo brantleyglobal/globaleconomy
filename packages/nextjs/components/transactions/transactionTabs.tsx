@@ -110,10 +110,10 @@ export const TransactionTabs = () => {
       };
 
       const json = await res.json();
-      console.log("API response:", json);
+      //console.log("API response:", json);
       const responseKey = responseKeyMap[tab];
       const result = json.result?.[responseKey] ?? [];
-      console.log(`Data extracted for tab ${tab}:`, result);
+      //console.log(`Data extracted for tab ${tab}:`, result);
       setData(prev => ({ ...prev, [tab]: result }));
 
     } catch (err) {

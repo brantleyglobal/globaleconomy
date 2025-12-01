@@ -9,7 +9,7 @@ export function TokenBalancesPanel() {
   const { address: userAddress } = useAccount();
   const hexAddress = userAddress?.startsWith("0x") ? (userAddress as Address) : undefined;
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  console.log("useradd: ", userAddress);
+  //API response:console.log("useradd: ", userAddress);
 
   const ethPublicClient = usePublicClient({ chainId: 1 });
   const polyPublicClient = usePublicClient({ chainId: 137 });
@@ -26,7 +26,7 @@ export function TokenBalancesPanel() {
     setExpandedIndex(prevIndex => (prevIndex === index ? null : index));
   };
 
-  console.log("Balance keys:", balances.map(b => `${b.chain}-${b.address}`));
+  //console.log("Balance keys:", balances.map(b => `${b.chain}-${b.address}`));
 
   return (
     <section className="space-y-6">
