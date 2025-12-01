@@ -79,9 +79,6 @@ export async function switchOrAddChain(provider: any, chain: ChainInfo): Promise
   const targetHex = normalizeChainId(chain.chainId);
 
   const currentChainId = normalizeChainId(await provider.request({ method: "eth_chainId" }));
-  const currentxChainId = await provider.request({ method: "eth_chainId" });
-  console.log("Current chainId from provider:", currentxChainId, "Target:", targetHex);
-
   if (currentChainId === targetHex) return;
 
   try {
@@ -104,15 +101,23 @@ export async function switchOrAddChain(provider: any, chain: ChainInfo): Promise
     }
   }
 
-  // Poll until chainId matches
-  let attempts = 0;
-  while (attempts < 15) {
-    const id = normalizeChainId(await provider.request({ method: "eth_chainId" }));
-    if (id === targetHex) return;
-    await new Promise(res => setTimeout(res, 1000));
-    attempts++;
-  }
-  throw new Error("Timeout waiting for chain switch");
+  // Wait for chainChanged event before resolving
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      provider.removeListener?.("chainChanged", handler);
+      reject(new Error("Timeout waiting for chainChanged"));
+    }, 15000);
+
+    function handler(chainId: string) {
+      if (normalizeChainId(chainId) === targetHex) {
+        clearTimeout(timeout);
+        provider.removeListener?.("chainChanged", handler);
+        resolve();
+      }
+    }
+
+    provider.on?.("chainChanged", handler);
+  });
 }
 
 function rescaleAmount(amount: bigint, fromDecimals: number, toDecimals: number): string {
