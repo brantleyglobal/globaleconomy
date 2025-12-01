@@ -87,11 +87,16 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
                 </button>
                 {/* Token Selector */}
                 <select
-                  disabled={paymentMethod !== "stable"}
                   className="select rounded-md bg-black w-full text-info-600 outline-none hover:bg-white/10 border-none focus:ring-0 focus:outline-none"
                   value={selectedTokenSymbol}
                   onChange={(e) => {
                     const symbol = e.target.value;
+
+                    // If user selects a token but paymentMethod isn't "stable", set it
+                    if (paymentMethod !== "stable") {
+                      setField("paymentMethod", "stable");
+                    }
+
                     setSelectedTokenSymbol(symbol);
                     setField("tokenSymbol", symbol);
                   }}
@@ -100,7 +105,7 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
                     Select Payment Method
                   </option>
                   {supportedTokens
-                    .filter((t) => !["GBDo", "GBDx", "WETH", "WBTC", "WBNB", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(t.symbol))
+                    .filter((t) => !["GBDo","GBDx","WETH","WBTC","WBNB","COPx","GLB","TGUSA","TGMX","CREs","CREh","CGRi"].includes(t.symbol))
                     .map((t) => (
                       <option key={t.symbol} value={t.symbol}>
                         {t.symbol} • {t.name}
