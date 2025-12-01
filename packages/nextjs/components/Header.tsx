@@ -118,7 +118,12 @@ export const Header = () => {
               >
                 TRANSFER
               </button>
-
+              <button
+                onClick={() => setModalState(s => ({ ...s, invest: true }))}
+                className="text-white hover:text-primary transition"
+              >
+                INVEST
+              </button>
               {/* RESOURCES dropdown (desktop only) */}
               <ResourcesDropdown pathname={pathname} />
 
@@ -129,12 +134,6 @@ export const Header = () => {
               >
                 HELP
               </Link>
-              <button
-                onClick={() => setModalState(s => ({ ...s, invest: true }))}
-                className="text-white hover:text-primary transition"
-              >
-                INVEST
-              </button>
             </div>
 
             {/* Mobile Menu Toggle */}
@@ -201,6 +200,17 @@ export const Header = () => {
                   TRANSFER
                 </button>
               </li>
+              <li>
+                <button
+                  onClick={() => {
+                    setModalState(s => ({ ...s, invest: true }));
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left py-1 px-6 hover:text-primary transition"
+                >
+                  INVEST
+                </button>
+              </li>
               {menuLinks.map(({ label, href }) => (
                 <li key={href}>
                   <Link
@@ -214,17 +224,6 @@ export const Header = () => {
                   </Link>
                 </li>
               ))}
-              <li>
-                <button
-                  onClick={() => {
-                    setModalState(s => ({ ...s, invest: true }));
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full text-left py-1 px-6 hover:text-primary transition"
-                >
-                  INVEST
-                </button>
-              </li>
             </ul>
           </div>
         )}
