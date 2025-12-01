@@ -113,9 +113,11 @@ export default function AboutLayout() {
       {/* Section 5: Investment CTA */}
       <section className="bg-white/10 px-6 py-14 text-center">
         <h2 className="text-2xl font-light mb-4">Quarterly Returns. Zero-Fee Access.</h2>
-        <p className="text-sm text-gray-400 max-w-2xl mx-auto mb-6">
-          Invest with flexible term structures, purchase utility-grade assets with near-zero fees,
-          and help shape the clean energy landscape of tomorrow. Explore our vision.
+        <p className="text-sm text-justify text-gray-400 max-w-2xl mx-auto mb-6">
+          Invest with flexible term structures & tradeable, redeemable asset‑backed tokens. 
+          Acquire utility‑grade assets with near‑zero fees, and participate in decentralized 
+          electrical infrastructure that powers homes and businesses. Help shape the clean 
+          energy landscape of tomorrow. Explore the vision.
         </p>
         <Link
           href="/whitepaper"
