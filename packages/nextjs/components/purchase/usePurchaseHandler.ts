@@ -176,7 +176,7 @@ async function initiateStripeCheckout(params: InitiateParams) {
   const productAmountCents = Math.round(parseFloat(params.estimatedTotal) * 100);
   const shippingAmountCents = shippingRate ? Math.round(shippingRate.Rate) : 0;
   const totalAmountCents = productAmountCents + shippingAmountCents;
-  console.log("shipping", shippingAmountCents);
+  //console.log("shipping", shippingAmountCents);
 
   // Save params for post-checkout return
   localStorage.setItem("checkoutParams", JSON.stringify(sanitize(params)));
@@ -301,9 +301,6 @@ async function handleCryptoPurchase(params: InitiateParams) {
     // Convert estimated total string to number (fiat dollars)
     const productAmount = parseFloat(estimatedTotal);
 
-    // Total cost in fiat dollars including shipping
-    const totalCost = productAmount + shippingCost;
-
     // Convert total cost in fiat to token units (scaled BigNumber)
     // tokenRate is token per USD, so multiply total USD by tokenRate to get token amount
 
@@ -328,9 +325,10 @@ async function handleCryptoPurchase(params: InitiateParams) {
       const tokenRate = selectedTokenRateObj.rate;
       exchangeRateFloat = (gbdoRate / tokenRate);
     }
-    console.log("exchangeRateFloat (gbdoRate / tokenRate):", exchangeRateFloat);
 
-    const totalTokenAmountFloat = totalCost * exchangeRateFloat;
+    const shippingCostFloat = shippingCost * exchangeRateFloat;
+
+    const totalTokenAmountFloat = productAmount + shippingCostFloat
 
     // Convert to ethers.BigNumber assuming 18 decimals (full precision)
     const totalTokenAmount = parseUnits(totalTokenAmountFloat.toString(), 18);
@@ -342,13 +340,12 @@ async function handleCryptoPurchase(params: InitiateParams) {
     const exchangeRateStr = exchangeRateFloat.toFixed(precision);
     const exchangeRate = parseUnits(exchangeRateStr, precision);
 
-    console.log(exchangeRate);
+    //console.log(exchangeRate);
 
     // Format totalTokenAmountF back to float for display
     const totalTokenAmountNumber = parseFloat(formatUnits(totalTokenAmountF, 18));
 
     const totalTokenAmountDisplay = totalTokenAmountNumber.toFixed(2);
-    console.log("totalTokenAmountDisplay (string with 2 decimals):", totalTokenAmountDisplay);
 
     let callAddress;
     if (selectedToken.symbol === "ETH") {
@@ -378,7 +375,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
       region,
     };
 
-    console.log("Total Amount:", totalTokenAmountFloat);
+    //console.log("Total Amount:", totalTokenAmountFloat);
     
     if (!selectedToken.address) {
       throw new Error("Token address is undefined");
@@ -417,14 +414,14 @@ async function handleCryptoPurchase(params: InitiateParams) {
     }
 
     /*************** CROSS CHAIN TRANSFER CALL ***************/
-    console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address);
+    //console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address);
     
     if (!provider) {
       throw new Error("No provider available");
     }
     const { txHash, receipt } = await sendTransferOnTargetChain(
       holdingWalletAddress,
-      parsedValue,
+      totalTokenAmount,
       {
         address: selectedToken.address!,
         decimals: selectedToken.decimals,
