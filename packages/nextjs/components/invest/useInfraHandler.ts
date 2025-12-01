@@ -98,9 +98,9 @@ export function useInfra(): UseDepositResult {
 
         let callAddress;
         if (token.symbol === "ETH") {
-          callAddress = 0x00000000000000000000000000000000000000E0
+          callAddress = "0x00000000000000000000000000000000000000E0";
         } else if (token.symbol === "BTC"){
-          callAddress = 0x00000000000000000000000000000000000000b0;
+          callAddress = "0x00000000000000000000000000000000000000b0";
         } else {
           callAddress = token.address;
         }

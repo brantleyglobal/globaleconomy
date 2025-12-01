@@ -11,6 +11,7 @@ import { getExchangeRates } from "~~/lib/exchangeRates";
 import { Address } from "viem";
 import { useSelectedTokenBalance } from "~~/lib/chainHelper";
 import { sendTransferOnTargetChain, CHAINS, switchOrAddChain } from "~~/utils/targetChain"
+import Web3 from "web3";
 
 interface TransferHandlerProps {
   sender?: string;
@@ -153,8 +154,9 @@ export function useXchangeHandler(config: TransferHandlerProps) {
       if (!window.ethereum) {
         throw new Error("No Ethereum provider found. Please install MetaMask.");
       }
-      const activeProvider = provider || window.ethereum;
-      if (!activeProvider) throw new Error("No wallet provider available");
+      
+      const provider = new BrowserProvider(window.ethereum);
+      if (!provider) throw new Error("No wallet provider available");
     
       const chainInfo = CHAINS.global;
       if (!chainInfo) throw new Error(`Unknown chain: ${selectedToken.chain}`);
@@ -162,11 +164,11 @@ export function useXchangeHandler(config: TransferHandlerProps) {
       const hexChainId = "0x" + chainInfo.chainId.toString(16);
     
       // Ethereum‑style chains
-      await switchOrAddChain(activeProvider, chainInfo);
+      await switchOrAddChain(window.ethereum, chainInfo);
 
-      const signer = await activeProvider.getSigner();
+      const signer = await provider.getSigner();
       const signerAddress = await signer.getAddress();
-      console.log("Connected wallet:", signerAddress);
+      console.log("Connected wallet:", signer);
 
       if (signerAddress === recipient && isNewContractSelected!) {
         console.log("Creating AssetXchange Contract");
@@ -175,25 +177,25 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
         const iface = new Interface(GlobalSwapFactoryabi.abi);
         const iface2 = new Interface(GlobalSwapabi.abi);
-        parsedValue = parseUnits(amount, 18);
-        parsedValue2 = parseUnits(amount2, 18);
+        parsedValue = parseUnits(amount, 18);   // bigint
+        parsedValue2 = parseUnits(amount2, 18); // bigint
         console.log("value1", parsedValue);
         console.log("value2", parsedValue2);
 
         let callAddress;
         if (selectedToken.symbol === "ETH") {
-          callAddress = 0x00000000000000000000000000000000000000E0
+          callAddress = "0x00000000000000000000000000000000000000E0";
         } else if (selectedToken.symbol === "BTC"){
-          callAddress = 0x00000000000000000000000000000000000000b0;
+          callAddress = "0x00000000000000000000000000000000000000b0";
         } else {
           callAddress = selectedToken.address;
         }
 
         let callAddress2;
         if (selectedToken.symbol === "ETH") {
-          callAddress2 = 0x00000000000000000000000000000000000000E0
+          callAddress2 = "0x00000000000000000000000000000000000000E0";
         } else if (selectedToken.symbol === "BTC"){
-          callAddress2 = 0x00000000000000000000000000000000000000b0;
+          callAddress2 = "0x00000000000000000000000000000000000000b0";
         } else {
           callAddress2 = selectedToken.address;
         }
@@ -264,7 +266,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           provider // pass provider here
         );
 
-/*************************************************************************************************************/
+      /*************************************************************************************************************/
       
       } else if (xchangeId! && !isRefundSelected && !isNewContractSelected) {
         console.log("Depositing to Contract: ", xchangeId);
@@ -299,7 +301,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           provider // pass provider here
         );
 
-/********************************************************************************************************************/
+      /********************************************************************************************************************/
 
       } else if (xchangeId! && isRefundSelected!) {
         console.log("Refunding from Contract: ", xchangeId);
@@ -337,7 +339,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           chainStatus = false;
         }
 
- /************************************************************************************************************************/     
+      /************************************************************************************************************************/     
         
       } else if (signerAddress !== recipient && isNewContractSelected!) {
         console.log("Initiating Contract");
@@ -353,18 +355,18 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
         let callAddress;
         if (selectedToken.symbol === "ETH") {
-          callAddress = 0x00000000000000000000000000000000000000E0
+          callAddress = "0x00000000000000000000000000000000000000E0";
         } else if (selectedToken.symbol === "BTC"){
-          callAddress = 0x00000000000000000000000000000000000000b0;
+          callAddress = "0x00000000000000000000000000000000000000b0";
         } else {
           callAddress = selectedToken.address;
         }
 
         let callAddress2;
         if (selectedToken.symbol === "ETH") {
-          callAddress2 = 0x00000000000000000000000000000000000000E0
+          callAddress2 = "0x00000000000000000000000000000000000000E0";
         } else if (selectedToken2.symbol === "BTC"){
-          callAddress2 = 0x00000000000000000000000000000000000000b0;
+          callAddress2 = "0x00000000000000000000000000000000000000b0";
         } else {
           callAddress2 = selectedToken2.address;
         }

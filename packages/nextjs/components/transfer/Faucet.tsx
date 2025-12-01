@@ -27,20 +27,12 @@ import { getAddress } from "viem";
 import HelpStep from "~~/components/transfer/helpStep";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { mainnet, polygon } from "viem/chains";
+import { GLOBALCHAIN } from '~~/utils/globalEco/customChains';
 
 const RPC_URLS = {
   global: process.env.NEXT_PUBLIC_DEX_RPC_URL || "",
   polygon: process.env.NEXT_PUBLIC_POLYGON_RPC_URL || "",
   ethereum: process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || "",
-};
-
-// Create customized chain object for global chain
-const globalChain = {
-  ...mainnet,
-  id: 3503995874081207,
-  rpcUrls: {
-    default: { http: [RPC_URLS.global] }
-  },
 };
 
 /*const baseClient = createPublicClient({
@@ -60,7 +52,7 @@ const polyAddresses = new Set<AddressType>([
 
 function getChainConfig(token: { address: AddressType }) {
   if (myChainSupportedTokenAddresses.has(token.address)) {
-    return globalChain;
+    return GLOBALCHAIN;
   } else if (polyAddresses.has(token.address)) {
     return polygon;
   } else {
@@ -255,7 +247,7 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
           transport: http(RPC_URLS.polygon),
         }),
         global: createPublicClient({
-          chain: globalChain,
+          chain: GLOBALCHAIN,
           transport: http(RPC_URLS.global),
         }),
       };

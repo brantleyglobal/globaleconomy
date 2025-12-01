@@ -98,7 +98,6 @@ export default function ReviewStep(props: Props) {
     chainId: 0, // replace accordingly
     selectedToken,
     selectedToken2,
-    selectedTokenS,
     amount,
     amount2,
     recipient,
@@ -117,11 +116,12 @@ export default function ReviewStep(props: Props) {
     try {
       console.log("Xchange ID", xchangeId);
       const result = await send();
+
       if (!result?.success) {
         toast.error(`Xchange failed: ${result?.error || "Unknown error"}`, { id: toastId });
-        setIsProcessing(false);
         return;
       }
+
       setXchangeId(result.xchangeId?.toString() || "");
       const receipt = result?.txHash || "";
       console.log("Sending Confirmation");
@@ -154,6 +154,8 @@ export default function ReviewStep(props: Props) {
         await sendXchangeConfirmation({ templateType: "refundSwap", ...emailParams });
       }
 
+      props.onComplete();
+
     } catch (error: unknown) {
       let message = "Unknown error";
       if (error instanceof Error) {
@@ -166,8 +168,6 @@ export default function ReviewStep(props: Props) {
       toast.error(`Transfer failed: ${message}`, { id: toastId });
     } finally {
       setIsProcessing(false);
-      props.onComplete();
-
     }
   }
 
