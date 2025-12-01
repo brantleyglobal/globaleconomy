@@ -1,6 +1,5 @@
 "use client";
-//components/common/modal.tsx
-import React from "react";
+import React, { useEffect } from "react";
 
 export interface ModalProps {
   title?: string;
@@ -8,6 +7,7 @@ export interface ModalProps {
   onClose: () => void;
   isOpen: boolean;
 }
+
 
 export const Modal: React.FC<ModalProps> = ({
   title,
@@ -17,9 +17,22 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4 sm:px-0"
+      className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center px-4 sm:px-0"
       role="dialog"
       aria-modal="true"
     >
