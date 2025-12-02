@@ -15,7 +15,7 @@ export default function MirrorModeToggle() {
         onMouseDown={(e) => e.preventDefault()}
         className={`px-4 py-2 text-xs transition 
           ${isDashboard 
-            ? "bg-white/20 text-white" 
+            ? "bg-white/15 text-white" 
             : "text-gray-300 hover:bg-white/5"}`
         }
       >
@@ -26,7 +26,7 @@ export default function MirrorModeToggle() {
         onMouseDown={(e) => e.preventDefault()}
         className={`px-4 py-2 text-xs transition 
           ${isStorefront 
-            ? "bg-white/20 text-white" 
+            ? "bg-white/15 text-white" 
             : "text-gray-300 hover:bg-white/5"}`
         }
       >
