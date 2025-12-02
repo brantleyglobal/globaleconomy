@@ -154,7 +154,10 @@ export const Header = () => {
         {mobileMenuOpen && (
           <div ref={mobileMenuRef} className="lg:hidden px-4 pb-4">
             <ul className="flex flex-col gap-3 text-sm font-light text-white">
-              <MirrorModeToggle />
+              <li className="flex justify-center">
+                <MirrorModeToggle />
+              </li>
+
               <li>
                 <button
                   onClick={() => {
