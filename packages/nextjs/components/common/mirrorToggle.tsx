@@ -8,12 +8,12 @@ export default function MirrorModeToggle() {
   const isStorefront = pathname === "/";
 
   return (
-    <div className="inline-flex rounded-md overflow-hidden 
+    <div className="inline-flex rounded-full overflow-hidden 
                     bg-white/10 backdrop-blur-md shadow-md">
       <button
         onClick={() => router.push("/dashboard")}
         onMouseDown={(e) => e.preventDefault()}
-        className={`px-4 py-2 text-xs transition 
+        className={`px-4 py-1.5 text-xs transition 
           ${isDashboard 
             ? "bg-white/15 text-white" 
             : "text-gray-300 hover:bg-white/5"}`
@@ -24,7 +24,7 @@ export default function MirrorModeToggle() {
       <button
         onClick={() => router.push("/")}
         onMouseDown={(e) => e.preventDefault()}
-        className={`px-4 py-2 text-xs transition 
+        className={`px-4 py-1.5 text-xs transition 
           ${isStorefront 
             ? "bg-white/15 text-white" 
             : "text-gray-300 hover:bg-white/5"}`

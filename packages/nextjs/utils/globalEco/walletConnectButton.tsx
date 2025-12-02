@@ -201,7 +201,7 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
         {/* Install Wallet Button */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 
+          className="flex items-center gap-2 
                   bg-white/10 backdrop-blur-md rounded-full 
                   shadow-md hover:bg-white/20 transition">
           {/* Circle Wallet Icon */}
@@ -210,7 +210,7 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
           </div>
 
           {/* Label */}
-          <span className="text-xs font-medium">INSTALL WALLET</span>
+          <span className="text-xs font-medium px-3">INSTALL WALLET</span>
 
           {/* Chevron */}
           <ChevronDownIcon className="w-4 h-4 ml-1 text-green animate-pulse" />
@@ -266,23 +266,23 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
     <div className="relative inline-flex items-center space-x-2 mr-8" ref={dropdownRef}>
       <button
         onClick={() => setMenuOpen(!menuOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 
+        className="flex items-center gap-1 
           bg-white/10 backdrop-blur-md rounded-full 
           shadow-md hover:bg-white/20 transition">
         {/* Circle Wallet Icon */}
-        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shadow-inner">
+        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shadow-inner">
           <img src="/logo.png" alt="Wallet" className="w-7 h-7" />
         </div>
 
         {/* Address Display or Connect Prompt */}
         {(selectedChain === "ethereum" && account) ? (
-          <span className="text-xs text-white font-medium drop-shadow-sm">
+          <span className="text-xs text-white font-medium drop-shadow-sm px-3">
             {selectedChain === "ethereum"
               ? `${walletName}: ${account?.slice(0, 6)}...${account?.slice(-4)}`
               : `Bitcoin: ${btcAddress?.slice(0, 6)}...${btcAddress?.slice(-4)}`}
           </span>
         ) : (
-          <span className="text-xs text-white font-medium drop-shadow-sm">
+          <span className="text-xs text-white font-medium drop-shadow-sm px-3">
             CONNECT WALLET
           </span>
         )}
