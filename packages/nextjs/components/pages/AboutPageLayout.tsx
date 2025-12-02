@@ -8,7 +8,7 @@ export default function AboutLayout() {
     <main className="bg-black text-white font-sans">
       {/* Section 1: Hero */}
       <section className="h-[350px] flex flex-col items-center justify-center text-center relative">
-        <h1 className="text-5xl font-light tracking-wide mb-4">
+        <h1 className="text-2xl sm:text-4xl font-light tracking-wide mb-4 text-primary">
           ENERGY GENERATION REDEFINED
         </h1>
         <p className="text-gray-400 text-lg">
@@ -29,7 +29,7 @@ export default function AboutLayout() {
 
       {/* Section 2: Company Overview */}
       <section className="bg-white/10 px-6 py-12 md:px-16">
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6">
           <h2 className="text-4xl font-light mb-4">THE ECOSYSTEM</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-justify text-gray-300 text-sm leading-relaxed">
             <p>

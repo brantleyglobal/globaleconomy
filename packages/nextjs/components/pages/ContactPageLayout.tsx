@@ -67,7 +67,7 @@ export default function ContactLayout() {
     <main className="bg-black text-white min-h-screen px-6 py-14 font-sans">
       {/* Title Section */}
       <section className="text-center mb-14">
-        <h1 className="text-5xl font-light tracking-wide mb-4">YOUR SUPPORT</h1>
+        <h1 className="text-2xl sm:text-4xl font-light tracking-wide mb-4 text-primary">YOUR SUPPORT</h1>
         <p className="text-lg text-gray-400 max-w-2xl mx-auto">
           For general inquiries or technical support—choose chat or email.
         </p>
