@@ -74,40 +74,43 @@ export default function ContactLayout() {
       </section>
 
       {/* Contact Cards */}
-      <section className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10">
+      <section className="flex flex-col items-center gap-10">
         {/* 🔹 Live Chat */}
-        <div
+        {/*<div
           role="button"
           tabIndex={0}
           onClick={() => window.$chatwoot?.toggle()}
-          className="bg-white/20 rounded-xl h-72 px-8 py-6 shadow-md hover:shadow-xl hover:bg-secondary/30 hover:scale-[1.02] transition cursor-pointer flex flex-col justify-between"
+          className="bg-white/20 rounded-xl h-72 w-full md:w-2/3 px-8 py-6 
+                    shadow-md hover:shadow-xl hover:bg-secondary/30 hover:scale-[1.02] 
+                    transition cursor-pointer flex flex-col justify-between"
         >
-          <div>
-            <h2 className="text-3xl font-light text-white mb-10">LIVE CHAT</h2>
+          <div className="text-center">
+            <h2 className="text-3xl font-light text-white mb-6">LIVE CHAT</h2>
             <p className="text-lg text-white">
               Connect instantly with support or an AI assistant.
             </p>
           </div>
-          <p className="text-xs text-gray-500 text-right">Tap to open chat</p>
-        </div>
+          <p className="text-xs text-gray-500 text-center mt-6">Tap to open chat</p>
+        </div>*/}
 
-        {/* Email Form */}
+        {/* 🔹 Email Form */}
         <div
           role="button"
           tabIndex={0}
           onClick={() => setShowEmailModal(true)}
-          className="bg-white/20 rounded-xl h-72 px-8 py-6 shadow-md hover:shadow-xl hover:bg-secondary/30 hover:scale-[1.02] transition cursor-pointer flex flex-col justify-between"
+          className="bg-white/20 rounded-xl h-72 w-full md:w-2/3 px-8 py-6 
+                    shadow-md hover:shadow-xl hover:bg-secondary/30 hover:scale-[1.02] 
+                    transition cursor-pointer flex flex-col justify-between"
         >
-          <div>
-            <h2 className="text-3xl font-light text-white mb-10">EMAIL</h2>
+          <div className="text-center">
+            <h2 className="text-3xl font-light text-white mb-6">EMAIL</h2>
             <p className="text-lg text-gray-300">
               Fill out a short form—responses usually arrive within 24 hours.
             </p>
           </div>
-          <p className="text-xs text-gray-500 text-right">Tap to open form</p>
+          <p className="text-xs text-gray-500 text-center mt-6">Tap to open form</p>
         </div>
       </section>
-
       {/* Modal: Email Form */}
       <EmailModal
         isOpen={showEmailModal}
