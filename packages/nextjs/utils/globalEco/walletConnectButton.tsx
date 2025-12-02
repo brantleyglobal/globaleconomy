@@ -201,15 +201,20 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
         {/* Install Wallet Button */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="flex items-center gap-2 px-2 py-1 text-white rounded"
-        >
-          <div className="w-8 h-8 rounded-full bg-white/40 hover:bg-white/15 flex items-center justify-center">
+          className="flex items-center gap-2 px-3 py-1.5 
+                  bg-white/10 backdrop-blur-md rounded-full 
+                  shadow-md hover:bg-white/20 transition">
+          {/* Circle Wallet Icon */}
+          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shadow-inner">
             <img src="/logo.png" alt="Wallet" className="w-7 h-7" />
           </div>
-          <span className="text-xs">INSTALL WALLET</span>
-          <ChevronDownIcon className="w-4 h-4 ml-1" />
-        </button>
 
+          {/* Label */}
+          <span className="text-xs font-medium">INSTALL WALLET</span>
+
+          {/* Chevron */}
+          <ChevronDownIcon className="w-4 h-4 ml-1 text-green animate-pulse" />
+        </button>
         {/* Dropdown Menu */}
         {menuOpen && (
           <div className="absolute top-12 left-0 bg-black/80 text-xs text-white rounded shadow-md z-50 w-56">
@@ -259,27 +264,29 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
 
   return (
     <div className="relative inline-flex items-center space-x-2 mr-8" ref={dropdownRef}>
-      {/* Circle Wallet Icon */}
       <button
         onClick={() => setMenuOpen(!menuOpen)}
-        className="w-8 h-8 rounded-full bg-white/40 hover:bg-white/15 flex items-center justify-center"
-      >
-        <img src="/logo.png" alt="Wallet" className="w-7 h-7" />
+        className="flex items-center gap-2 px-3 py-1.5 
+          bg-white/10 backdrop-blur-md rounded-full 
+          shadow-md hover:bg-white/20 transition">
+        {/* Circle Wallet Icon */}
+        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shadow-inner">
+          <img src="/logo.png" alt="Wallet" className="w-7 h-7" />
+        </div>
+
+        {/* Address Display or Connect Prompt */}
+        {(selectedChain === "ethereum" && account) ? (
+          <span className="text-xs text-white font-medium drop-shadow-sm">
+            {selectedChain === "ethereum"
+              ? `${walletName}: ${account?.slice(0, 6)}...${account?.slice(-4)}`
+              : `Bitcoin: ${btcAddress?.slice(0, 6)}...${btcAddress?.slice(-4)}`}
+          </span>
+        ) : (
+          <span className="text-xs text-white font-medium drop-shadow-sm">
+            CONNECT WALLET
+          </span>
+        )}
       </button>
-
-      {/* Address Display or Connect Prompt */}
-      {(selectedChain === "ethereum" && account) ? (
-        <span className="text-xs text-white">
-          {selectedChain === "ethereum"
-            ? `${walletName}: ${account?.slice(0, 6)}...${account?.slice(-4)}`
-            : `Bitcoin: ${btcAddress?.slice(0, 6)}...${btcAddress?.slice(-4)}`}
-        </span>
-      ) : (
-        <button onClick={connectWallet} className="text-xs text-white">
-          CONNECT WALLET
-        </button>
-      )}
-
       {/* Dropdown */}
       {menuOpen && (
         <div className="absolute top-12 left-0 bg-black/80 text-xs text-white rounded shadow-md z-50 w-48">
@@ -319,7 +326,7 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
                   selectedChain === "ethereum" ? "bg-white/10" : ""
                 }`}
               >
-                Ethereum
+                EVM
               </button>
               {/*<button
                 onClick={() => {

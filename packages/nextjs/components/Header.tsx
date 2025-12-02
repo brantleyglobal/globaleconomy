@@ -87,12 +87,13 @@ export const Header = () => {
             </ul>
           </div>
 
+          {/* Center: Wallet Button */}
+          <div className="flex-1 flex justify-center">
+            <WalletConnectButton />
+          </div>
+
           {/* Right: Actions + Page Links */}
           <div className="relative flex items-center gap-4">
-            {/* Conditionally render different wallet connect UI based on mobile or desktop */}
-            <WalletConnectButton />
-
-            {/* Desktop Action Buttons + Page Links */}
             <div className="hidden lg:flex gap-4 text-xs font-light items-center">
               <button
                 onClick={() => setModalState(s => ({ ...s, acquire: true }))}
@@ -124,13 +125,12 @@ export const Header = () => {
               >
                 INVEST
               </button>
-              {/* RESOURCES dropdown (desktop only) */}
               <ResourcesDropdown pathname={pathname} />
-
-              {/* HELP after RESOURCES */}
               <Link
                 href="/help"
-                className={`hover:text-primary transition ${pathname === "/help" ? "text-primary font-medium" : "text-white"}`}
+                className={`hover:text-primary transition ${
+                  pathname === "/help" ? "text-primary font-medium" : "text-white"
+                }`}
               >
                 HELP
               </Link>
@@ -150,7 +150,6 @@ export const Header = () => {
             </button>
           </div>
         </nav>
-
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div ref={mobileMenuRef} className="lg:hidden px-4 pb-4">
