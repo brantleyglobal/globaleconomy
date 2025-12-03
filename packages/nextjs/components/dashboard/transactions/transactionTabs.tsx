@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import type { Transaction } from "~~/components/transactions/transactions";
+import type { Transaction } from "~~/components/dashboard/transactions/transactions";
 import { PurchaseTable } from "./tabs/purchaseTable";
 import { GBDoTable } from "./tabs/GBDoTable";
 import { XchangeTable } from "./tabs/xchangeTable";
@@ -144,13 +144,13 @@ export const TransactionTabs = () => {
   };
 
   return (
-    <div className="py-2">
-      {/* Mobile Dropdown */}
+    <div className="flex flex-col h-full">
+      {/* Tabs header */}
       <div className="md:hidden mb-4">
         <select
           value={activeTab}
           onChange={(e) => setActiveTab(e.target.value as TabKey)}
-          className="select rounded-md bg-base-300  w-full text-info-600 mb-4 outline-none hover:bg-white/10 border-none focus:ring-0 focus:outline-none"
+          className="select rounded-md bg-base-300 w-full text-info-600 mb-4 outline-none hover:bg-white/10 border-none focus:ring-0 focus:outline-none"
         >
           {tabs.map(tab => (
             <option key={tab} value={tab}>
@@ -160,7 +160,6 @@ export const TransactionTabs = () => {
         </select>
       </div>
       <div className="hidden md:flex overflow-x-auto space-x-2 mb-4 pb-2 border-b border-base-300">
-        {/*Desktop*/}
         {tabs.map(tab => (
           <button
             key={tab}
@@ -178,7 +177,11 @@ export const TransactionTabs = () => {
           </button>
         ))}
       </div>
-      {renderTable()}
+
+      {/* Scrollable table area */}
+      <div className="flex-1 overflow-y-auto">
+        {renderTable()}
+      </div>
     </div>
   );
 };

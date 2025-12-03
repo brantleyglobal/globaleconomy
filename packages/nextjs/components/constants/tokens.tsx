@@ -17,7 +17,7 @@ interface Deployments {
 
 const deploymentsTyped = deployments as Deployments;
 
-const generateDividendTokens = (): Token[] => {
+export const generateDividendTokens = (): Token[] => {
   const tokens: Token[] = [];
   for (let middle = 2; middle <= 8; middle++) {
     const maxDigit = middle + 2;
