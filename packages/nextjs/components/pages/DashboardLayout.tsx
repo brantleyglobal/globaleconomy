@@ -12,6 +12,16 @@ import deployments from "~~/lib/contracts/deployments.json";
 import { generateDividendTokens } from "~~/components/constants/tokens";
 import type { ProjectData } from "~~/types/charts";
 
+async function normalizeValue(contract: ethers.Contract, rawValue: any): Promise<number> {
+  try {
+    const decimals: number = await contract.decimals().catch(() => 18); // default to 18
+    // ethers v6 returns bigint for rawValue, so convert directly
+    return Number(rawValue) / Math.pow(10, decimals);
+  } catch {
+    return 0;
+  }
+}
+
 async function fetchProjectData(userAddress: string): Promise<ProjectData[]> {
   const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_DEX_RPC_URL);
 
@@ -35,13 +45,18 @@ async function fetchProjectData(userAddress: string): Promise<ProjectData[]> {
   for (const proj of projectsConfig) {
     const contract = new ethers.Contract(proj.address, poolAbi, provider);
 
-    let balance = 0, supply = 1, currentValue = 0, nextQuarter = "";
+    const [balanceRaw, supplyRaw, nextQuarter] = await Promise.all([
+      contract.balanceOf(userAddress).catch(() => 0),
+      contract.viewSupply().catch(() => 0),
+      contract.unlockQuarter().catch(() => "Data unavailable"),
+    ]);
 
-    try { balance = await contract.balanceOf(userAddress); } catch {}
-    try { currentValue = await contract.viewSupply(); } catch {}
-    try { nextQuarter = await contract.nextDistributionQuarter(); } catch {}
+    const balance = await normalizeValue(contract, balanceRaw);
+    const currentValue = await normalizeValue(contract, supplyRaw);
 
-    const userShare = supply > 0 ? (Number(balance) / Number(supply)) * 100 : 0;
+    const userShare = Number(currentValue) > 0
+    ? (Number(balance) / Number(currentValue)) * 100
+    : 0;
 
     projects.push({
       name: proj.name,
@@ -85,14 +100,20 @@ async function fetchSmartVaultProject(userAddress: string): Promise<ProjectData 
   for (const token of tokens) {
     const tokenContract = new ethers.Contract(token.address, dividendTokenAbi, provider);
 
-    try { multiplier = await smartVault.multiplier(token.address); } catch {}
-    try { committedQuarters = await tokenContract.committedQuarters(token.address); } catch {}
-    try { balance = await tokenContract.balanceOf(userAddress); } catch {}
-    try { nextQuarter = await tokenContract.unlockQuarter(); } catch {}
+    // Check balance first
+    const balanceRaw = await tokenContract.balanceOf(userAddress).catch(() => 0);
+    const balance = await normalizeValue(tokenContract, balanceRaw);
 
     if (Number(balance) > 0) {
+      // Only query the rest if user actually holds this token
+      const [multiplier, committedQuarters, nextQuarter] = await Promise.all([
+        smartVault.multiplier(token.address).catch(() => 1),
+        tokenContract.committedQuarters?.(token.address).catch(() => 0), // ensure ABI matches
+        tokenContract.unlockQuarter().catch(() => "Data unavailable"),
+      ]);
+
       const weightedBalance = Number(balance) * Number(multiplier);
-      const weightedSupply = Number(supply) * Number(multiplier); // or sum across all tokens if needed
+      const weightedSupply = 1 * Number(multiplier);
       const userShare = weightedSupply > 0 ? (weightedBalance / weightedSupply) * 100 : 0;
 
       return {
@@ -104,7 +125,7 @@ async function fetchSmartVaultProject(userAddress: string): Promise<ProjectData 
         nextDistribution: nextQuarter,
         projectedGrowthRate: 0.05,
         termLength: committedQuarters,
-        userBalance: Number(balance) || 0, 
+        userBalance: Number(balance),
       };
     }
   }
