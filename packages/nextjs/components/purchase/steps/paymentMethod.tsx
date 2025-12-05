@@ -102,7 +102,7 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
                   }}
                 >
                   <option value="" disabled>
-                    Select Payment Method
+                    Select Stablecoin Payment Method
                   </option>
                   {supportedTokens
                     .filter((t) => !["GBDo","GBDx","WETH","WBTC","WBNB","COPx","GLB","TGUSA","TGMX","CREs","CREh","CGRi"].includes(t.symbol))

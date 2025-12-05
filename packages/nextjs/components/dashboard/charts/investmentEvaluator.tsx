@@ -27,13 +27,12 @@ export function InvestmentEvaluator({ projects }: { projects: ProjectData[] }) {
   const [selected, setSelected] = useState<ProjectData | null>(null);
   const [selectedQuarter, setSelectedQuarter] = useState(0);
   const [amount, setAmount] = useState(0);
-  const currencyImage = "/globalw.png";
 
-  useEffect(() => {
+  /*useEffect(() => {
     if (projects.length > 0 && !selected) {
       setSelected(projects[0]);
     }
-  }, [projects]);
+  }, [projects]);*/
 
   // Safe defaults
   const investment = amount ?? 0;
@@ -66,7 +65,7 @@ export function InvestmentEvaluator({ projects }: { projects: ProjectData[] }) {
       {
         data: hasData ? [investment,  projectedRemaining] : [1],
         backgroundColor: hasData
-          ? ["#4ade80", "#1f2937", "#facc15"]
+          ? ["#4ade80", "#60a5fa", "#facc15"]
           : ["#374151"],
       },
     ],
@@ -91,15 +90,17 @@ export function InvestmentEvaluator({ projects }: { projects: ProjectData[] }) {
       <h2 className="text-xl font-light mb-8">INVESTMENT EVALUATOR</h2>
 
       {/* Project Selector */}
-      <label className="block text-sm mb-2">SELECT PROJECT</label>
       <select
-        className="select rounded-md bg-black w-full text-info-600 outline-none hover:bg-white/10 border-none focus:ring-0 focus:outline-none"
+        className="select rounded-md mt-4 bg-black w-full text-info-600 outline-none hover:bg-white/10 text-white/50 border-none focus:ring-0 focus:outline-none"
         value={selected?.symbol ?? ""}
         onChange={e => {
           const proj = projects.find(p => p.symbol === e.target.value);
           if (proj) setSelected(proj);
         }}
       >
+        <option value="" hidden className="text-gray-400">
+          Select Investment
+        </option>
         {projects.map(p => (
           <option key={p.symbol} value={p.symbol}>
             {p.name}
@@ -137,47 +138,67 @@ export function InvestmentEvaluator({ projects }: { projects: ProjectData[] }) {
       {/* Results */}
       <div className="bg-black/30 rounded-lg p-4 space-y-2 text-sm mt-4 mb-8">
         <p className="flex justify-between">
-          Investment: &nbsp;
+          <span className="text-xs">INVESTMENT</span>
           {selected?.projectedValue ? (
-            <span className="inline-flex items-center">
+            <span className="inline-flex items-center text-xs">
               {investment.toLocaleString()} GBDo
             </span>
           ) : (
-            " Data unavailable"
+            <span className="inline-flex items-center text-xs">
+              Unavailable
+            </span>
           )}
         </p>
 
         <p className="flex justify-between text-green-400">
-          Projected Earnings:&nbsp;
+          <span className="text-xs">PROJECTED EARNINGS</span>
           {selected?.projectedValue ? (
-            <span className="inline-flex items-center text-">
+            <span className="inline-flex items-center text-xs">
               {projectedEarnings.toLocaleString()} GBDo
             </span>
           ) : (
-            " Data unavailable"
+            <span className="inline-flex items-center text-xs">
+              Unavailable
+            </span>
           )}
         </p>
 
         <p className="flex justify-between">
-          <span>Estimated Yield:</span>
-          <span>{((selected?.projectedGrowthRate ?? 0) * 100).toFixed(1)}%</span>
+          <span className="text-xs">ESTIMATED YIELD</span>
+          {selected?.projectedGrowthRate ? (
+            <span>
+              {((selected?.projectedGrowthRate ?? 0) * 100).toFixed(1)}%
+            </span>
+          ) : (
+            <span className="inline-flex items-center text-xs">
+              Unavailable
+            </span>
+          )}
         </p>
         <p className="flex justify-between">
-          Projected Pool Size: &nbsp;
+          <span className="text-xs">PROJECTED POOL</span>
           {selected?.projectedValue ? (
-            <span className="inline-flex items-center">
+            <span className="inline-flex items-center text-xs">
               {projectedPoolValue.toLocaleString()} GBDo
             </span>
           ) : (
-            " Data unavailable"
+            <span className="inline-flex items-center text-xs">
+              Unavailable
+            </span>
           )}
         </p>
 
-        <p className="flex justify-between mb-2">
-          Contract Term: 
-          {selected?.termLength
-            ? `   ${selected.termLength!.toLocaleString()}`
-            : " Data unavailable"}
+        <p className="flex justify-between mb-1">
+          <span className="text-xs">CONTRACT TERM</span>
+          {selected?.termLength ? (
+            <span className="inline-flex items-center text-xs">
+              {selected.termLength!.toLocaleString()}
+            </span>
+          ):( 
+          <span className="inline-flex items-center text-xs">
+            Unavailable
+          </span>
+          )}
         </p>
       </div>
 

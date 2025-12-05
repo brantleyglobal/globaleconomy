@@ -19,6 +19,8 @@ type TabKey = "PRODUCT PURCHASES" | "GBDo PURCHASES" | "XCHANGE CONTRACTS" | "XC
 export const TransactionTabs = () => {
   const [userAddress, setUserAddress] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const [activeTab, setActiveTab] = useState<TabKey>("PRODUCT PURCHASES");
   const [data, setData] = useState<Record<TabKey, Transaction[]>>({
@@ -27,10 +29,16 @@ export const TransactionTabs = () => {
     "XCHANGE CONTRACTS": [],
     "XCHANGE DEPOSITS": [],
     "XCHANGE REFUNDS": [],
-    TRANSFERS: [],
+    "TRANSFERS": [],
     "VAULT DEPOSITS": [],
     "DIVIDEND PAYOUTS": [],
   });
+
+  const paginatedData = data[activeTab].slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,45 +87,100 @@ export const TransactionTabs = () => {
         "XCHANGE CONTRACTS": "getSwap",
         "XCHANGE DEPOSITS": "getSwap",
         "XCHANGE REFUNDS": "getSwap",
-        TRANSFERS: "getTransfer",
+        "TRANSFERS": "getTransfer",
         "VAULT DEPOSITS": "getVault",
         "DIVIDEND PAYOUTS": "getRedemption",
-      };
+      } as const;
 
-      const res = await fetch("https://gateway.brantley-global.com", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
-        },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          method: endpointMap[tab],
-          params: { useraddress: userAddress, page: 1, pageSize: 10 },
-          id: 1,
-        }),
-      });
+      // Optional subtype mapping if the backend expects it for getSwap
+      const subtypeMap: Partial<Record<TabKey, string>> = {
+        "XCHANGE CONTRACTS": "contract",
+        "XCHANGE DEPOSITS": "deposit",
+        "XCHANGE REFUNDS": "refund",
+      };
 
       const responseKeyMap: Record<TabKey, string> = {
         "PRODUCT PURCHASES": "purchases",
-        "GBDo PURCHASES": "acquistions",
+        "GBDo PURCHASES": "acquisitions",
         "XCHANGE CONTRACTS": "swaps",
         "XCHANGE DEPOSITS": "swaps",
         "XCHANGE REFUNDS": "swaps",
-        TRANSFERS: "transfers",
+        "TRANSFERS": "transfers",
         "VAULT DEPOSITS": "vault",
         "DIVIDEND PAYOUTS": "redemptions",
       };
 
-      const json = await res.json();
-      //console.log("API response:", json);
+      const method = endpointMap[tab];
       const responseKey = responseKeyMap[tab];
-      const result = json.result?.[responseKey] ?? [];
-      //console.log(`Data extracted for tab ${tab}:`, result);
-      setData(prev => ({ ...prev, [tab]: result }));
+      const subtype = subtypeMap[tab]; // may be undefined
 
+      const pageSize = 10; // increase so you don’t get just one
+      let page = 1;
+      const all: Transaction[] = [];
+      const maxPages = 20; // safety cap
+
+      // Paginate until no more results
+      // If your API returns total/pages, switch to that; this “empty page stops” pattern works broadly
+      while (page <= maxPages) {
+        
+        const normalizedAddr = userAddress?.toLowerCase();
+
+        const body = {
+          jsonrpc: "2.0",
+          method,
+          params: {
+            // send both versions so backend can bind them
+            useraddress: userAddress,
+            useraddressNormalized: normalizedAddr,
+            page,
+            pageSize,
+            ...(subtype ? { type: subtype } : {}),
+          },
+          id: `tx-${tab}-${page}`,
+        };
+
+        const res = await fetch("https://gateway.brantley-global.com", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const json = await res.json();
+
+        if (json.error) {
+          throw new Error(json.error.message || "RPC error");
+        }
+
+        const raw = json.result?.[responseKey];
+
+        // Normalize to array in case backend returns a single object
+        const pageItems: Transaction[] = Array.isArray(raw)
+          ? raw
+          : raw
+          ? [raw]
+          : [];
+
+        // Stop if this page returned nothing
+        if (pageItems.length === 0) break;
+
+        all.push(...pageItems);
+
+        // If fewer than pageSize, we reached the end
+        if (pageItems.length < pageSize) break;
+
+        page += 1;
+      }
+
+      setData(prev => ({ ...prev, [tab]: all }));
     } catch (err) {
-      console.error(err);
+      console.error("Transaction fetch failed:", err);
       setError("Failed to load transactions.");
     } finally {
       setLoading(false);
@@ -129,19 +192,27 @@ export const TransactionTabs = () => {
     if (loading) return <div className="text-gray-400">Loading...</div>;
     if (error) return <div className="text-red-500">{error}</div>;
 
+    const paginatedData = data[activeTab].slice(
+      (currentPage - 1) * pageSize,
+      currentPage * pageSize
+    );
+
     switch (activeTab) {
-      case "PRODUCT PURCHASES": return <PurchaseTable transactions={data["PRODUCT PURCHASES"]} />;
-      case "GBDo PURCHASES": return <GBDoTable transactions={data["GBDo PURCHASES"]} />;
-      case "XCHANGE CONTRACTS": return <XchangeTable transactions={data["XCHANGE CONTRACTS"]} />;
-      case "XCHANGE DEPOSITS": return <XchangeDepositTable transactions={data["XCHANGE DEPOSITS"]} />;
-      case "XCHANGE REFUNDS": return <XchangeRefundTable transactions={data["XCHANGE REFUNDS"]} />;
-      case "TRANSFERS": return <TransferTable transactions={data.TRANSFERS} />;
-      case "VAULT DEPOSITS": return <VaultTable transactions={data["VAULT DEPOSITS"]} />;
-      case "DIVIDEND PAYOUTS": return <DividendTable transactions={data["DIVIDEND PAYOUTS"]} />;
+      case "PRODUCT PURCHASES": return <PurchaseTable transactions={paginatedData} />;
+      case "GBDo PURCHASES": return <GBDoTable transactions={paginatedData} />;
+      case "XCHANGE CONTRACTS": return <XchangeTable transactions={paginatedData} />;
+      case "XCHANGE DEPOSITS": return <XchangeDepositTable transactions={paginatedData} />;
+      case "XCHANGE REFUNDS": return <XchangeRefundTable transactions={paginatedData} />;
+      case "TRANSFERS": return <TransferTable transactions={paginatedData} />;
+      case "VAULT DEPOSITS": return <VaultTable transactions={paginatedData} />;
+      case "DIVIDEND PAYOUTS": return <DividendTable transactions={paginatedData} />;
       default: return null;
     }
-
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
 
   return (
     <div className="flex flex-col h-full">
@@ -177,10 +248,30 @@ export const TransactionTabs = () => {
           </button>
         ))}
       </div>
-
       {/* Scrollable table area */}
       <div className="flex-1 overflow-y-auto">
         {renderTable()}
+      </div>
+      <div className="flex justify-center space-x-2 mt-2">
+        <button
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage(p => p - 1)}
+          className="px-2 py-1 text-xs bg-base-200 rounded disabled:opacity-50"
+        >
+          Prev
+        </button>
+
+        <span className="text-xs text-gray-400">
+          Page {currentPage} of {Math.max(1, Math.ceil(data[activeTab].length / pageSize))}
+        </span>
+
+        <button
+          disabled={currentPage >= Math.ceil(data[activeTab].length / pageSize)}
+          onClick={() => setCurrentPage(p => p + 1)}
+          className="px-2 py-1 text-xs bg-base-200 rounded disabled:opacity-50"
+        >
+          Next
+        </button>
       </div>
     </div>
   );

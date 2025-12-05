@@ -22,6 +22,16 @@ async function normalizeValue(contract: ethers.Contract, rawValue: any): Promise
   }
 }
 
+function formatQuarterCode(code: number | bigint): string {
+  const str = code.toString().padStart(5, "0"); // ensure 5 digits
+  const yearTwoDigits = str.slice(0, 2);
+  const quarter = str.slice(2, 3);
+  // const day = str.slice(3); // optional if you want day info
+
+  const yearFull = 2000 + parseInt(yearTwoDigits, 10);
+  return `Q${quarter} ${yearFull}`;
+}
+
 async function fetchProjectData(userAddress: string): Promise<ProjectData[]> {
   const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_DEX_RPC_URL);
 
@@ -46,13 +56,15 @@ async function fetchProjectData(userAddress: string): Promise<ProjectData[]> {
     const contract = new ethers.Contract(proj.address, poolAbi, provider);
 
     const [balanceRaw, supplyRaw, nextQuarter] = await Promise.all([
-      contract.balanceOf(userAddress).catch(() => 0),
-      contract.viewSupply().catch(() => 0),
-      contract.unlockQuarter().catch(() => "Data unavailable"),
+      contract.balanceOf!(userAddress),
+      contract.viewSupply!(),
+      contract.unlockQuarter!(),
     ]);
 
     const balance = await normalizeValue(contract, balanceRaw);
     const currentValue = await normalizeValue(contract, supplyRaw);
+    const nextQuarterNum = Number(nextQuarter);
+    const nextQuarterStr = nextQuarterNum === 0 ? "Unavailable" : formatQuarterCode(nextQuarterNum);
 
     const userShare = Number(currentValue) > 0
     ? (Number(balance) / Number(currentValue)) * 100
@@ -65,7 +77,7 @@ async function fetchProjectData(userAddress: string): Promise<ProjectData[]> {
       projectedValue: proj.projectedValue ?? 0,
       termLength: proj.termLength ?? 0,
       userShare: userShare ?? 0,
-      nextDistribution: nextQuarter || "Data unavailable",
+      nextDistribution: nextQuarterStr, // ensure string
       projectedGrowthRate: proj.projectedGrowthRate ?? 0,
       userBalance: Number(balance) || 0, 
     });
@@ -85,62 +97,75 @@ async function fetchSmartVaultProject(userAddress: string): Promise<ProjectData 
   const dividendTokenAbi = [
     "function balanceOf(address owner) view returns (uint256)",
     "function unlockQuarter() view returns (uint16)",
+    "function committedQuarters() view returns (uint16)" // include if it exists
   ];
 
   const smartVault = new ethers.Contract(deployments.SmartVault, smartVaultAbi, provider);
   const tokens = generateDividendTokens();
 
-  let multiplier = 1;
-  let currentValue = 0;
-  let committedQuarters;
-  let balance = 0, supply = 1, nextQuarter = "Data unavailable";
-  try { currentValue = await smartVault.getRedemptionSupply(); } catch {}
+  let currentValue = 0n;
+  try {
+    currentValue = await smartVault.getRedemptionSupply();
+  } catch {}
 
-  // Find the first dividend token the user actually holds
-  for (const token of tokens) {
+  // Batch all balanceOf calls in parallel
+  const balanceCalls = tokens.map(token => {
     const tokenContract = new ethers.Contract(token.address, dividendTokenAbi, provider);
+    return tokenContract.balanceOf(userAddress).then(raw => ({
+      token,
+      tokenContract,
+      raw
+    }));
+  });
 
-    // Check balance first
-    const balanceRaw = await tokenContract.balanceOf(userAddress).catch(() => 0);
-    const balance = await normalizeValue(tokenContract, balanceRaw);
+  const balances = await Promise.all(balanceCalls);
 
-    if (Number(balance) > 0) {
-      // Only query the rest if user actually holds this token
-      const [multiplier, committedQuarters, nextQuarter] = await Promise.all([
-        smartVault.multiplier(token.address).catch(() => 1),
-        tokenContract.committedQuarters?.(token.address).catch(() => 0), // ensure ABI matches
-        tokenContract.unlockQuarter().catch(() => "Data unavailable"),
-      ]);
+  // Find the first token with a non‑zero balance
+  const held = balances.find(b => b.raw !== 0n);
 
-      const weightedBalance = Number(balance) * Number(multiplier);
-      const weightedSupply = 1 * Number(multiplier);
-      const userShare = weightedSupply > 0 ? (weightedBalance / weightedSupply) * 100 : 0;
+  if (held) {
+    const balance = await normalizeValue(held.tokenContract, held.raw);
 
-      return {
-        name: "SMART VAULT",
-        symbol: "SVT",
-        currentValue: Number(currentValue),
-        projectedValue: 10000000,
-        userShare,
-        nextDistribution: nextQuarter,
-        projectedGrowthRate: 0.05,
-        termLength: committedQuarters,
-        userBalance: Number(balance),
-      };
-    }
+    // Batch the other calls for that token
+    const [multiplierRaw, nextQuarterRaw, committedQuartersRaw] = await Promise.all([
+      smartVault.multiplier(held.token.address),
+      held.tokenContract.unlockQuarter(),
+      held.tokenContract.committedQuarters?.() // only if ABI has it
+    ]);
+
+    const multiplier = Number(multiplierRaw);
+    const committedQuarters = committedQuartersRaw ? Number(committedQuartersRaw) : undefined;
+    const nextQuarterNum = Number(nextQuarterRaw);
+    const nextQuarterStr = nextQuarterNum === 0 ? "Unavailable" : formatQuarterCode(nextQuarterNum);
+
+    const weightedBalance = Number(balance) * multiplier;
+    const weightedSupply = 1 * multiplier;
+    const userShare = weightedSupply > 0 ? (weightedBalance / weightedSupply) * 100 : 0;
+
+    return {
+      name: "SMART VAULT",
+      symbol: "SVT",
+      currentValue: Number(currentValue),
+      projectedValue: 10000000,
+      userShare,
+      nextDistribution: nextQuarterStr,
+      projectedGrowthRate: 0.05,
+      termLength: committedQuarters,
+      userBalance: Number(balance),
+    };
   }
 
-  // If user holds no dividend tokens, still return SmartVault with defaults
+  // No holdings
   return {
     name: "SMART VAULT",
     symbol: "SVT",
     currentValue: Number(currentValue),
     projectedValue: 10000000,
     userShare: 0,
-    nextDistribution: "Data unavailable",
+    nextDistribution: "Unavailable",
     projectedGrowthRate: 0.05,
-    termLength: committedQuarters,
-    userBalance: Number(balance) || 0, 
+    termLength: undefined,
+    userBalance: 0,
   };
 }
 

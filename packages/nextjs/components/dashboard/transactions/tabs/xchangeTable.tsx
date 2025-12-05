@@ -1,6 +1,6 @@
 "use client";
 
-import type { Transaction } from "~~/components/transactions/transactions";
+import type { Transaction } from "~~/components/dashboard/transactions/transactions";
 import { SharedColumns } from "./sharedColumns";
 import { useAccount } from "wagmi";
 
@@ -19,7 +19,7 @@ export const XchangeTable = ({ transactions }: { transactions: Transaction[] }) 
 
   return (
     <div className="overflow-x-auto rounded-box shadow bg-base-100">
-      <table className="table table-zebra w-full text-sm font-light">
+      <table className="table table-zebra w-full text-xs font-light">
         <thead className="bg-base-300 text-base-content">
           <tr>
             <th>Currency</th>          {/* Initiator token */}
@@ -49,7 +49,7 @@ export const XchangeTable = ({ transactions }: { transactions: Transaction[] }) 
             const serviceToken = tokens[2] ?? "";
 
             return (
-              <tr key={tx.timestamp} className="hover:bg-base-300">
+              <tr key={tx.timestamp} className="hover:bg-base-300 h-6">
                 <td>{initiatorToken}</td>
                 <td className="truncate max-w-[120px]">
                   {tx.initiator}

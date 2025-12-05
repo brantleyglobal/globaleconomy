@@ -28,7 +28,7 @@ export default function AboutLayout() {
       </section>
 
       {/* Section 2: Company Overview */}
-      <section className="bg-white/10 px-6 py-12 md:px-16">
+      <section className="bg-gradient-to-b from-white/10 to-black px-6 py-12 md:px-16">
         <div className="max-w-4xl mx-auto space-y-6">
           <h2 className="text-4xl font-light mb-4">THE ECOSYSTEM</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-justify text-gray-300 text-sm leading-relaxed">
@@ -85,7 +85,7 @@ export default function AboutLayout() {
       </section>
 
       {/* Section 4: Blockchain Architecture */}
-      <section className="bg-white/10 px-6 py-12 md:px-16">
+      <section className="bg-gradient-to-b from-white/10 to-black px-6 py-12 md:px-16">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl font-light mb-6">BLOCKCHAIN ARCHITECTURE</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-justify">
@@ -111,7 +111,7 @@ export default function AboutLayout() {
       </section>
 
       {/* Section 5: Investment CTA */}
-      <section className="bg-white/10 px-6 py-14 text-center">
+     <section className="bg-gradient-to-b from-black to-white/10 px-6 py-12 md:px-16 text-center">
         <h2 className="text-2xl font-light mb-4">Quarterly Returns. Zero-Fee Access.</h2>
         <p className="text-sm text-justify text-gray-400 max-w-2xl mx-auto mb-6">
           Invest with flexible term structures & tradeable, redeemable asset‑backed tokens. 
