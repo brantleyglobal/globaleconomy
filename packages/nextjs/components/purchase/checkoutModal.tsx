@@ -477,7 +477,7 @@ const CheckoutModalBase = (
             <div className="relative z-20 text-sm text-gray-400 animate-bounce">
                 Scroll to accept ↓
               </div>
-            <div className="flex-grow max-h-150 sm:max-h-110 overflow-y-auto text-xs sm:text-sm border px-4 rounded bg-black text-justify text-white space-y-8">
+            <div className="flex-grow max-h-150 sm:max-h-105 overflow-y-auto text-xs sm:text-sm border px-4 rounded bg-black text-justify text-white space-y-8">
               <section>
                 <h3 className="font-semibold mb-2 mt-2 text-2xl">TERMS & CONDITIONS</h3>
                 <div dangerouslySetInnerHTML={{ __html: termsText || "<p>Loading…</p>" }} />
