@@ -60,7 +60,7 @@ export function PoolCompositionChart({ pools }: { pools: ProjectData[] }) {
       legend: {
         position: "bottom",
         labels: {
-          padding: 50,
+          padding: 10,
           boxWidth: 20,
           font: { size: 12 },
           generateLabels: (chart) => {
@@ -74,6 +74,11 @@ export function PoolCompositionChart({ pools }: { pools: ProjectData[] }) {
               index: i,
             }));
           },
+        },
+        title: {
+          display: true,
+          text: "", // empty string
+          padding: { top: 20, bottom: 0 }, // creates space above legend
         },
       },
       tooltip: {
@@ -94,56 +99,59 @@ export function PoolCompositionChart({ pools }: { pools: ProjectData[] }) {
   };
 
   return (
-    <div className="bg-white/5 rounded-lg py-4 px-6 shadow-md">
-      <h2 className="text-xl font-light mb-8">PORTFOLIO OVERVIEW</h2>
-      
+    <div className="bg-white/1 backdrop-blur-md rounded-xl px-6 py-4 shadow-lg flex flex-col h-full">
+         
       {/* Donut Chart with guaranteed height */}
-      <div className="h-80 mt-6 mb-2">
+      <div className="h-65 mt-6 mb-2">
         <Doughnut data={chartData} options={chartOptions} />
       </div>
 
+      <h2 className="text-xl text-primary font-light mt-8 mb-8">PORTFOLIO OVERVIEW</h2>
+
       {/* Compact Table */}
-<table className="w-full text-sm mt-8 mb-6 border-collapse">
-  <thead>
-    <tr className="border-b border-white/10">
-      <th className="text-left font-light py-2">POOL</th>
-      <th className="text-right font-light py-1">CURRENT</th>
-      <th className="text-right font-light py-1">PROJECTED</th>
-      <th className="text-right font-light py-1">SHARE</th>
-    </tr>
-  </thead>
-  <tbody>
-    {pools.map((pool, i) => (
-      <tr key={pool.symbol} className="border-b border-white/5">
-        <td className="flex items-center gap-2 py-1">
-          <span
-            className="w-3 h-3 rounded-full"
-            style={{ backgroundColor: COLORS[i % COLORS.length] }}
-          />
-          {pool.symbol}
-        </td>
-        <td className="text-right py-1">
-          {(pool.currentValue ?? 0).toLocaleString()} GBDo
-        </td>
-        <td className="text-right py-1">
-          {(pool.projectedValue ?? 0).toLocaleString()} GBDo
-        </td>
-        <td className="text-right py-1">
-          {pool.userShare ?? 0}%
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</table>
+      <table className="w-full text-sm mt-2 border-collapse">
+        <thead>
+          <tr className="border-b border-white/10">
+            <th className="text-left font-light py-1">POOL</th>
+            <th className="text-right font-light py-1">CURRENT</th>
+            <th className="text-right font-light py-1">PROJECTED</th>
+            <th className="text-right font-light py-1">SHARE</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pools.map((pool, i) => (
+            <tr key={pool.symbol} className="border-b border-white/5">
+              <td className="flex items-center gap-2 py-2.5">
+                <span
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                />
+                {pool.symbol}
+              </td>
+              <td className="text-right py-1">
+                {(pool.currentValue ?? 0).toLocaleString()} GBDo
+              </td>
+              <td className="text-right py-1">
+                {(pool.projectedValue ?? 0).toLocaleString()} GBDo
+              </td>
+              <td className="text-right py-1">
+                {pool.userShare ?? 0}%
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       {/* Disclaimer */}
-      <p className="text-sm text-justify text-gray-400 mt-10 mb-4">
-        This chart and table show how your investments are distributed across different pools,
-        comparing current pool values with projected growth. The table below provides detailed figures for your share.
-      </p>
-      <p className="mt-4 mb-8 text-xs text-gray-400">
-        Projected values are estimates. Last updated: {new Date().toLocaleDateString()}
-      </p>
+      <div className="mt-auto">
+        <p className="text-sm text-justify text-gray-400 mt-10 mb-6">
+          This chart and table show how your investments are distributed across different pools,
+          comparing current pool values with projected growth. The table below provides detailed figures for your share.
+        </p>
+        <p className="mt-4 text-xs text-gray-400">
+          Projected values are estimates. Last updated: {new Date().toLocaleDateString()}
+        </p>
+      </div>
     </div>
   );
 }

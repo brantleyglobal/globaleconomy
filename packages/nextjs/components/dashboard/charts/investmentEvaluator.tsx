@@ -76,7 +76,7 @@ export function InvestmentEvaluator({ projects }: { projects: ProjectData[] }) {
       legend: {
         position: "bottom" as const,
         labels: {
-            padding: 20,   // adds space between chart and legend
+            padding: 40,   // adds space between chart and legend
         },
       },
     },
@@ -86,12 +86,18 @@ export function InvestmentEvaluator({ projects }: { projects: ProjectData[] }) {
   };
 
   return (
-    <div className="bg-white/5 backdrop-blur-md rounded-xl p-4 shadow-lg">
-      <h2 className="text-xl font-light mb-8">INVESTMENT EVALUATOR</h2>
+    <div className="bg-white/1 backdrop-blur-md rounded-xl px-6 py-4 shadow-lg flex flex-col h-full">
+
+      {/* Chart */}
+      <div className="h-65 mt-8 mb-2">
+        <Doughnut data={chartData} options={chartOptions} />
+      </div>
+
+      <h2 className="text-xl text-primary font-light mt-8 mb-8">INVESTMENT EVALUATOR</h2>
 
       {/* Project Selector */}
       <select
-        className="select rounded-md mt-4 bg-black w-full text-info-600 outline-none hover:bg-white/10 text-white/50 border-none focus:ring-0 focus:outline-none"
+        className="select rounded-md bg-black w-full text-info-600 outline-none hover:bg-white/10 text-white/50 border-none focus:ring-0 focus:outline-none"
         value={selected?.symbol ?? ""}
         onChange={e => {
           const proj = projects.find(p => p.symbol === e.target.value);
@@ -103,7 +109,7 @@ export function InvestmentEvaluator({ projects }: { projects: ProjectData[] }) {
         </option>
         {projects.map(p => (
           <option key={p.symbol} value={p.symbol}>
-            {p.name}
+            {p.name} • {p.symbol}
           </option>
         ))}
       </select>
@@ -136,7 +142,7 @@ export function InvestmentEvaluator({ projects }: { projects: ProjectData[] }) {
       )}
 
       {/* Results */}
-      <div className="bg-black/30 rounded-lg p-4 space-y-2 text-sm mt-4 mb-8">
+      <div className="bg-black/30 rounded-lg p-4 space-y-2 text-sm mt-4">
         <p className="flex justify-between">
           <span className="text-xs">INVESTMENT</span>
           {selected?.projectedValue ? (
@@ -202,21 +208,18 @@ export function InvestmentEvaluator({ projects }: { projects: ProjectData[] }) {
         </p>
       </div>
 
-      {/* Chart */}
-      <div className="h-48">
-        <Doughnut data={chartData} options={chartOptions} />
-      </div>
-
       {/* Disclaimer */}
-      <p className="text-sm text-justify text-gray-400 mb-6">
-        Use this tool to estimate potential returns based on your investment amount and each project's
-        growth assumptions. For SmartVault contracts, projections factor in the number of quarters you
-        commit and the corresponding multiplier. For held real estate, ROI projections are calculated
-        on an annual basis to reflect long‑term property performance.
-      </p>
-      <p className="mt-4 text-xs text-gray-400">
-        Projections are estimates based on current pool data and may vary with market conditions.
-      </p>
+      <div className="mt-auto">
+        <p className="text-sm text-justify text-gray-400 mb-6 mt-10">
+          Use this tool to estimate potential returns based on your investment amount and each project's
+          growth assumptions. For SmartVault contracts, projections factor in the number of quarters you
+          commit and the corresponding multiplier. For held real estate, ROI projections are calculated
+          on an annual basis to reflect long‑term property performance.
+        </p>
+        <p className="mt-4 text-xs text-gray-400">
+          Projections are estimates based on current pool data and may vary with market conditions.
+        </p>
+      </div>
     </div>
   );
 }

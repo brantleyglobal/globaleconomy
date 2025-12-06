@@ -68,12 +68,18 @@ export function ProjectDetails({ projects }: { projects: ProjectData[] }) {
   };
 
   return (
-    <div className="bg-white/5 backdrop-blur-md rounded-xl px-6 py-4 shadow-lg">
-      <h2 className="text-xl font-light mb-6">PROJECT DETAILS</h2>
-      
+    <div className="bg-white/1 backdrop-blur-md rounded-xl px-6 py-4 shadow-lg flex flex-col h-full">
+
+      {/* Donut Chart */}
+      <div className="h-65 mt-6 mb-2">
+        <Doughnut data={chartData} options={chartOptions} />
+      </div>
+
+      <h2 className="text-xl font-light mt-8 mb-8 text-primary">PROJECT DETAILS</h2>
+
       {/* Project Selector */}
       <select
-        className="select rounded-md mt-6 bg-black w-full text-info-600 outline-none hover:bg-white/10 border-none text-white/50 focus:ring-0 focus:outline-none"
+        className="select rounded-md bg-black w-full text-info-600 outline-none hover:bg-white/10 border-none text-white/50 focus:ring-0 focus:outline-none"
         value={selected?.symbol ?? ""}   // safe default
         onChange={e => {
           const proj = projects.find(p => p.symbol === e.target.value);
@@ -85,18 +91,13 @@ export function ProjectDetails({ projects }: { projects: ProjectData[] }) {
         </option>
         {projects.map(p => (
           <option key={p.symbol} value={p.symbol}>
-            {p.name}
+            {p.name} • {p.symbol}
           </option>
         ))}
       </select>
 
-      {/* Donut Chart */}
-      <div className="h-65 mt-6 mb-2">
-        <Doughnut data={chartData} options={chartOptions} />
-      </div>
-
       {/* Details */}
-      <div className="bg-black/30 rounded-lg p-4 space-y-2 text-sm mt-4 mb-8">
+      <div className="bg-black/30 rounded-lg p-4 space-y-2 text-sm mt-4">
         <p className="flex justify-between">
           <span className="text-xs">CURRENT POOL</span>
           {selected?.currentValue !== undefined && selected?.currentValue !== null ?  (
@@ -166,17 +167,19 @@ export function ProjectDetails({ projects }: { projects: ProjectData[] }) {
       </div>
 
       {/* Trust Signal */}
-      <p className="text-sm text-justify text-gray-400 mt-8 mb-6">
-        This section provides a breakdown of the selected project, including current pool size,
-        projected growth, your share, and contract term. The donut chart compares present values
-        with projected outcomes. For SmartVault contracts, projections factor in committed quarters
-        and multipliers, while for held real estate investments ROI projections are calculated on
-        an annual basis to reflect long‑term property performance.
-      </p>
-      <p className="mt-4 mb-4 text-xs text-gray-400">
-        Values are based on current pool data. Last updated:{" "}
-        {new Date().toLocaleDateString()}
-      </p>
+      <div className="mt-auto">
+        <p className="text-sm text-justify text-gray-400 mt-10 mb-6">
+          This section provides a breakdown of the selected project, including current pool size,
+          projected growth, your share, and contract term. The donut chart compares present values
+          with projected outcomes. For SmartVault contracts, projections factor in committed quarters
+          and multipliers, while for held real estate investments ROI projections are calculated on
+          an annual basis to reflect long‑term property performance.
+        </p>
+        <p className="mt-4 text-xs text-gray-400">
+          Values are based on current pool data. Last updated:{" "}
+          {new Date().toLocaleDateString()}
+        </p>
+      </div>
     </div>
   );
 }
