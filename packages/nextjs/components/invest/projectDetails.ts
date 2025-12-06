@@ -3,14 +3,7 @@
 export const projectDetails = {
     GLB: {
     title: "THE GLOBE | Capital Raise TBA",
-    description: `The Globe will aid BG Company’s pursuits. It is a forward-thinking mixed-use development that 
-      brings unique and genuine cultural themes from around the world into a single development. Featuring a mix of 
-      residential and commercial spaces catering to the evolving live-work-play lifestyle, the completely walkable 
-      commercial aspect consists of shops and restaurants that incorporate cuisine and customs from around the globe 
-      with fitting settings. The second component entails development of a commercial/light industrial facility 
-      designed to facilitate R&D, client demonstrations, and administrative functions. Encapsulating BG Company’s 
-      efforts within a mixed-use theme provides a magnetic experience for the local community as well as a unique 
-      clientele. It is the UN of the NEW ENERGY ORDER.`, 
+    description: `The Globe will aid BG Company’s pursuits. It is a forward-thinking mixed-use development that brings unique and genuine cultural themes from around the world into a single development. Featuring a mix of residential and commercial spaces catering to the evolving live-work-play lifestyle, the completely walkable commercial aspect consists of shops and restaurants that incorporate cuisine and customs from around the globe with fitting settings. The second component entails development of a commercial/light industrial facility designed to facilitate R&D, client demonstrations, and administrative functions. Encapsulating BG Company’s efforts within a mixed-use theme provides a magnetic experience for the local community as well as a unique clientele. It is the UN of the NEW ENERGY ORDER.`, 
     image: "/assets/images/glb-project.png",
     pdf: "/assets/The Globe(Web).pdf",
   },
@@ -35,28 +28,20 @@ export const projectDetails = {
     pdf: "/assets/.Trans Greentech(web)",
   },
     CREs: {
-    title: "Clean Real Estate Buy & Sell | USA",
-    description: `BG Company offers a pooled real estate investment model powered by its clean energy generator, designed to virtually eliminate 
-      energy‑related overhead and holding costs. Investors collectively participate in a one‑year (four‑quarter) term, after which a one‑year 
-      redemption period begins. Profits are distributed on a pro rata basis to all participants in the pool, with lump‑sum payouts made following 
-      the sale.`,
+    title: "Clean Real Estate Buy & Sell",
+    description: `BG Company offers a pooled real estate investment model powered by its clean energy generator, designed to virtually eliminate energy‑related overhead and holding costs. Investors collectively participate in a one‑year (four‑quarter) term, after which a one‑year redemption period begins. Profits are distributed on a pro rata basis to all participants in the pool, with lump‑sum payouts made following the sale.`,
     image: "",
     pdf: "/assets/bgbs.pdf",
   },
     CREh: {
-    title: "Clean Real Estate Buy & Hold | USA",
-    description: `Pooled real estate investments powered by BG Company’s clean energy generator, designed to virtually eliminate energy-related overhead and 
-      holding costs. Investors commit to a one-year (four-quarter) term, after which a five-year redemption period begins. Monthly payouts are 
-      distributed based on actual rental revenue.`,
+    title: "Clean Real Estate Buy & Hold",
+    description: `Pooled real estate investments powered by BG Company’s clean energy generator, designed to virtually eliminate energy-related overhead and holding costs. Investors commit to a one-year (four-quarter) term, after which a five-year redemption period begins. Monthly payouts are distributed based on actual rental revenue.`,
     image: "",
     pdf: "/assets/bgbh.pdf",
   },
     CGRi: {
     title: "Clean Grid Infrastructure",
-    description: `Planned real estate energy farms function as decentralized power stations, similar in concept to solar farms but designed for vertical 
-      growth, much like server farms. Each farm acts as a central hub that continuously supplies clean energy to surrounding developments. Because the 
-      system is decentralized, major grid outages do not disrupt the network — only the individual station it connects to. This ensures uninterrupted power 
-      for supported projects, with milestone payouts beginning as each stage of development is completed.`,
+    description: `Planned real estate energy farms function as decentralized power stations, similar in concept to solar farms but designed for vertical growth, much like server farms. Each farm acts as a central hub that continuously supplies clean energy to surrounding developments. Because the system is decentralized, major grid outages do not disrupt the network — only the individual station it connects to. This ensures uninterrupted power for supported projects, with milestone payouts beginning as each stage of development is completed.`,
     image: "",
     pdf: "/assets/bggrid.pdf",
   },
