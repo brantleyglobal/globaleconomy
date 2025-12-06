@@ -51,13 +51,13 @@ export const OutputCustomizationStep: React.FC<Props> = ({
 
   return (
     <div className="flex flex-col h-full">
-  <div className="flex-grow p-6 space-y-8">
+  <div className="flex-grow p-4 space-y-4">
     <h3 className="text-2xl font-light tracking-tight text-primary">
       Customize Output
     </h3>
 
     {/* Voltage Selector */}
-    <div className="rounded-xl border border-secondary/30 bg-black/70 shadow-md p-6">
+    <div className="rounded-xl border border-secondary/30 bg-black/70 shadow-md p-3">
       <h4 className="text-xs uppercase tracking-wide text-info-400 mb-4">
         Voltage Output
       </h4>
@@ -80,7 +80,7 @@ export const OutputCustomizationStep: React.FC<Props> = ({
     </div>
 
     {/* Frequency Picker */}
-    <div className="rounded-xl border border-secondary/30 bg-black/70 shadow-md p-6">
+    <div className="rounded-xl border border-secondary/30 bg-black/70 shadow-md p-3">
       <h4 className="text-xs uppercase tracking-wide text-info-400 mb-4">
         Frequency Output
       </h4>
@@ -111,7 +111,7 @@ export const OutputCustomizationStep: React.FC<Props> = ({
     </div>
 
     {/* Phase Picker */}
-    <div className="rounded-xl border border-secondary/30 bg-black/70 shadow-md p-6">
+    <div className="rounded-xl border border-secondary/30 bg-black/70 shadow-md p-3">
       <h4 className="text-xs uppercase tracking-wide text-info-400 mb-4">
         Phase Output
       </h4>
@@ -143,7 +143,7 @@ export const OutputCustomizationStep: React.FC<Props> = ({
   </div>
 
   {/* Footer Navigation */}
-  <div className="flex flex-row justify-between items-center px-6 py-4 border-t bg-black/20 shadow-inner">
+  <div className="flex flex-row justify-between items-center px-6 pt-4 border-t bg-black/20 shadow-inner">
     <button
       className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md px-6 disabled:opacity-50"
       onClick={() => setCurrentStep(Math.max(currentStep - 1, 0))}
