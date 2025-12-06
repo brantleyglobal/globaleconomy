@@ -174,8 +174,8 @@ export default function ReviewStep(props: Props) {
   const { address, isConnected } = useAccount();
 
   return (
-    <div className="flex flex-col h-full space-y-2">
-      <div className="flex justify-between items-center mb-4">
+    <div className="flex flex-col h-full flex-full">
+      <div className="flex justify-between items-center">
       <h3 className="text-xl font-light text-primary">REVIEW & CONFIRMATION</h3>
       <button
         onClick={onHelpToggle}
@@ -266,7 +266,7 @@ export default function ReviewStep(props: Props) {
 
       {/* Footer Buttons */}
       {/* Right: Previous + Next buttons */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mt-4 py-4 border-t bg-transparent w-full">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mt-4 pt-4 border-t bg-transparent w-full">
         <button
           className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
           onClick={onBack}

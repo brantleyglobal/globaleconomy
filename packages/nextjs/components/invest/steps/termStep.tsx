@@ -72,7 +72,7 @@ export const TermStep: React.FC<Props> = ({
     selectedQuarter === 0 || depositAmount === "" || selectedTokenSymbol === "";
 
   return (
-    <div className="flex flex-col h-full space-y-4">
+    <div className="flex flex-col flex-full h-full">
     {/* Header - separate from background */}
     <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-light text-primary">INVESTMENT DETAILS</h2>
@@ -174,7 +174,7 @@ export const TermStep: React.FC<Props> = ({
         </div>
       </div>
     </div>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 py-4 border-t bg-transparent w-full">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 pt-4 border-t bg-transparent w-full">
         <button
           className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
           onClick={onPrevious}

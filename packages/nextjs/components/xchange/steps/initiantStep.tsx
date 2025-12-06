@@ -219,7 +219,7 @@ export default function InitiantStep({
                     value={userEmail}
                     onChange={handleEmailChange}
                     placeholder="Email Address"
-                    className={`input w-full bg-black mt-2 rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5 ${
+                    className={`input w-full bg-black mt-2 mb-4 rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5 ${
                     emailError ? "border-red-500" : ""
                     }`}
                 />
@@ -228,7 +228,7 @@ export default function InitiantStep({
                 )}
             </div>
             {/* Sticky Footer Navigation */}
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 py-4 border-t bg-transparent w-full">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 pt-4 border-t bg-transparent w-full">
                 {/*currentStep > 1 && (*/}
                 <button
                     className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"

@@ -40,7 +40,7 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
 
   return (
     <>
-      <div className="flex flex-col h-full space-y-2">
+      <div className="flex flex-col flex-full h-full">
         <div className="px-0">
           <h3 className="text-lg font-light mb-4 text-primary">PAYMENT METHOD</h3>
         </div>
@@ -137,7 +137,7 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
         </div>
 
         {/* Sticky-style footer matching modal layout */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6 p-4 mt-4 border-t bg-transparent w-full">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6 px-4 pt-4 mt-4 border-t bg-transparent w-full">
           {/* Left side: wallet connect button */}
           <div className="bottom-0 w-full sm:w-auto flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
             <WalletConnectButton />

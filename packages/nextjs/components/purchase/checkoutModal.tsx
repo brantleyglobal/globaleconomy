@@ -440,7 +440,7 @@ const CheckoutModalBase = (
         </div>
       </div>
 
-      <div className="space-y-2 h-auto min-h-[400px] sm:h-[500px] flex flex-col">
+      <div className="flex flex-col flex-full">
         {currentStep === 0 && (
           <SystemConfigurationStep
             currentStep={currentStep}
@@ -470,14 +470,14 @@ const CheckoutModalBase = (
 
         {/* Step 3 - Terms & Policies */}
         {currentStep === 2 && (
-          <div className="flex flex-col h-full space-y-2">
+          <div className="flex flex-col flex-full h-full">
             <div className="px-0 h-full">
               <h2 className="text-xl font-light text-primary">AGREEMENTS</h2>
             </div>
             <div className="relative z-20 text-sm text-gray-400 animate-bounce">
                 Scroll to accept ↓
               </div>
-            <div className="flex-grow max-h-90 sm:max-h-90 overflow-y-auto text-xs sm:text-sm border px-4 rounded bg-black text-justify text-white space-y-8">
+            <div className="flex-grow max-h-150 sm:max-h-110 overflow-y-auto text-xs sm:text-sm border px-4 rounded bg-black text-justify text-white space-y-8">
               <section>
                 <h3 className="font-semibold mb-2 mt-2 text-2xl">TERMS & CONDITIONS</h3>
                 <div dangerouslySetInnerHTML={{ __html: termsText || "<p>Loading…</p>" }} />
@@ -503,7 +503,7 @@ const CheckoutModalBase = (
               </section>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mt-4 py-4 border-t bg-transparent w-full">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mt-4 pt-4 border-t bg-transparent w-full">
               <button
                 className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
                 onClick={() => {

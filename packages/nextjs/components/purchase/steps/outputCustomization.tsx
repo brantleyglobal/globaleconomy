@@ -50,123 +50,117 @@ export const OutputCustomizationStep: React.FC<Props> = ({
   }, []);
 
   return (
-    <div className="flex flex-col h-full space-y-2">
-      <div className="flex-grow overflow-y-auto p-4 space-y-6">
-        <h3 className="text-xl font-light tracking-tight mb-4 text-primary">
-          CUSTOMIZE OUTPUT
-        </h3>
+    <div className="flex flex-col h-full">
+  <div className="flex-grow p-6 space-y-8">
+    <h3 className="text-2xl font-light tracking-tight text-primary">
+      Customize Output
+    </h3>
 
-        {/* Voltage Selector */}
-        <div>
-          {/*<label className="block text-xs font-light text-info-400 mt-6 mb-6">
-            VOLTAGE OUTPUT
-          </label>*/}
-          <input
-            type="range"
-            min={120}
-            max={800}
-            step={10}
-            value={selectedVoltage}
-            onChange={(e) => {
-              const rawVoltage = Number(e.target.value);
-              const voltage = `${rawVoltage}V`;
-              setSelectedVoltage(rawVoltage);
-              setField("voltage", voltage);
-            }}
-            className="range range-secondary w-full mt-10"
-          />
-          <p className="text-sm text-center mt-1 mb-8 text-light text-info-300">
-            VOLTAGE: <strong>{selectedVoltage}</strong>
-          </p>
-        </div>
-
-        {/* Frequency Picker */}
-        <div>
-          {/*<label className="block text-xs font-light text-info-400 mt-6 mb-6">
-            FREQUENCY OUTPUT
-          </label>*/}
-          <div className="grid grid-cols-2 gap-3 mt-15">
-            {frequencyOptions.map((frequency) => {
-              const isSelected = selectedFrequency === frequency;
-              return (
-                <button
-                  key={frequency}
-                  onClick={() => {
-                    setSelectedFrequency(frequency);
-                    setField("frequency", frequency);
-                  }}
-                  className={`relative w-full mt-1 py-2 border rounded-md text-sm btn-black overflow-hidden transition-all duration-200 ease-in-out
-                    ${isSelected
-                      ? "bg-secondary/30 text-info border-none"
-                      : "bg-black/50 border-none text-info-400 hover:bg-secondary/30"
-                    }`}
-                >
-                  {isSelected && (
-                    <div className="absolute right-0 top-0 h-full w-1 bg-info rounded-l-md animate-slideFade" />
-                  )}
-                  {frequency}
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-sm mt-1 mb-8 text-light text-center text-info-300">
-            FREQUENCY: <strong>{selectedFrequency || "—"}</strong>
-          </p>
-        </div>
-
-        {/* Phase Picker */}
-        <div>
-          {/*<label className="block text-xs font-light text-info-400 mt-6 mb-6">
-            PHASE OUTPUT
-          </label>*/}
-          <div className="grid grid-cols-3 gap-3 mt-15">
-            {phaseOptions.map((phase) => {
-              const isSelected = selectedPhase === phase;
-              return (
-                <button
-                  key={phase}
-                  onClick={() => {
-                    setSelectedPhase(phase);
-                    setField("phase", phase);
-                  }}
-                  className={`relative w-full py-2 border rounded-md text-sm btn-black overflow-hidden transition-all duration-200 ease-in-out
-                    ${isSelected
-                      ? "bg-secondary/30 text-info border-none"
-                      : "bg-black/50 border-none text-info-400 hover:bg-secondary/30"
-                    }`}
-                >
-                  {isSelected && (
-                    <div className="absolute right-0 top-0 h-full w-1 bg-info rounded-l-md animate-slideFade" />
-                  )}
-                  {phase}
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-sm mt-1 text-light text-center text-info-300">
-            PHASE: <strong>{selectedPhase || "—"}</strong>
-          </p>
-        </div>
-      </div>
-
-      {/* Sticky Footer Navigation */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 p-4 border-t bg-transparent w-full">
-        {currentStep > 1 && (
-          <button
-            className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
-            onClick={() => setCurrentStep(Math.max(currentStep - 1, 1))}
-          >
-            Previous
-          </button>
-        )}
-        <button
-          className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
-          onClick={() => setCurrentStep(currentStep + 1)}
-          disabled={isRestrictedCombo}
-        >
-          Next
-        </button>
-      </div>
+    {/* Voltage Selector */}
+    <div className="rounded-xl border border-secondary/30 bg-black/70 shadow-md p-6">
+      <h4 className="text-xs uppercase tracking-wide text-info-400 mb-4">
+        Voltage Output
+      </h4>
+      <input
+        type="range"
+        min={120}
+        max={800}
+        step={10}
+        value={selectedVoltage}
+        onChange={(e) => {
+          const rawVoltage = Number(e.target.value);
+          setSelectedVoltage(rawVoltage);
+          setField("voltage", `${rawVoltage}V`);
+        }}
+        className="range range-secondary w-full"
+      />
+      <p className="text-sm text-center mt-3 text-info-300">
+        Voltage: <span className="font-semibold">{selectedVoltage}V</span>
+      </p>
     </div>
+
+    {/* Frequency Picker */}
+    <div className="rounded-xl border border-secondary/30 bg-black/70 shadow-md p-6">
+      <h4 className="text-xs uppercase tracking-wide text-info-400 mb-4">
+        Frequency Output
+      </h4>
+      <div className="grid grid-cols-2 gap-4">
+        {frequencyOptions.map((frequency) => {
+          const isSelected = selectedFrequency === frequency;
+          return (
+            <button
+              key={frequency}
+              onClick={() => {
+                setSelectedFrequency(frequency);
+                setField("frequency", frequency);
+              }}
+              className={`w-full py-2 rounded-md text-sm transition-all duration-200 ${
+                isSelected
+                  ? "bg-secondary/40 text-info shadow-md"
+                  : "bg-white/2 text-info-400 hover:bg-secondary/20"
+              }`}
+            >
+              {frequency}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-sm text-center mt-3 text-info-300">
+        Frequency: <span className="font-semibold">{selectedFrequency || "—"}</span>
+      </p>
+    </div>
+
+    {/* Phase Picker */}
+    <div className="rounded-xl border border-secondary/30 bg-black/70 shadow-md p-6">
+      <h4 className="text-xs uppercase tracking-wide text-info-400 mb-4">
+        Phase Output
+      </h4>
+      <div className="grid grid-cols-3 gap-4">
+        {phaseOptions.map((phase) => {
+          const isSelected = selectedPhase === phase;
+          return (
+            <button
+              key={phase}
+              onClick={() => {
+                setSelectedPhase(phase);
+                setField("phase", phase);
+              }}
+              className={`w-full py-2 rounded-md text-sm transition-all duration-200 ${
+                isSelected
+                  ? "bg-secondary/40 text-info shadow-md"
+                  : "bg-white/2 text-info-400 hover:bg-secondary/20"
+              }`}
+            >
+              {phase}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-sm text-center mt-3 text-info-300">
+        Phase: <span className="font-semibold">{selectedPhase || "—"}</span>
+      </p>
+    </div>
+  </div>
+
+  {/* Footer Navigation */}
+  <div className="flex flex-row justify-between items-center px-6 py-4 border-t bg-black/20 shadow-inner">
+    <button
+      className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md px-6 disabled:opacity-50"
+      onClick={() => setCurrentStep(Math.max(currentStep - 1, 0))}
+      disabled={currentStep <= 0}
+    >
+      Previous
+    </button>
+    <button
+      className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md px-6 disabled:opacity-50"
+      onClick={() => setCurrentStep(currentStep + 1)}
+      disabled={isRestrictedCombo}
+    >
+      Next
+    </button>
+  </div>
+</div>
+
+
   );
 };

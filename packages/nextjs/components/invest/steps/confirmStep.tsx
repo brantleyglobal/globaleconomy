@@ -38,7 +38,7 @@ export function ConfirmStep({
   const [showWalletNotice, setShowWalletNotice] = useState(false);
 
   return (
-    <div className="flex flex-col h-full space-y-2">
+    <div className="flex flex-col flex-full h-full">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-light text-primary tracking-wide">CONTRACT SUMMARY & CONFIRMATION</h3>
         <button
@@ -51,10 +51,8 @@ export function ConfirmStep({
         </button>
       </div>
         <div className="flex flex-col justify-between h-full rounded-xl"> 
-          <div className="flex-grow max-h-98 sm:max-h-98 overflow-y-auto mb-4 pt-6 bg-base-200 border px-4 border-base-300 rounded-md shadow-sm text-sm">
+          <div className="flex-grow max-h-250 sm:max-h-98 overflow-y-auto mb-4 pt-6 bg-base-200 border px-4 border-base-300 rounded-md shadow-sm text-sm">
             {/* Summary info */}
-            <div className="flex-grow max-h-98 sm:max-h-98 overflow-y-auto mb-4 pt-6 bg-base-200 border px-4 border-base-300 rounded-md shadow-sm text-sm">
-          {/* Summary info */}
           <div className="flex justify-between items-center border-b border-base-300 pb-2">
             <p className="text-white/50 uppercase tracking-wide text-xs font-light">
               Investment Amount
@@ -118,9 +116,8 @@ export function ConfirmStep({
             </p>
           </div>
         </div>
-        </div>
         {/* Wallet connect section and buttons */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 py-4 border-t bg-transparent w-full">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 pt-4 border-t bg-transparent w-full">
           <div className="w-full sm:w-auto flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
             <WalletConnectButton />
             {!connectedWallet && (

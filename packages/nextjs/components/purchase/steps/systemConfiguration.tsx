@@ -82,13 +82,12 @@ export const SystemConfigurationStep: React.FC<Props> = ({
   };
 
   return (
-    <div className="flex flex-col h-full space-y-2">
+    <div className="flex flex-col flex-full h-full">
       <div className="px-0">
         <h3 className="text-xl font-light tracking-tight text-primary">SYSTEM CONFIGURATION</h3>
       </div>
-      <div className="flex flex-col justify-between h-full rounded-xl"> 
-        <div className="flex-grow h-full overflow-y-auto mb-10">
-          
+      <div className="flex flex-col flex-full asjustify-between h-full rounded-xl"> 
+        <div className="flex-grow text-xs sm:text-sm px-4 rounded text-justify text-white space-y-8">          
           {variationGroups.epanel
             ? renderVariationGroup("epanel", "epanel", "GBDo")
             : variationGroups.xpanel && renderVariationGroup("xpanel", "xpanel", "GBDo")}
@@ -100,7 +99,7 @@ export const SystemConfigurationStep: React.FC<Props> = ({
           {variationGroups.monitoring &&
             renderVariationGroup("monitoring", "monitoring", "GBDo")}
 
-          {/* 📢 Volume Orders Section */}
+          {/* Volume Orders Section */}
           <div className="bg-black/40 border border-info-400 rounded-md mt-4 p-1 text-center">
             <p className="text-sm text-info-300">
               For <span className="font-semibold text-info">volume or bulk orders</span>, 
@@ -110,7 +109,7 @@ export const SystemConfigurationStep: React.FC<Props> = ({
             </p>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 py-4 border-t bg-transparent w-full">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 pt-4 mt-4 border-t bg-transparent w-full">
           <button
             className="invisible btn btn-primary/15 btn-sm h-8 text-xs rounded-md px-6"
             aria-hidden="true"

@@ -88,7 +88,7 @@ export const RegionStep: React.FC<Props> = ({
     selectedTokenSymbol2 === "" || depositAmount === "" || selectedTokenSymbol === "";
 
   return (
-    <div className="flex flex-col space-y-4">
+    <div className="flex flex-col flex-full">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-light text-primary">INVESTMENT DETAILS</h2>
         <button
@@ -100,7 +100,7 @@ export const RegionStep: React.FC<Props> = ({
         
       </button>
       </div>
-      <div className="flex flex-col justify-between h-full rounded-xl">
+      <div className="flex flex-col flex-full justify-between h-full rounded-xl">
         <div className="space-y-4">
           <div>
             <select
@@ -200,15 +200,15 @@ export const RegionStep: React.FC<Props> = ({
           </div>
         </div>
       </div>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 py-4 border-t bg-transparent w-full">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 pt-4 border-t bg-transparent w-full">
         <button
-          className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
+           className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
           onClick={onPrevious}
         >
           Previous
         </button>
         <button
-          className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
+           className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
           disabled={isDisabled}
           onClick={onNext}
         >

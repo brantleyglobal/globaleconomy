@@ -155,7 +155,7 @@ export default function CounterPartyStep({
         
     return (
     <div>
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-full justify-between items-center mb-4">
           <h3 className="text-xl font-light text-primary">COUNTERPARTY DETAILS</h3>
           <button
             onClick={onHelpToggle}
@@ -193,13 +193,13 @@ export default function CounterPartyStep({
                     </option>
                 ))}
             </select>
-            <button
+            {/*<button
                 type="button"
                 onClick={() => setShowStablecoinInfo(true)}
                 className="bg-white/10 animate-pulse backdrop-blur-md w-full mt-2 px-6 py-2 rounded-md text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
             >
                 Supported Stablecoin
-            </button>
+            </button>*/}
             <input
               type="text"
               inputMode="decimal"
@@ -241,7 +241,7 @@ export default function CounterPartyStep({
             )}
         </div>
         {/* Sticky-style footer matching modal layout */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6 p-4 mt-4 border-t bg-transparent w-full">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6 px-4 pt-4 mt-4 border-t bg-transparent w-full">
             {/* Left side: wallet connect button */}
             <div className="bottom-0 w-full sm:w-auto flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
             <WalletConnectButton />

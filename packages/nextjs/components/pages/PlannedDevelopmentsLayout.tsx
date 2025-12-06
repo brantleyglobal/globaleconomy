@@ -48,7 +48,7 @@ const projects = [
 
 export default function ProposedDevelopments() {
   return (
-    <main className="bg-black text-white min-h-screen font-sans">
+    <main className="bg-black text-white min-h-screen font-sans flex flex-col h-full">
       {/* Hero */}
       <section className="py-16 text-center border-b border-white/10">
         <h1 className="text-2xl sm:text-4xl font-light tracking-wide mb-4 text-primary">
@@ -102,7 +102,9 @@ function ThumbnailGallery({ project }: { project: any }) {
       {/* Description */}
       <h2 className="text-xl sm:text-2xl font-light text-primary">{project.title}</h2>
       <p className="text-sm sm:text-base text-gray-300 text-justify">{project.description}</p>
-      <span className="text-xs text-gray-400">Status: {project.status}</span>
+      <div className="mt-auto">
+        <span className="text-xs text-gray-400">Status: {project.status}</span>
+      </div>
 
       {/* Modal Gallery */}
       {modalOpen && (

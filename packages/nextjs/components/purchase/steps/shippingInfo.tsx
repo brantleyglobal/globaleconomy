@@ -65,7 +65,7 @@ export const ShippingInfoStep: React.FC<{ currentStep: number; setCurrentStep: (
     !userCountry.trim();
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-full h-full">
       <h3 className="text-xl font-light mb-6 text-primary">SHIPPING INFORMATION</h3>
       <div className="space-y-2">
         <input
@@ -144,7 +144,7 @@ export const ShippingInfoStep: React.FC<{ currentStep: number; setCurrentStep: (
       </div>
 
       {/* Footer Navigation */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 p-4 border-t bg-transparent w-full mt-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 px-4 pt-4 border-t bg-transparent w-full mt-6">
         <button
           className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
           onClick={() => setCurrentStep(Math.max(currentStep - 1, 1))}

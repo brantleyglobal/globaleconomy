@@ -137,9 +137,9 @@ export const CheckoutReviewStep: React.FC<Props> = ({
   const totalIncludingShipping = (estimatedTotalNumber + shippingCost);
 
   return (
-    <div className="flex flex-col h-full space-y-2">
+    <div className="flex flex-col h-full flex-full">
       {/* Scrollable Content */}
-      <div className="flex-grow overflow-y-auto p-2 space-y-2 text-sm">
+      <div className="flex-grow p-2 space-y-2 text-sm">
         <h3 className="text-lg font-light text-primary tracking-wide">
           REVIEW & CHECKOUT
         </h3>
@@ -220,7 +220,7 @@ export const CheckoutReviewStep: React.FC<Props> = ({
       </div>
 
       {/* Sticky Footer */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-t bg-transparent w-full">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 px-4 pt-4 border-t bg-transparent w-full mt-6">
         <button
           className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
           onClick={() => setCurrentStep(prev =>Math.max(prev - 1, 1))}
