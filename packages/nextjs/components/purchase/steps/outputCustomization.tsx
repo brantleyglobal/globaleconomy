@@ -72,7 +72,7 @@ export const OutputCustomizationStep: React.FC<Props> = ({
           setSelectedVoltage(rawVoltage);
           setField("voltage", `${rawVoltage}V`);
         }}
-        className="range-secondary40"
+        className="range-secondary40 w-full"
       />
       <p className="text-xs text-center mt-2 text-info-300">
         Voltage: <span className="font-semibold">{selectedVoltage}V</span>
