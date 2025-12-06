@@ -151,30 +151,30 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
   };
 
   const handleRecipientChange = (val: string) => {
-    // Always update the raw value
-    setRecipient(val);
+      // Always update the raw value
+      setRecipient(val);
 
-    // If empty, clear error
-    if (val === "") {
-      setAddressError("");
-      return;
-    }
+      // If empty, clear error
+      if (val === "") {
+          setAddressError("");
+          return;
+      }
 
-    // If not long enough yet, mark as incomplete
-    if (val.length < 42) {
-      setAddressError("Address incomplete");
-      return;
-    }
+      // If not long enough yet, mark as incomplete
+      if (val.length < 42) {
+          setAddressError("Address incomplete");
+          return;
+      }
 
-    // Once length is correct, try to checksum/validate
-    try {
-      const checksummed = getAddress(val);
-      setRecipient(checksummed);
-      setAddressError("");
-    } catch {
-      setRecipient(undefined);
-      setAddressError("Invalid Ethereum address");
-    }
+      // Once length is correct, try to checksum/validate
+      try {
+          const checksummed = getAddress(val);
+          setRecipient(checksummed);
+          setAddressError("");
+      } catch {
+          setRecipient(val);
+          setAddressError("Invalid Ethereum address");
+      }
   };
 
   const { send } = useTransferHandler({
