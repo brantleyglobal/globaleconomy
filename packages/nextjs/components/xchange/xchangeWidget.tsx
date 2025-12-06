@@ -255,7 +255,7 @@ export const GlobalXchangeModal = ({ isOpen, onClose, openWalletModal }: GlobalX
               <div className="relative z-20 text-sm text-gray-400 animate-bounce">
                 Scroll to accept ↓
               </div>
-              <div className="flex-grow max-h-150 sm:max-h-110 overflow-y-auto text-xs sm:text-sm border px-4 rounded bg-black text-justify text-white space-y-8">
+              <div className="flex-grow max-h-150 sm:max-h-95 overflow-y-auto text-xs sm:text-sm border px-4 rounded bg-black text-justify text-white space-y-8">
                 <section>
                   <h3 className="font-semibold mb-6 mt-2 text-2xl">PRIVACY POLICY</h3>
                   <div dangerouslySetInnerHTML={{ __html: policyText || "<p>Loading…</p>" }} />
