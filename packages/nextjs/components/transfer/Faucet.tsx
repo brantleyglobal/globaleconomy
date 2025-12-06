@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   Address as AddressType,
   createPublicClient,
@@ -65,6 +65,7 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
 
   const [step, setStep] = useState(0);
   const [recipient, setRecipient] = useState<AddressType>();
+  const [localRecipient, setLocalRecipient] = useState(recipient ?? "");
   const [amount, setAmount] = useState("");
   const [userFirstName, setUserFirstName] = useState("");
   const [userLastName, setUserLastName] = useState("");
@@ -150,6 +151,28 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
     }
   };
 
+  // Ref to hold debounce timer
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+      if (recipient !== localRecipient) {
+      setLocalRecipient(recipient ?? "");
+      setAddressError("");
+      }
+  }, [recipient]);
+
+  // Validate and commit address after debounce or blur
+  const validateAndSetRecipient = (val: string) => {
+      try {
+      const checksummed = getAddress(val);
+      setRecipient(checksummed);
+      setAddressError("");
+      } catch {
+      setRecipient("");
+      setAddressError(val === "" ? "" : "Invalid Ethereum address");
+      }
+  };
+
   const handleRecipientChange = (val: string) => {
       // Always update the raw value
       setRecipient(val);
@@ -175,6 +198,15 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
           setRecipient(val);
           setAddressError("Invalid Ethereum address");
       }
+  };
+
+  // On blur, immediately validate and commit
+    const handleBlur = () => {
+      if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+      debounceTimer.current = null;
+      }
+      validateAndSetRecipient(localRecipient.trim());
   };
 
   const { send } = useTransferHandler({
@@ -378,6 +410,7 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
                 <AddressInput
                   placeholder="Recipient Address"
                   value={recipient ?? ""}
+                  onBlur={handleBlur}
                   onChange={handleRecipientChange}
                 />
                 {addressError && (
