@@ -72,9 +72,9 @@ export const OutputCustomizationStep: React.FC<Props> = ({
           setSelectedVoltage(rawVoltage);
           setField("voltage", `${rawVoltage}V`);
         }}
-        className="range range-secondary w-full"
+        className="range-secondary40"
       />
-      <p className="text-sm text-center mt-3 text-info-300">
+      <p className="text-xs text-center mt-2 text-info-300">
         Voltage: <span className="font-semibold">{selectedVoltage}V</span>
       </p>
     </div>
@@ -94,7 +94,7 @@ export const OutputCustomizationStep: React.FC<Props> = ({
                 setSelectedFrequency(frequency);
                 setField("frequency", frequency);
               }}
-              className={`w-full py-2 rounded-md text-sm transition-all duration-200 ${
+              className={`w-full py-1.5 rounded-md text-sm transition-all duration-200 ${
                 isSelected
                   ? "bg-secondary/40 text-info shadow-md"
                   : "bg-white/2 text-info-400 hover:bg-secondary/20"
@@ -105,7 +105,7 @@ export const OutputCustomizationStep: React.FC<Props> = ({
           );
         })}
       </div>
-      <p className="text-sm text-center mt-3 text-info-300">
+      <p className="text-xs text-center mt-3 text-info-300">
         Frequency: <span className="font-semibold">{selectedFrequency || "—"}</span>
       </p>
     </div>
@@ -125,7 +125,7 @@ export const OutputCustomizationStep: React.FC<Props> = ({
                 setSelectedPhase(phase);
                 setField("phase", phase);
               }}
-              className={`w-full py-2 rounded-md text-sm transition-all duration-200 ${
+              className={`w-full py-1.5 rounded-md text-sm transition-all duration-200 ${
                 isSelected
                   ? "bg-secondary/40 text-info shadow-md"
                   : "bg-white/2 text-info-400 hover:bg-secondary/20"
@@ -136,7 +136,7 @@ export const OutputCustomizationStep: React.FC<Props> = ({
           );
         })}
       </div>
-      <p className="text-sm text-center mt-3 text-info-300">
+      <p className="text-xs text-center mt-3 text-info-300">
         Phase: <span className="font-semibold">{selectedPhase || "—"}</span>
       </p>
     </div>
