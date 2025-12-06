@@ -97,6 +97,18 @@ export default function CounterPartyStep({
         }
     };
 
+    // Validate and commit address after debounce or blur
+    const validateAndSetRecipient = (val: string) => {
+        try {
+        const checksummed = getAddress(val);
+        setRecipient2(checksummed);
+        setAddressError("");
+        } catch {
+        setRecipient2("");
+        setAddressError(val === "" ? "" : "Invalid Ethereum address");
+        }
+    };
+
     // On input change, update local state and debounce external update
     const handleRecipient2Change = (val: string) => {
       // Always update the raw value
@@ -130,9 +142,13 @@ export default function CounterPartyStep({
         isEditingAddress.current = true;
     };
 
+    // On blur, immediately validate and commit
     const handleBlur = () => {
-        isEditingAddress.current = false;
-        validateAndSetRecipient2(localRecipient2.trim());
+        if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+        debounceTimer.current = null;
+        }
+        validateAndSetRecipient(localRecipient2.trim());
     };
     
     // Basic email validation regex
