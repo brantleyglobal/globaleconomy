@@ -210,10 +210,10 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
           </div>
 
           {/* Label */}
-          <span className="text-xs font-medium px-3">INSTALL WALLET</span>
+          <span className="text-xs font-light px-2 mr-2">INSTALL WALLET</span>
 
           {/* Chevron */}
-          <ChevronDownIcon className="w-4 h-4 ml-1 text-green animate-pulse" />
+          {/*<ChevronDownIcon className="w-4 h-4 ml-1 text-green animate-pulse" />*/}
         </button>
         {/* Dropdown Menu */}
         {menuOpen && (
@@ -282,7 +282,7 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
               : `Bitcoin: ${btcAddress?.slice(0, 6)}...${btcAddress?.slice(-4)}`}
           </span>
         ) : (
-          <span className="text-xs text-white font-medium drop-shadow-sm px-3">
+          <span className="text-xs text-white font-light drop-shadow-sm px-3">
             CONNECT WALLET
           </span>
         )}
@@ -342,7 +342,7 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
             </div>
           )}
           {(account || btcAddress) && (
-            <button onClick={disconnectWallet} className="w-full px-4 py-2 hover:bg-white/5">
+            <button onClick={disconnectWallet} className="w-full px-4 py-2 font-light hover:bg-white/5">
               DISCONNECT WALLET
             </button>
           )}

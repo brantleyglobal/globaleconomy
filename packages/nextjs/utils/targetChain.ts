@@ -177,7 +177,7 @@ export async function sendTransferOnTargetChain(
   const from = accounts[0];
 
   let receipt;
-  if (selectedToken.symbol === "ETH" || selectedToken.symbol === "GBDo") {
+  if (selectedToken.symbol === "ETH") {
     // Native transfer: input is already 18 decimals, chain uses 18 → no rescale
     const value = rescaleAmount(tamount, 18, chainInfo.nativeCurrency.decimals);
     

@@ -46,7 +46,7 @@ const nativeToken: NormalizedToken = {
 const myChainSupportedTokenAddresses = new Set<Address>([
   //nativeToken.address,
   //deployments.Copian,
-  deployments.GlobalDollarX,
+  deployments.GlobalDollar,
   deployments.BGFFS,
   deployments.BGFRS,
   deployments.TGMX,

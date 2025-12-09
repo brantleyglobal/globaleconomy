@@ -47,7 +47,7 @@ export const supportedTokens = [
   {
     name: "Global Dollar",
     symbol: "GBDo",
-    address: "0x0000000000000000000000000000000000000000",
+    address: "0xE95EFf9be907532E1356ac65812b142b0D0b4C33",
     decimals: 18,
     isNative: true,
     chain: "global",
