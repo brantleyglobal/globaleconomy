@@ -1,6 +1,6 @@
 import { useAccount } from "wagmi";
 
-const ADMIN_WALLET = "0xA6d2B0570c54E9bB4Ea3d5C9f8055fE67F9bE788".toLowerCase();
+const ADMIN_WALLET = "0x1166579617240592e8a7c87bc389549eab8de047".toLowerCase();
 
 export function useIsAdmin() {
   const { address } = useAccount();
