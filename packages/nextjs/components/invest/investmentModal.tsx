@@ -106,6 +106,7 @@ export const InvestmentModal: React.FC<Props> = ({
   const [userFirstName, setUserFirstName] = useState("");
   const [userLastName, setUserLastName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [userPromo, setUserPromo] = useState("");
 
   const [selectedTokenSymbol, setSelectedTokenSymbol] = useState("");
   const [selectedTokenSymbol2, setSelectedTokenSymbol2] = useState("");
@@ -248,6 +249,7 @@ export const InvestmentModal: React.FC<Props> = ({
         eligibilityLabel,
         multiplier,
         receipt: receiptx || "",
+        promo: userPromo || "",
       });
 
       setStep(3);
@@ -414,8 +416,10 @@ export const InvestmentModal: React.FC<Props> = ({
                 userLastName={userLastName}
                 setUserLastName={setUserLastName}
                 userEmail={userEmail}
-                onHelpToggle={() => setIsHelpMode(true)}
                 setUserEmail={setUserEmail}
+                userPromo={userPromo}
+                setUserPromo={setUserPromo}
+                onHelpToggle={() => setIsHelpMode(true)}
                 onPrevious={() => setStep(ModalStep.AgreementStep)}
                 onNext={() => {
                   if (!selectedTokenSymbol || selectedQuarter <= 0 || !depositAmount) {
@@ -445,8 +449,10 @@ export const InvestmentModal: React.FC<Props> = ({
                 userLastName={userLastName}
                 setUserLastName={setUserLastName}
                 userEmail={userEmail}
-                onHelpToggle={() => setIsHelpMode(true)}
                 setUserEmail={setUserEmail}
+                userPromo={userPromo}
+                setUserPromo={setUserPromo} 
+                onHelpToggle={() => setIsHelpMode(true)}
                 onPrevious={() => setStep(ModalStep.AgreementStep)}
                 onNext={() => {
                   if (!selectedTokenSymbol || !selectedTokenSymbol2 || !depositAmount) {

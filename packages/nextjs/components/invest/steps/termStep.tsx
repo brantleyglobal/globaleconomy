@@ -16,6 +16,8 @@ export type Props = {
   setUserLastName: (val: string) => void;
   userEmail: string;
   setUserEmail: (val: string) => void;
+  userPromo: string;
+  setUserPromo: (val: string) => void;
   onHelpToggle: () => void;
   onNext: () => void;
   onPrevious: () => void;
@@ -37,6 +39,7 @@ export const TermStep: React.FC<Props> = ({
   const [userFirstName, setUserFirstName] = useState("");
   const [userLastName, setUserLastName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [userPromo, setUserPromo] = useState("");
   const [emailError, setEmailError] = useState("");
   const [showStablecoinInfo, setShowStablecoinInfo] = useState(false);
   const getNetwork = (symbol: string, address: string): string => {
@@ -171,6 +174,13 @@ export const TermStep: React.FC<Props> = ({
           {emailError && (
               <p className="text-red-500 text-xs mt-1">{emailError}</p>
           )}
+          {/*<input
+            type="promo"
+            value={userPromo}
+            onChange={e => setUserPromo(e.target.value)}
+            placeholder="Promo Code"
+            className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5"
+          />*/}
         </div>
       </div>
     </div>

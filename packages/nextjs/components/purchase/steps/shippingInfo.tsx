@@ -17,6 +17,7 @@ export const ShippingInfoStep: React.FC<{ currentStep: number; setCurrentStep: (
   const [userState, setUserState] = useState(shippingInfo?.state || "");
   const [userZip, setUserZip] = useState(shippingInfo?.postalCode || "");
   const [userCountry, setUserCountry] = useState(shippingInfo?.country || "");
+  const [userPromo, setUserPromo] = useState(shippingInfo?.promo || "");
   const [emailError, setEmailError] = useState("");
     
     // Basic email validation regex
@@ -49,9 +50,10 @@ export const ShippingInfoStep: React.FC<{ currentStep: number; setCurrentStep: (
       state: userState,
       postalCode: userZip,
       country: userCountry,
+      promo: userPromo
       // Add region separately if needed
     });
-  }, [userFirstName, userLastName, userAddress, userPhone, userEmail, userCity, userState, userZip, userCountry]);
+  }, [userFirstName, userLastName, userAddress, userPhone, userEmail, userCity, userState, userZip, userCountry, userPromo]);
 
   // Disable "Next" if any required field is empty
   const isDisabled =
@@ -141,6 +143,13 @@ export const ShippingInfoStep: React.FC<{ currentStep: number; setCurrentStep: (
             </option>
           ))}
         </select>
+        <input
+          type="text"
+          placeholder="Promo Code"
+          className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5"
+          value={userZip}
+          onChange={(e) => setUserZip(e.target.value)}
+        />
       </div>
 
       {/* Footer Navigation */}

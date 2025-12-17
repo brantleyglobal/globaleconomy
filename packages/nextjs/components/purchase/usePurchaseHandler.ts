@@ -482,6 +482,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
         phone = "",
         email = "",
         country = "",
+        promo = "",
         postalCode = "",
       } = useCheckoutStore.getState().shippingInfo ?? {};
 
@@ -525,6 +526,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
         country,
         postalCode,
         receipt: receipt?.blockHash || "",
+        promo: promo || "",
         purchaseMadeEvents: [purchaseMade],
       });
     } else {

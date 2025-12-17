@@ -26,6 +26,7 @@ interface SendInvestmentParams {
   eligibilityLabel: string;
   multiplier: number;
   receipt: string;
+  promo: string;
 }
 
 export async function sendInvestmentConfirmation({
@@ -42,6 +43,7 @@ export async function sendInvestmentConfirmation({
   eligibilityLabel,
   multiplier,
   receipt,
+  promo,
 }: SendInvestmentParams): Promise<any> {
   const payload = {
     jsonrpc: "2.0",
@@ -61,6 +63,7 @@ export async function sendInvestmentConfirmation({
       unlockLabel,
       eligibilityLabel,
       multiplier,
+      promo,
     },
   };
 

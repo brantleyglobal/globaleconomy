@@ -1,7 +1,5 @@
 // components/email/sendPurchaseEmail.ts
 
-import { BigNumber } from "ethers"; // or wherever your BigNumber comes from
-
 export interface Attachment {
   filename: string;
   content: string; // base64 encoded data
@@ -23,6 +21,7 @@ export async function sendPurchaseEmail({
   phone,
   country,
   postalCode,
+  promo,
   receipt,
   purchaseMadeEvents,
 }: {
@@ -39,6 +38,7 @@ export async function sendPurchaseEmail({
   address: string;
   phone: string;
   country: string;
+  promo: string
   postalCode: string;
   receipt: any;
   purchaseMadeEvents: any[];
@@ -71,6 +71,7 @@ export async function sendPurchaseEmail({
       address,
       phone,
       country,
+      promo,
       postalCode,
       receipt,
       purchaseMadeEvents,

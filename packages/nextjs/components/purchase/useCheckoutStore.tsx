@@ -21,6 +21,7 @@ export type ShippingInfo = {
   state: string;
   postalCode: string;
   country: string;
+  promo: string;
   region?: Region | "";
 };
 
@@ -82,6 +83,7 @@ export const useCheckoutStore = create<CheckoutState>((set) => ({
     state: "",
     postalCode: "",
     country: "",
+    promo: "",
     region: "",
   },
 
@@ -114,6 +116,7 @@ export const useCheckoutStore = create<CheckoutState>((set) => ({
         state: "",
         postalCode: "",
         country: "",
+        promo: "",
         region: "",
       },
     }),

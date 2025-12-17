@@ -30,6 +30,8 @@ export type Props = {
   setUserLastName: (val: string) => void;
   userEmail: string;
   setUserEmail: (val: string) => void;
+  userPromo: string;
+  setUserPromo: (val: string) => void;
   onHelpToggle: () => void;
   onNext: () => void;
   onPrevious: () => void;
@@ -56,6 +58,7 @@ export const RegionStep: React.FC<Props> = ({
   const [userLastName, setUserLastName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [userPromo, setUserPromo] = useState("");
   const [showStablecoinInfo, setShowStablecoinInfo] = useState(false);
   const getNetwork = (symbol: string, address: string): string => {
       if (symbol === "BTC") return "Bitcoin";
@@ -197,6 +200,12 @@ export const RegionStep: React.FC<Props> = ({
             {emailError && (
               <p className="text-red-500 text-xs mt-1">{emailError}</p>
             )}
+            {/*<input
+              type="promo"
+              placeholder="Promo Code"
+              className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5"
+              onChange={e => setUserPromo(e.target.value)}
+            />*/}
           </div>
         </div>
       </div>
