@@ -65,7 +65,7 @@ const variationGroupsMap: Record<"eseries" | "xseries", Record<string, AssetVari
     ],
     etie: [
       { label: "Stand Alone", apriceInGBDo: BigInt(0) },
-      { label: "Grid Tie", apriceInGBDo: BigInt(1_000_000_000) },
+      { label: "Grid Tie", apriceInGBDo: BigInt(2_500_000_000) },
     ],
   },
   xseries: {
