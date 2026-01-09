@@ -93,4 +93,4 @@
 <p>We reserve the right, at our sole discretion, to update, change or replace any part of these Terms of Service by posting updates and changes to our website. It is your responsibility to check our website periodically for changes. Your continued use of or access to our website or the Service following the posting of any changes to these Terms of Service constitutes acceptance of those changes.</p>
 
 <h2 style="font-size:18px; font-weight:lighter; margin-top:32px; margin-bottom:16px;">SECTION 20 – CONTACT INFORMATION</h2>
-<p>Questions about the Terms of Service should be sent to us at <a href="mailto:info@brantley-global.com">info@brantley-global.com</a>.</p>
+<p>Questions about the Terms of Service should be sent to us at <a href="mailto:global@brantley-global.com">global@brantley-global.com</a>.</p>

@@ -103,7 +103,7 @@ export const SystemConfigurationStep: React.FC<Props> = ({
           <div className="bg-black/40 border border-info-400 rounded-md mt-4 p-1 text-center">
             <p className="text-sm text-info-300">
               For <span className="font-semibold text-info">volume or bulk orders</span>, 
-              please <a href="mailto:sales@brantley-global.com" className="underline hover:text-secondary">
+              please <a href="mailto:global@brantley-global.com" className="underline hover:text-secondary">
                 contact directly
               </a>.
             </p>
