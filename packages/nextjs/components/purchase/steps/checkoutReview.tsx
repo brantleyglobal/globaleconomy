@@ -8,7 +8,7 @@ import { getExchangeRates, StablecoinRate } from "~~/lib/exchangeRates";
 
 type Props = {
   checkoutAsset: { id: number; name: string; variant: string };
-  paymentMethod: "native" | "stable" | "cash";
+  paymentMethod: "native" | "stable" | "cash" | "paypal" | "applepay" | "klarna" | "affirm" | "afterpay";
   tokenSymbol: string;
   estimatedTotal: string;
   quantity: number;

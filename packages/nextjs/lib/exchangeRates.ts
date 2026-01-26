@@ -110,7 +110,7 @@ const SMOOTHING_THRESHOLD = 0.02;
 const RATE_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 const rpcUrls: Record<string, string> = {
-  ethereum: "https://ethereum-rpc.publicnode.com",
+  ethereum: "https://1rpc.io/eth",
   arbitrum: "https://arb1.arbitrum.io/rpc",
   optimism: "https://mainnet.optimism.io",
   polygon: "https://polygon-rpc.com",

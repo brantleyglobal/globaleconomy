@@ -25,7 +25,8 @@ export type ShippingInfo = {
   region?: Region | "";
 };
 
-type PaymentMethod = "native" | "stable" | "cash";
+type PaymentMethod = "native" | "stable" | "cash" | "paypal" | "applepay" | "klarna" | "affirm" | "afterpay";
+type cardType = "debit" | "credit" | null;
 
 export type CheckoutState = {
   asset: CheckoutAsset | null;
@@ -35,6 +36,7 @@ export type CheckoutState = {
   estimatedEscrow: string;
   buyer: string;
   paymentMethod: PaymentMethod;
+  cardType: cardType;
   voltage: string | null;
   frequency?: "50Hz" | "60Hz" | null;
   phase?: "Single-Phase" | "Split-Phase" | "3-Phase" | null;
@@ -63,6 +65,7 @@ export const useCheckoutStore = create<CheckoutState>((set) => ({
   estimatedEscrow: "0.00",
   buyer: "",
   paymentMethod: "native",
+  cardType: null,
   voltage: null,
   frequency: null,
   phase: null,
@@ -98,6 +101,7 @@ export const useCheckoutStore = create<CheckoutState>((set) => ({
       estimatedEscrow: "0.00",
       buyer: "",
       paymentMethod: "native",
+      cardType: null,
       voltage: null,
       frequency: null,
       phase: null,

@@ -13,7 +13,7 @@ export const supportedChains: Chain[] = [
     },
     rpcUrls: {
       default: {
-        http: ["https://ethereum-rpc.publicnode.com"],
+        http: ["https://1rpc.io/eth"],
       },
     },
     blockExplorers: {

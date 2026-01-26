@@ -14,6 +14,9 @@ export interface Transaction {
   asset?: string;
   quantity?: number;
   amount?: number;
+  affiliate?: string;
+  commission?: number;
+  payout?: string;
 
   // GBDo
   stablein?: number;

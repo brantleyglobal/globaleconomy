@@ -11,10 +11,11 @@ import { XchangeRefundTable } from "./tabs/xchangeRefundTable";
 import { VaultTable } from "./tabs/vaultTable";
 import { TransferTable } from "./tabs/transfersTable"
 import { DividendTable } from "./tabs/dividendTable"
+import { PartnerTable } from "./tabs/partnerTable"
 
-const tabs = ["PRODUCT PURCHASES", "GBDo PURCHASES", "XCHANGE CONTRACTS",  "XCHANGE DEPOSITS", "XCHANGE REFUNDS", "TRANSFERS", "VAULT DEPOSITS", "DIVIDEND PAYOUTS"];
+const tabs = ["PRODUCT PURCHASES", "GBDo PURCHASES", "XCHANGE CONTRACTS",  "XCHANGE DEPOSITS", "XCHANGE REFUNDS", "TRANSFERS", "VAULT DEPOSITS", "DIVIDEND PAYOUTS", "PARTNERS"];
 
-type TabKey = "PRODUCT PURCHASES" | "GBDo PURCHASES" | "XCHANGE CONTRACTS" | "XCHANGE DEPOSITS" | "XCHANGE REFUNDS" | "TRANSFERS" | "VAULT DEPOSITS" | "DIVIDEND PAYOUTS";
+type TabKey = "PRODUCT PURCHASES" | "GBDo PURCHASES" | "XCHANGE CONTRACTS" | "XCHANGE DEPOSITS" | "XCHANGE REFUNDS" | "TRANSFERS" | "VAULT DEPOSITS" | "DIVIDEND PAYOUTS" | "PARTNERS";
 
 export const TransactionTabs = () => {
   const [userAddress, setUserAddress] = useState<string | null>(null);
@@ -32,6 +33,7 @@ export const TransactionTabs = () => {
     "TRANSFERS": [],
     "VAULT DEPOSITS": [],
     "DIVIDEND PAYOUTS": [],
+    "PARTNERS": [],
   });
 
   const paginatedData = data[activeTab].slice(
@@ -90,6 +92,7 @@ export const TransactionTabs = () => {
         "TRANSFERS": "getTransfer",
         "VAULT DEPOSITS": "getVault",
         "DIVIDEND PAYOUTS": "getRedemption",
+        "PARTNERS": "getPurchase"
       } as const;
 
       // Optional subtype mapping if the backend expects it for getSwap
@@ -97,6 +100,7 @@ export const TransactionTabs = () => {
         "XCHANGE CONTRACTS": "contract",
         "XCHANGE DEPOSITS": "deposit",
         "XCHANGE REFUNDS": "refund",
+        "PARTNERS": "affiliates"
       };
 
       const responseKeyMap: Record<TabKey, string> = {
@@ -108,6 +112,7 @@ export const TransactionTabs = () => {
         "TRANSFERS": "transfers",
         "VAULT DEPOSITS": "vault",
         "DIVIDEND PAYOUTS": "redemptions",
+        "PARTNERS": "purchases"
       };
 
       const method = endpointMap[tab];
@@ -206,6 +211,7 @@ export const TransactionTabs = () => {
       case "TRANSFERS": return <TransferTable transactions={paginatedData} />;
       case "VAULT DEPOSITS": return <VaultTable transactions={paginatedData} />;
       case "DIVIDEND PAYOUTS": return <DividendTable transactions={paginatedData} />;
+      case "PARTNERS": return <PartnerTable transactions={paginatedData} />;
       default: return null;
     }
   };

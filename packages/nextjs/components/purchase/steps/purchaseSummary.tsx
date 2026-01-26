@@ -12,7 +12,7 @@ type StripeConfirmation = {
 
 type Props = {
   transactionStatus: "accepted" | "confirmed" | "failed" | "pending" | "queued" | "idle" | null | undefined;
-  paymentMethod: "native" | "stable" | "cash";
+  paymentMethod: "native" | "stable" | "cash" | "paypal" | "applepay" | "klarna" | "affirm" | "afterpay";
   tokenSymbol: string;
   stripeConfirmation?: StripeConfirmation;
   txhash?: string;

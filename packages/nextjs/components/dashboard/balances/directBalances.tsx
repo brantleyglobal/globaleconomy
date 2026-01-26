@@ -90,7 +90,7 @@ const chainClients: Record<string, PublicClient> = {
   }),
   ethereum: createPublicClient({
     chain: mainnet,
-    transport: http("https://ethereum-rpc.publicnode.com"),
+    transport: http("https://1rpc.io/eth"),
   }),
   polygon: createPublicClient({
     chain: polygon,

@@ -95,6 +95,9 @@ export async function handleStripeReturn(): Promise<{
         quantity,
         paymentmethod: paymentMethod,
         region: "",
+        affiliate: "",
+        commission: parseFloat(estimatedTotal) || null,
+        payout: "",
         status: "accepted",
         chainstatus: false,
         queuedat: new Date().toISOString(),
@@ -432,12 +435,44 @@ async function handleCryptoPurchase(params: InitiateParams) {
       provider // pass provider here
     );
 
+    const {
+      firstname = "",
+      lastname = "",
+      address = "",
+      phone = "",
+      email = "",
+      country = "",
+      promo = "",
+      postalCode = "",
+    } = useCheckoutStore.getState().shippingInfo ?? {};
+    
+    /* Affiliate Logic */
+    let affiliateAddress;
+    let commissionAmount;
+    let payout = "";
+    if (promo != ""){
+      if (promo === "something") { 
+        affiliateAddress = "kbjdfsiib"; //affiliates Wallet Address
+      } else if ( promo === "somethingelse") {
+        affiliateAddress = "hhvdfihihbbd"; //another affiliate Walllet Address
+      }
+
+      if (checkoutAsset.variant === "eseries"){
+        commissionAmount = productAmount * .03;
+      } else if (checkoutAsset.variant === "xseries"){
+        commissionAmount = productAmount * .01;
+      }
+
+      payout = "pending";
+    }
+
     // Step 5: Log purchase to backend
     const purchasePayload = {
       contractaddress: deployments.AssetPurchase.toString(),
       txhash: txHash || "",
       receipthash: receipt?.blockHash || "",
       useraddress: userAddress,
+      affiliate: affiliateAddress,
       asset: checkoutAsset.id,
       amount: totalTokenAmount,
       exchangerate: tokenRate,
@@ -445,6 +480,8 @@ async function handleCryptoPurchase(params: InitiateParams) {
       configs: serializedConfig,
       paymentmethod: tokenSymbol,
       region, 
+      commission: commissionAmount,
+      payout,
       status: "accepted",
       chainstatus: true,
       queuedat: new Date().toISOString(),

@@ -23,7 +23,8 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
   } = useCheckoutStore();
 
   const { address, isConnected } = useAccount();
-  const isDisabled = paymentMethod !== "cash" && !isConnected;
+  const walletRequiredMethods = ["native", "stable"];
+  const isDisabled = walletRequiredMethods.includes(paymentMethod) && !isConnected;
   const [showWalletNotice, setShowWalletNotice] = useState(false);
   const [selectedTokenSymbol, setSelectedTokenSymbol] = useState<string>("");
   const [showStablecoinInfo, setShowStablecoinInfo] = useState(false);
@@ -73,7 +74,7 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
             >
               <div className="w-full">
                 <div className="w-full flex justify-between items-center mt-2">
-                <h4 className="text-md font-light mt-2 text-white">STABLE & NON-STABLECOIN</h4>
+                <h4 className="text-md font-light mt-2 text-white">STABLECOIN</h4>
                 </div>
                 <p className="text-xs text-justify text-white mt-">
                   Includes routing fee of 0.25%. Non-Stablecoin purchases are not based live conversion rates in an effort to protect products on this platform from volatility. Users are encouraged to convert to Stablecoin for investment and energy related product purchases on this platform.
@@ -127,13 +128,122 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
               }`}
             >
               <div>
-                <h4 className="text-md font-light mt-2 text-white">STRIPE CASH</h4>
+                <h4 className="text-md font-light mt-2 text-white">STRIPE CREDIT/DEBIT</h4>
                 <p className="text-xs text-white mt-6">
                   No wallet required. Processing fee: 2.9% + $0.30 USD.
                 </p>
               </div>
             </button>
           </div>
+
+          {/* Traditional Payments (Adyen) */}
+          {/*<div className="max-h-[300px] sm:max-h-[300px] max-h-[200px] mt-4 overflow-y-auto rounded-lg border border-secondary/30 transition-all">*/}
+
+            {/* Credit / Debit Card (Template with Icon*/}
+            {/*<button
+              onClick={() => setField("paymentMethod", "cash")}
+              className={`w-full block rounded-lg p-4 bg-black/40 hover:bg-secondary/10 transition-colors text-left ${
+                paymentMethod === "cash" ? "bg-secondary/20" : ""
+              }`}
+            >
+              <h4 className="flex items-center gap-2 text-md mt-2 font-light text-white">*/}
+                {/*<img src="/icons/card.svg" className="w-5 h-5" />*/}
+              {/*}  Credit / Debit Card
+              </h4>
+              <p className="text-xs text-white mt-2">Visa, Mastercard, Amex. Fees: Debit 0.8% + $0.13 • Credit 2% + $0.13 • Commercial 2.5% + $0.13</p>
+            </button>          
+          </div>*/}
+
+          {/* Apple Pay */}
+           {/*<div className={`max-h-[300px] sm:max-h-[300px] max-h-[200px] mt-4 overflow-y-auto rounded-lg border border-secondary/30 transition-all`}></div>
+            <button
+              onClick={() => setField("paymentMethod", "applepay")}
+              className={`w-full block rounded-lg p-4 bg-black/40 hover:bg-secondary/10 transition-colors text-left ${
+                paymentMethod === "applepay" ? "bg-secondary/20" : ""
+              }`}
+            >
+              <h4 className="flex items-center gap-2 text-md mt-2 font-light text-white">
+                Apple Pay
+              </h4>
+              <p className="text-xs text-white mt-2">Fast checkout on Apple devices. Fees: Debit 0.8% + $0.13 • Credit 2% + $0.13 • Commercial 2.5% + $0.13</p>
+            </button>
+          </div>*/}
+
+          {/* Google Pay */}
+          {/*<div className={`max-h-[300px] sm:max-h-[300px] max-h-[200px] mt-4 overflow-y-auto rounded-lg border border-secondary/30 transition-all`}>
+            <button
+              onClick={() => setField("paymentMethod", "googlepay")}
+              className={`w-full block rounded-lg p-4 bg-black/40 hover:bg-secondary/10 transition-colors text-left ${
+                paymentMethod === "googlepay" ? "bg-secondary/20" : ""
+              }`}
+            >
+              <h4 className="flex items-center gap-2 text-md mt-2 font-light text-white">
+                <img src="/icons/googlepay.svg" className="w-5 h-5" />
+                Google Pay
+              </h4>
+              <p className="text-xs text-white mt-2">Fast checkout on Android devices.</p>
+            </button>
+          </div>*/}
+
+          {/* PayPal */}
+          {/*<div className={`max-h-[300px] sm:max-h-[300px] max-h-[200px] mt-4 overflow-y-auto rounded-lg border border-secondary/30 transition-all`}>
+            <button
+              onClick={() => setField("paymentMethod", "paypal")}
+              className={`w-full block rounded-lg p-4 bg-black/40 hover:bg-secondary/10 transition-colors text-left ${
+                paymentMethod === "paypal" ? "bg-secondary/20" : ""
+              }`}
+            >
+              <h4 className="flex items-center gap-2 text-md mt-2 font-light text-white">
+                PayPal
+              </h4>
+              <p className="text-xs text-white mt-2">Pay securely with your PayPal account. Fee: 3.95% + $0.13 USD</p>
+            </button>
+          </div>*/}
+
+          {/* Klarna */}
+          {/*<div className={`max-h-[300px] sm:max-h-[300px] max-h-[200px] mt-4 overflow-y-auto rounded-lg border border-secondary/30 transition-all`}>
+            <button
+              onClick={() => setField("paymentMethod", "klarna")}
+              className={`w-full block rounded-lg p-4 bg-black/40 hover:bg-secondary/10 transition-colors text-left ${
+                paymentMethod === "klarna" ? "bg-secondary/20" : ""
+              }`}
+            >
+              <h4 className="flex items-center gap-2 text-md mt-2 font-light text-white">
+                Klarna
+              </h4>
+              <p className="text-xs text-white mt-2">Pay in installments. Fee: 6% + $0.13</p>
+            </button>
+          </div>*/}
+
+          {/* Afterpay */}
+          {/*<div className={`max-h-[300px] sm:max-h-[300px] max-h-[200px] mt-4 overflow-y-auto rounded-lg border border-secondary/30 transition-all`}>
+            <button
+              onClick={() => setField("paymentMethod", "afterpay")}
+              className={`w-full block rounded-lg p-4 bg-black/40 hover:bg-secondary/10 transition-colors text-left ${
+                paymentMethod === "afterpay" ? "bg-secondary/20" : ""
+              }`}
+            >
+              <h4 className="flex items-center gap-2 text-md mt-2 font-light text-white">
+                Afterpay
+              </h4>
+              <p className="text-xs text-white mt-2">Pay in 4 interest-free payments or monthly up to 12 months. Fee: 6% + $0.13</p>
+            </button>
+          </div>*/}
+
+          {/* Affirm */}
+          {/*<div className={`max-h-[300px] sm:max-h-[300px] max-h-[200px] mt-4 overflow-y-auto rounded-lg border border-secondary/30 transition-all`}>
+            <button
+              onClick={() => setField("paymentMethod", "affirm")}
+              className={`w-full block rounded-lg p-4 bg-black/40 hover:bg-secondary/10 transition-colors text-left ${
+                paymentMethod === "affirm" ? "bg-secondary/20" : ""
+              }`}
+            >
+              <h4 className="flex items-center gap-2 text-md mt-2 font-light text-white">
+                Affirm
+              </h4>
+              <p className="text-xs text-white mt-2">Flexible financing options. Fee: 6% + $0.13</p>
+            </button>*/}
+          {/*</div>*/}
         </div>
 
         {/* Sticky-style footer matching modal layout */}

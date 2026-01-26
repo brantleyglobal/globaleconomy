@@ -175,6 +175,7 @@ const CheckoutModalBase = (
     estimatedTotal,
     estimatedEscrow,
     paymentMethod,
+    cardType,
     stripeSessionId,
     stripeConfirmation, 
     txhash,
@@ -215,7 +216,8 @@ const CheckoutModalBase = (
 
   async function calculateTotalPrice(
     variations: Record<string, AssetVariation>,
-    method: "cash" | "native" | "stable",
+    method: "cash" | "native" | "stable" | "paypal" | "applepay" | "klarna" | "affirm" | "afterpay",
+    cardType: "debit" | "credit" | null,
     tokenSymbol: string,
     exchangeData: {
       rates: StablecoinRate[];
@@ -238,14 +240,44 @@ const CheckoutModalBase = (
 
     // Apply fee based on method
     if (method === "stable" || method === "native") {
-      const fee = subtotalGBDo * 0;
+      const fee = 0;
       subtotalGBDo += fee;
-      //console.log("[Fee] Stablecoin fee applied:", fee);
+
+    } else if (method === "paypal") {
+      const fee = subtotalGBDo * 0.0395 + 0.13;
+      subtotalGBDo += fee;
+
     } else if (method === "cash") {
+      // You MUST detect debit vs credit BEFORE this point
+      /*if (cardType === "debit") {
+        const fee = subtotalGBDo * 0.008 + 0.13;   // ~0.8% + 0.13
+        subtotalGBDo += fee;
+      } else if (cardType === "credit") {
+        const fee = subtotalGBDo * 0.02 + 0.13;    // ~2.0% + 0.13
+        subtotalGBDo += fee;
+      } else {
+        // fallback for commercial/premium cards
+        const fee = subtotalGBDo * 0.025 + 0.13;
+        subtotalGBDo += fee;
+      }*/
       const fee = subtotalGBDo * 0.029 + 0.30;
       subtotalGBDo += fee;
-      //console.log("[Fee] Cash fee applied:", fee);
+
+    } else if (method === "applepay") {
+      // Apple Pay uses the underlying card type
+      if (cardType === "debit") {
+        const fee = subtotalGBDo * 0.008 + 0.13;
+        subtotalGBDo += fee;
+      } else {
+        const fee = subtotalGBDo * 0.02 + 0.13;
+        subtotalGBDo += fee;
+      }
+
+    } else if (method === "affirm" || method === "klarna" || method === "afterpay") {
+      const fee = subtotalGBDo * 0.06 + 0.13;  // BNPL estimated
+      subtotalGBDo += fee;
     }
+
 
     //console.log("[Pricing] Subtotal after Fees:", subtotalGBDo);
 
@@ -287,6 +319,7 @@ const CheckoutModalBase = (
     const total = await calculateTotalPrice(
       selectedVariations,
       paymentMethod,
+      cardType,
       tokenSymbol,
       exchangeData,
       basePriceInGBDo
@@ -331,6 +364,7 @@ const CheckoutModalBase = (
       const total = await calculateTotalPrice(
         selectedVariations,
         paymentMethod,
+        cardType,
         tokenSymbol,
         exchangeData,
         basePriceInGBDo
