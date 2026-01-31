@@ -70,7 +70,7 @@ const variationGroupsMap: Record<"eseries" | "xseries", Record<string, AssetVari
   },
   xseries: {
     xpanel: [
-      { label: "360v 3 Phase @60Hz", apriceInGBDo: BigInt(0) },
+      { label: "480v 3 Phase @60Hz", apriceInGBDo: BigInt(0) },
       { label: "Customize", apriceInGBDo: BigInt(5_000_000_000) },
     ],
     monitoring: [
