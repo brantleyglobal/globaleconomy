@@ -65,7 +65,9 @@ const variationGroupsMap: Record<"eseries" | "xseries", Record<string, AssetVari
     ],
     etie: [
       { label: "Stand Alone", apriceInGBDo: BigInt(0) },
-      { label: "Grid Tie", apriceInGBDo: BigInt(2_500_000_000) },
+      { label: "Grid Tie (225amp Rating)", apriceInGBDo: BigInt(3_500_000_000) },
+      { label: "Grid Tie (400amp Rating)", apriceInGBDo: BigInt(5_000_000_000) },
+      { label: "Grid Tie (630amp Rating)", apriceInGBDo: BigInt(10_000_000_000) },
     ],
   },
   xseries: {
@@ -79,7 +81,9 @@ const variationGroupsMap: Record<"eseries" | "xseries", Record<string, AssetVari
     ],
     xtie: [
       { label: "Stand Alone", apriceInGBDo: BigInt(0) },
-      { label: "Grid Tie", apriceInGBDo: BigInt(5_000_000_000) },
+      { label: "Grid Tie (400amp Rating)", apriceInGBDo: BigInt(5_000_000_000) },
+      { label: "Grid Tie (1260amp Rating)", apriceInGBDo: BigInt(20_000_000_000) },
+      { label: "Grid Tie (2100amp Rating)", apriceInGBDo: BigInt(28_000_000_000) },
     ],
   },
 };
