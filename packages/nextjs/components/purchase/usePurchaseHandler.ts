@@ -16,6 +16,7 @@ import { getExchangeRates } from "~~/lib/exchangeRates";
 import { Address } from "viem";
 import { useSelectedTokenBalance } from "~~/lib/chainHelper";
 import { sendTransferOnTargetChain } from "~~/utils/targetChain";
+import { parse } from "next/dist/build/swc/generated-native";
 
 type Hex = `0x${string}`;
 
@@ -176,7 +177,49 @@ async function initiateStripeCheckout(params: InitiateParams) {
   const category = determineCategory(params.quantity, params.checkoutAsset.variant);
   const shippingRate = getShippingRate(region, category);
 
-  const productAmountCents = Math.round(parseFloat(params.estimatedTotal) * 100);
+  const {
+    firstname = "",
+    lastname = "",
+    address = "",
+    phone = "",
+    email = "",
+    country = "",
+    promo = "",
+    postalCode = "",
+  } = useCheckoutStore.getState().shippingInfo ?? {};
+
+  let productAmountCents = Math.round(parseFloat(params.estimatedTotal) * 100);
+  if (promo) {
+    productAmountCents = productAmountCents - 100; // apply discount
+  }
+
+  let productAmount = parseFloat(params.estimatedTotal);
+  if (promo) {
+    productAmount = productAmount - 100; // apply discount
+  }
+
+  /* Affiliate Logic */
+  let affiliateAddress;
+  let commissionAmount;
+  let payout = "";
+  if (promo != ""){
+    if (promo === "something") { 
+      affiliateAddress = "kbjdfsiib"; //affiliates Wallet Address
+    } else if ( promo === "somethingelse") {
+      affiliateAddress = "hhvdfihihbbd"; //another affiliate Walllet Address
+    }
+
+    if (params.checkoutAsset.variant === "eseries"){
+      commissionAmount = productAmount * .03;
+    } else if (params.checkoutAsset.variant === "xseries"){
+      commissionAmount = productAmount * .01;
+    }
+
+    payout = "pending";
+  }
+
+  // Stripe requires cents (integer)
+  const amountInCents = Math.round(productAmount * 100);
   const shippingAmountCents = shippingRate ? Math.round(shippingRate.Rate) : 0;
   const totalAmountCents = productAmountCents + shippingAmountCents;
   //console.log("shipping", shippingAmountCents);
@@ -184,6 +227,31 @@ async function initiateStripeCheckout(params: InitiateParams) {
   // Save params for post-checkout return
   localStorage.setItem("checkoutParams", JSON.stringify(sanitize(params)));
   localStorage.setItem("returnFromStripe", "true");
+
+  const parsedConfig = JSON.parse(params.configuration);
+  const selectedVariations = parsedConfig?.system?.selectedVariations ?? {};
+  const customizeKey = parsedConfig?.system?.customizeGroupKey;
+  const output = parsedConfig?.output ?? {};
+
+  let formattedConfig: string;
+
+  if (customizeKey && selectedVariations[customizeKey]?.label === "Customize") {
+    const voltage = output.selectedVoltage ? `${output.selectedVoltage}V` : null;
+    const frequency = output.selectedFrequency;
+    const phase = output.selectedPhase;
+
+    formattedConfig = [voltage, frequency, phase]
+      .filter(Boolean)
+      .map(String) // ensure all values are strings
+      .join(" / ");
+  } else {
+    formattedConfig = Object.values(selectedVariations)
+      .map(v => (v as { label: string }).label)
+      .filter(Boolean)
+      .join(" / ");
+  }
+  
+  const serializedConfig = JSON.stringify(formattedConfig);
 
   // Prepare sanitized payload
   const payload = sanitize({
@@ -196,6 +264,46 @@ async function initiateStripeCheckout(params: InitiateParams) {
       quantity: params.quantity,
       amount: totalAmountCents,
     },
+  });
+
+  // Step 5: Log purchase to backend
+  const purchasePayload = {
+    contractaddress: deployments.AssetPurchase.toString(),
+    txhash: "",
+    receipthash: "",
+    useraddress: "",
+    affiliate: affiliateAddress,
+    asset: params.checkoutAsset.id,
+    amount: totalAmountCents,
+    exchangerate: "",
+    quantity: params.quantity,
+    configs: serializedConfig,
+    paymentmethod: "stripe",
+    region, 
+    commission: commissionAmount,
+    payout,
+    status: "pending",
+    chainstatus: true,
+    queuedat: new Date().toISOString(),
+    processedat: new Date().toISOString(),
+    timestamp: new Date().toISOString(),
+    priority: 0,
+    retrycount: 0,
+    notes: "Purchase Submitted",
+  };
+
+  const res = await fetch("https://gateway.brantley-global.com", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: "purchase",
+      method: "recordPurchase",
+      params: purchasePayload,
+    }),
   });
 
   // Call Cloudflare Worker
@@ -301,8 +409,22 @@ async function handleCryptoPurchase(params: InitiateParams) {
     // Shipping cost in fiat dollars (e.g., USD)
     const shippingCost = shippingRate ? (shippingRate.Rate * quantity) : 0;
 
+    const {
+      firstname = "",
+      lastname = "",
+      address = "",
+      phone = "",
+      email = "",
+      country = "",
+      promo = "",
+      postalCode = "",
+    } = useCheckoutStore.getState().shippingInfo ?? {};
+
     // Convert estimated total string to number (fiat dollars)
-    const productAmount = parseFloat(estimatedTotal);
+    let productAmount = parseFloat(estimatedTotal);
+    if (promo){
+      productAmount = parseFloat(estimatedTotal) - 100;
+    }
 
     // Convert total cost in fiat to token units (scaled BigNumber)
     // tokenRate is token per USD, so multiply total USD by tokenRate to get token amount
@@ -434,17 +556,6 @@ async function handleCryptoPurchase(params: InitiateParams) {
       btcWallet,
       provider // pass provider here
     );
-
-    const {
-      firstname = "",
-      lastname = "",
-      address = "",
-      phone = "",
-      email = "",
-      country = "",
-      promo = "",
-      postalCode = "",
-    } = useCheckoutStore.getState().shippingInfo ?? {};
     
     /* Affiliate Logic */
     let affiliateAddress;
