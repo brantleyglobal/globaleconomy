@@ -51,7 +51,7 @@ export default function WhitepaperLayout() {
   const CurrentTab = tabData.find(tab => tab.id === activeTab)?.component;
 
   return (
-    <div className="relative bg-black text-white min-h-screen">
+    <div className="relative w-full bg-black text-white min-h-screen">
       {/* Mobile Navigation Drawer */}
       <button onClick={() => setMobileOpen(true)} className="md:hidden p-4">
         <Bars3Icon className="w-6 h-6 text-white" />

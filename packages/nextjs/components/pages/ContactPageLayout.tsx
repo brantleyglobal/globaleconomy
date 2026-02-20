@@ -64,7 +64,7 @@ export default function ContactLayout() {
   }, []);
 
   return (
-    <main className="bg-black text-white min-h-screen px-6 py-14 font-sans">
+    <main className="bg-black w-full text-white min-h-screen px-6 py-14 font-sans">
       {/* Title Section */}
       <section className="text-center mb-14">
         <h1 className="text-2xl sm:text-4xl font-light tracking-wide mb-4 text-primary">YOUR SUPPORT</h1>

@@ -150,7 +150,7 @@ export const CheckoutReviewStep: React.FC<Props> = ({
             PAYMENT
           </p>
           <p className="text-white/80 tracking-wide text-xs font-semibold">
-            Method: <span className="font-semibold text-white">{tokenSymbol}</span>
+            Method: <span className="font-semibold text-white">{paymentMethod === "cash" ? "USD" : tokenSymbol}</span>
           </p>
           {paymentMethod === "stable" && tokenSymbol !== "GBDo" && (
             <p>
@@ -168,7 +168,7 @@ export const CheckoutReviewStep: React.FC<Props> = ({
           <p className="text-white/80 tracking-wide text-xs font-semibold">
             Product Total:{" "}
             <span className="bg-ghost text-white px-2 py-1 rounded-full font-semibold">
-              {Number(estimatedTotal).toFixed(2)} {paymentMethod === "cash" ? "GBDo" : tokenSymbol}
+              {Number(estimatedTotal).toFixed(2)} {paymentMethod === "cash" ? "USD" : tokenSymbol}
             </span>
           </p>
           <p className="text-white/80 tracking-wide text-xs font-semibold">

@@ -133,7 +133,7 @@ export default function VerificationLayout() {
 
 
   return (
-    <div className="relative bg-black text-white min-h-screen">
+    <div className="relative bg-black w-full text-white min-h-screen">
       {/* Mobile Navigation Drawer */}
       <button onClick={() => setMobileOpen(true)} className="md:hidden p-4">
         <Bars3Icon className="w-6 h-6 text-white" />

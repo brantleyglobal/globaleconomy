@@ -202,7 +202,7 @@ export default function DashboardPage() {
   }, [address]);
   
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen w-full bg-black text-white">
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-2 p-4">
         
         {/* Row 1: Transactions + Balances */}

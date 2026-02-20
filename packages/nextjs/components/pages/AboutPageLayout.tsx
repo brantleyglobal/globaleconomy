@@ -5,7 +5,7 @@ import Link from "next/link";
 
 export default function AboutLayout() {
   return (
-    <main className="bg-black text-white font-sans">
+    <main className="bg-black w-full text-white font-sans">
       {/* Section 1: Hero */}
       <section className="h-[350px] flex flex-col items-center justify-center text-center relative">
         <h1 className="text-2xl sm:text-4xl font-light tracking-wide mb-4 text-primary">

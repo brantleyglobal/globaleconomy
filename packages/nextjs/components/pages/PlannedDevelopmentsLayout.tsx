@@ -75,7 +75,7 @@ function ThumbnailGallery({ project }: { project: any }) {
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
-    <div className="bg-white/5 p-6 rounded-lg shadow-md flex flex-col gap-4">
+    <div className="bg-white/5 w-full p-6 rounded-lg shadow-md flex flex-col gap-4">
       {/* Main Image */}
       <div
         className="relative aspect-video rounded-md overflow-hidden cursor-pointer"

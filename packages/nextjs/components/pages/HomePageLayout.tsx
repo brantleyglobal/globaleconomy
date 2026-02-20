@@ -146,7 +146,7 @@ export default function HomePageLayout() {
   return (
     <>
       <section
-        className="relative bg-black px-6 py-1 md:px-16 bg-scroll md:bg-fixed bg-center bg-cover bg-no-repeat"
+        className="relative bg-black bg-cover px-6 py-1 md:px-16 bg-scroll md:bg-fixed w-full bg-center bg-cover bg-no-repeat"
         style={{
           backgroundImage: "url('/emblemA.png')",
         }}
@@ -162,7 +162,7 @@ export default function HomePageLayout() {
 
       <Footer />
 
-      <div className="bg-black px-4 py-2 sm:px-6 md:px-8 lg:px-12">
+      <div className="bg-black bg-cover min-h-[100dvh] mx-auto px-4 py-2 sm:px-6 md:px-8 lg:px-12 w-full">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Investor Portal */}
           <div className="bg-white/3 to-black rounded-xl shadow-lg px-6 mt-4 space-y-4">

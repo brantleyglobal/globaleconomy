@@ -8,7 +8,7 @@ export default function TheCurrent() {
   const [showRF, setShowRF] = useState(false);
 
   return (
-    <main className="bg-black/20 text-white font-sans">
+    <main className="bg-black/20 w-full text-white font-sans">
       {/* Hero Section */}
       <section className="h-screen sm:h-[90vh] flex flex-col items-center justify-center text-center relative overflow-hidden px-4">
         <video
