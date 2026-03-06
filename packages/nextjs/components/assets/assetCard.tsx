@@ -57,33 +57,33 @@ const variationGroupsMap: Record<"eseries" | "xseries", Record<string, AssetVari
   eseries: {
     epanel: [
       { label: "120v Split Phase @60Hz", apriceInGBDo: BigInt(0) },
-      { label: "Customize", apriceInGBDo: BigInt(1_000_000_000) },
+      { label: "Customize", apriceInGBDo: BigInt(1_100_000_000) },
     ],
     monitoring: [
       { label: "No Monitoring", apriceInGBDo: BigInt(0) },
-      { label: "Monitoring", apriceInGBDo: BigInt(2_000_000_000) },
+      { label: "Monitoring", apriceInGBDo: BigInt(2_200_000_000) },
     ],
     etie: [
       { label: "Stand Alone", apriceInGBDo: BigInt(0) },
-      { label: "Grid Tie (225amp Rating)", apriceInGBDo: BigInt(3_500_000_000) },
-      { label: "Grid Tie (400amp Rating)", apriceInGBDo: BigInt(5_000_000_000) },
-      { label: "Grid Tie (630amp Rating)", apriceInGBDo: BigInt(10_000_000_000) },
+      { label: "Grid Tie (225amp Rating)", apriceInGBDo: BigInt(3_850_000_000) },
+      { label: "Grid Tie (400amp Rating)", apriceInGBDo: BigInt(5_500_000_000) },
+      { label: "Grid Tie (630amp Rating)", apriceInGBDo: BigInt(11_000_000_000) },
     ],
   },
   xseries: {
     xpanel: [
       { label: "480v 3 Phase @60Hz", apriceInGBDo: BigInt(0) },
-      { label: "Customize", apriceInGBDo: BigInt(5_000_000_000) },
+      { label: "Customize", apriceInGBDo: BigInt(5_500_000_000) },
     ],
     monitoring: [
       { label: "No Monitoring", apriceInGBDo: BigInt(0) },
-      { label: "Monitoring", apriceInGBDo: BigInt(2_000_000_000) },
+      { label: "Monitoring", apriceInGBDo: BigInt(2_200_000_000) },
     ],
     xtie: [
       { label: "Stand Alone", apriceInGBDo: BigInt(0) },
-      { label: "Grid Tie (400amp Rating)", apriceInGBDo: BigInt(5_000_000_000) },
-      { label: "Grid Tie (1260amp Rating)", apriceInGBDo: BigInt(20_000_000_000) },
-      { label: "Grid Tie (2100amp Rating)", apriceInGBDo: BigInt(28_000_000_000) },
+      { label: "Grid Tie (400amp Rating)", apriceInGBDo: BigInt(5_500_000_000) },
+      { label: "Grid Tie (1260amp Rating)", apriceInGBDo: BigInt(22_000_000_000) },
+      { label: "Grid Tie (2100amp Rating)", apriceInGBDo: BigInt(30_800_000_000) },
     ],
   },
 };

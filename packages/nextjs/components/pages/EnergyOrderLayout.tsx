@@ -114,7 +114,7 @@ export default function TheCurrent() {
         isOpen={showE}
         onClose={() => setShowE(false)}
         title="LEGION E SERIES CLEAN ENERGY GENERATOR"
-        description={`The LEGION E Series is a compact clean energy generator engineered for residential and small-scale applications, delivering 20–75kW 
+        description={`The LEGION E Series is a compact clean energy generator engineered for residential and small-scale applications, delivering 20–75KVA 
           of continuous power. Designed for off-grid living, remote installations, and grid-tied support, it offers a versatile solution for modern 
           energy independence. At its core is a proprietary turbine system that operates using a unique combination of media pressure differentials and 
           temperature gradients — including near-cryogenic environments — to generate power internally without combustion. This results in a no-emission,
@@ -126,7 +126,7 @@ export default function TheCurrent() {
         isOpen={showX}
         onClose={() => setShowX(false)}
         title="LEGION X SERIES CLEAN ENERGY GENERATOR"
-        description={`The LEGION X Series is a compact clean energy generator engineered for commercial and EV applications, delivering 100–600kW 
+        description={`The LEGION X Series is a compact clean energy generator engineered for commercial and EV applications, delivering 100–60OKVA 
           of continuous power. Designed for off-grid living, remote installations, and grid-tied support, it offers a versatile solution for modern 
           energy independence. At its core is a proprietary turbine system that operates using a unique combination of media pressure differentials and 
           temperature gradients — including near-cryogenic environments — to generate power internally without combustion. This results in a no-emission,
