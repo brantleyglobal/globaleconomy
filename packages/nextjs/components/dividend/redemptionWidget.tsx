@@ -85,7 +85,7 @@ export const DividendRedeemModal = ({ openWalletModal }: FaucetProps) => {
   });
 
   // Fetch balances on address or client change
-  useEffect(() => {
+  /*useEffect(() => {
     if (!address || !publicClient) {
       setWalletTokens([]);
       setSelectedTokenSymbol("");
@@ -117,12 +117,12 @@ export const DividendRedeemModal = ({ openWalletModal }: FaucetProps) => {
         }
       } catch (error) {
         console.error("Failed to fetch token balances:", error);
-        setWalletTokens([]);
-        setSelectedTokenSymbol("");
+        //setWalletTokens([]);
+        //setSelectedTokenSymbol("");
       }
     };
     fetchBalances();
-  }, [address, publicClient]);
+  }, [address, publicClient]);*/
 
   // Fetch credit from SmartVault
   useEffect(() => {
@@ -259,12 +259,12 @@ export const DividendRedeemModal = ({ openWalletModal }: FaucetProps) => {
                   setSelectedTokenSymbol(e.target.value);
                 }}
               >
-                <option value="" disabled>
-                  {walletTokens.length === 0 ? "-- No Tokens Available --" : "Select Token"}
-                </option>
-                {walletTokens.map((token) => (
-                  <option key={token.symbol} value={token.symbol}>
-                    {token.symbol} • {token.displayName || token.name}
+                <option value="" disabled>Select Dividend Token</option>
+                {dividendTokens
+                .filter(t => !["GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh"].includes(t.symbol))
+                .map(t => (
+                  <option key={t.symbol} value={t.symbol}>
+                    {t.symbol} • {t.name}
                   </option>
                 ))}
               </select>
