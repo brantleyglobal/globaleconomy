@@ -33,6 +33,26 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         uint256 amountout; 
     }
 
+    struct User {
+        address user;
+        address token;
+        uint8 quartersCommitted;
+        uint16 unlockQuarter;
+        uint256 userDividendAmount;
+        uint256 convertedDividendAmount;
+        uint256 termTotalSupply;
+        uint256[8] amountout;
+        bytes32[8] payoutTxHash;
+        bool finalize;
+    }
+
+    struct UnlockD {
+        uint16 unlockQuarter;
+        uint256 poolBlalance;
+        uint256 timestamp;
+        address token;
+    }
+
     address public payoutToken;
     address public payoutAddress;
     address public rtoken;
@@ -62,6 +82,8 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     mapping(address => uint8) public quartersCommitted;
     mapping(uint256 => Deposit) public depositsByTimestamp;
     mapping(uint256 => Withdraw) public withdrawByTimestamp;
+    mapping(address => User[]) public withdrawalsByUser;
+    mapping(uint16 => UnlockD) public poolByUnlockQuarter;
 
     event Deposited(address indexed user, uint256 amountOut, uint256 amountIn, uint256 fee, uint32 committedQuarters);
     event DividendPaid(address indexed user, uint256 amount);
@@ -80,6 +102,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     event DepositInRange( uint256 timestamp, address indexed user, address token, address venture, uint256 amountin, uint256 amountout);
     event DepositTimestamp( uint256 timestamp, address indexed user, address token, address venture, uint256 amountin, uint256 amountout);
     event WithdrawTimestamp( uint256 timestamp, address indexed user, address token, address venture, uint256 amountin, uint256 amountout);
+    event UserWithdraw( uint256 timestamp, address indexed user, uint8 quartersCommitted, uint16 unlockQuarter, uint256 amountout);
 
 
     uint256 constant DECIMALS = 1e18;
@@ -107,9 +130,9 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     uint256 constant RATE_0073 = 73000000000000000;   // 0.0073 * 1e18
     uint256 constant RATE_058 = 580000000000000000;   // 0.58 * 1e18 (adjust if needed)
     uint256 constant RATE_062 = 620000000000000000;   // 0.62 * 1e18 (adjust if needed)
-    uint256 constant RATE_100000 = 100000000000000000000000;   // 100_000 * 1e18 (adjust if needed)
-    uint256 constant RATE_16000 = 16000000000000000000000;   // 16_000 * 1e18 (adjust if needed)
-    uint256 constant RATE_600 = 600000000000000000000;   // 600 * 1e18 (adjust if needed)
+    uint256 constant RATE_100000 = 90000000000000000000000;   // 90_000 * 1e18 (adjust if needed)
+    uint256 constant RATE_16000 = 3000000000000000000000;   // 3_000 * 1e18 (adjust if needed)
+    uint256 constant RATE_600 = 900000000000000000000;   // 900 * 1e18 (adjust if needed)
 
     // Events omitted for brevity...
 
@@ -192,6 +215,16 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             address addr = stakeables[i];
             //emit StakeableAddress(addr);
 
+            uint256 purgeAmount = 0;
+            uint16 redemptionEnd = GlobalDollarX(addr).comingQuarter();
+            if (_injectedTime >= redemptionEnd) {
+                purgeAmount += tokenPoolBalances[addr];
+                tokenPoolBalances[addr] = 0;
+                uint256 deduct = vaultSupply[addr];
+                uint256 updatedSupply = GlobalDollarX(addr).viewSupply() - deduct;
+                GlobalDollarX(addr).supply(updatedSupply);
+            }
+
             try GlobalDollarX(addr).update(_injectedTime) {
                 // success
             } catch Error(string memory reason) {
@@ -204,18 +237,21 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
 
     // Deposit with reentrancy guard
     function deposit(
+        address user,
         address token,
         address venture,
         uint256 amount,
-        uint16 injectedTime
-    ) external payable nonReentrant {
+        uint16 injectedTime,
+        uint256 incomingRate 
+    ) external payable onlyOwner nonReentrant {
         lastUpdatedTime = injectedTime;
         require(_isWhitelisted(token), "Token not whitelisted");
         calldates(injectedTime);
         
         uint256 fee = (amount * depositFeeBps) / 10000;
-        uint256 netAmount = amount - fee;
-        uint256 gbdAmountout = 0;
+        uint256 baseAmount = (amount * incomingRate) / 1e18;
+        uint256 netAmount = baseAmount - fee;
+        uint256 gbdAmountout = amount - fee;
         uint8 committedQuarters;
 
         for (uint256 i = 0; i < stakeables.length; i++) {
@@ -279,8 +315,10 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
                     minRate = (((netAmount * DECIMALS) / GBDr) * RATE_16000) / DECIMALS;
                 }
 
-                if (gbdAmountout < minRate || gbdAmountout > maxRate) {
-                    gbdAmountout = minRate;
+                if (gbdAmountout < maxRate) {
+                    gbdAmountout = maxRate;
+                } else if (gbdAmountout > maxRate) {
+                    gbdAmountout = maxRate;
                 }
 
                 break; // Exit loop once stable is matched and processed
@@ -288,19 +326,19 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         }
 
         // Phase 1: Check 15 day window first
-        GlobalDollarX(venture).mint(msg.sender, gbdAmountout);
+        GlobalDollarX(venture).mint(user, gbdAmountout);
         uint256 tokenSupply = GlobalDollarX(venture).viewSupply();
         uint256 supply = (tokenSupply + gbdAmountout);
         GlobalDollarX(venture).supply(supply);
 
         uint256 ts = block.timestamp;
-        depositsByTimestamp[ts] = Deposit(ts, msg.sender, payoutToken, venture, amount, gbdAmountout);
+        depositsByTimestamp[ts] = Deposit(ts, user, payoutToken, venture, amount, gbdAmountout);
         depositTimestamps.push(ts);
 
-        emit Deposited(msg.sender, gbdAmountout, amount, fee, committedQuarters);
+        emit Deposited(user, gbdAmountout, amount, fee, committedQuarters);
     }
 
-    function withdraw(address dividendToken, uint16 injectedTime, uint256 holderBalance) external payable nonReentrant{
+    function withdraw(address dividendToken, uint16 injectedTime, uint256 holderBalance, uint256 rate) external payable nonReentrant{
         //require(_isWhitelistedx(dividendToken), "Token not whitelisted");
 
         calldates(injectedTime);
@@ -308,76 +346,141 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         //*****Quarter Check ******/
         uint16 quarterCheck = GlobalDollarX(dividendToken).unlockQuarter();
         uint16 redemptionEnd = GlobalDollarX(dividendToken).comingQuarter();
+        uint8 committedQuarters = GlobalDollarX(dividendToken).committedQuarters();
 
-        uint256 stableAmountOut = 0;
+        uint256 stableAmountOut = (holderBalance * rate) / 1e18;
+
+        if (holderBalance != 0) {
         
-        if ((quarterCheck >= injectedTime) && (injectedTime < redemptionEnd)) {
-            for (uint256 i = 0; i < stablecoins.length; i++) {
-                if (stablecoins[i] == payoutToken) {
-                    uint256 minRate;
-                    uint256 maxRate;
-                    if (i == 1 || i == 3 || i == 5 || i == 9 || i == 11 || i == 12 || i == 13) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_098) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_102) * GBDr) / DECIMALS;
-                    } else if (i == 14) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_065) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_069) * GBDr) / DECIMALS;
-                    } else if (i == 2) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_072) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
-                    } else if (i == 4 || i == 19) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_108) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_112) * GBDr) / DECIMALS;
-                    } else if (i == 6) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_097) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_100) * GBDr) / DECIMALS;
-                    } else if (i == 7) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_0065) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_0073) * GBDr) / DECIMALS;
-                    } else if (i == 8) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_058) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_062) * GBDr) / DECIMALS;
-                    } else if (i == 10) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_074) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
-                    } else if (i == 15) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_054) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_064) * GBDr) / DECIMALS;
-                    } else if (i == 16) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_019) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_021) * GBDr) / DECIMALS;
-                    } else if (i == 17) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_120) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_130) * GBDr) / DECIMALS;
-                    } else if (i == 18) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_030) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_033) * GBDr) / DECIMALS;
-                    }
+            if ((quarterCheck >= injectedTime) && (injectedTime < redemptionEnd)) {
+                for (uint256 i = 0; i < stablecoins.length; i++) {
+                    if (stablecoins[i] == payoutToken) {
+                        uint256 minRate;
+                        uint256 maxRate;
+                        if (i == 1 || i == 3 || i == 5 || i == 9 || i == 11 || i == 12 || i == 13) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_098) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_102) * GBDr) / DECIMALS;
+                        } else if (i == 14) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_065) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_069) * GBDr) / DECIMALS;
+                        } else if (i == 2) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_072) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
+                        } else if (i == 4 || i == 19) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_108) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_112) * GBDr) / DECIMALS;
+                        } else if (i == 6) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_097) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_100) * GBDr) / DECIMALS;
+                        } else if (i == 7) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_0065) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_0073) * GBDr) / DECIMALS;
+                        } else if (i == 8) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_058) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_062) * GBDr) / DECIMALS;
+                        } else if (i == 10) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_074) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
+                        } else if (i == 15) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_054) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_064) * GBDr) / DECIMALS;
+                        } else if (i == 16) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_019) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_021) * GBDr) / DECIMALS;
+                        } else if (i == 17) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_120) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_130) * GBDr) / DECIMALS;
+                        } else if (i == 18) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_030) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_033) * GBDr) / DECIMALS;
+                        }
 
-                    if (stableAmountOut < minRate || stableAmountOut > maxRate) {
-                        stableAmountOut = minRate;
-                    }
+                        if (stableAmountOut < maxRate) {
+                            stableAmountOut = maxRate;
+                        } else if (stableAmountOut > maxRate) {
+                            stableAmountOut = maxRate;
+                        }
 
-                    break; // Exit loop once stable is matched and processed
+                        break; // Exit loop once stable is matched and processed
+                    }
                 }
             }
+
+            uint256 totalSupply = GlobalDollarX(dividendToken).viewSupply();
+            uint256 poolBalance = tokenPoolBalances[dividendToken];
+
+            uint256 payout = ((holderBalance * (poolBalance)) / (totalSupply)) + stableAmountOut;
+
+            IERC20(dividendToken).safeTransferFrom(msg.sender, address(this), holderBalance);
+
+            vaultSupply[dividendToken] += holderBalance;
+
+            uint256 ts = block.timestamp;
+            withdrawByTimestamp[ts] = Withdraw(ts, msg.sender, payoutToken, dividendToken, holderBalance, payout);
+            withdrawTimestamps.push(ts);
+
+            emit UserWithdraw(ts, msg.sender, committedQuarters, quarterCheck, payout);
+            emit AddressChecked(dividendToken, payoutToken, quarterCheck);
+
         }
 
-        uint256 totalSupply = GlobalDollarX(dividendToken).viewSupply();
-        uint256 test = 5000 * 1e18;
-        tokenPoolBalances[dividendToken] += test;
-        uint256 poolBalance = tokenPoolBalances[dividendToken];
+        if (holderBalance == 0) {
 
-        uint256 payout = ((stableAmountOut * (poolBalance)) / (totalSupply)) + stableAmountOut;
+            uint256 ts = block.timestamp;
 
-        vaultSupply[dividendToken] += holderBalance;
+            // Load user record from storage
+            User storage u = withdrawalsByUser[msg.sender][withdrawalsByUser[msg.sender].length - 1];
 
-        uint256 ts = block.timestamp;
-        withdrawByTimestamp[ts] = Withdraw(ts, msg.sender, payoutToken, dividendToken, holderBalance, payout);
-        withdrawTimestamps.push(ts);
+            require(u.user != address(0), "No prior withdrawal found");
 
-        emit RedemptionFulfilled(msg.sender, payoutToken, payout, holderBalance);
-        emit AddressChecked(dividendToken, payoutToken, quarterCheck);
+            // If finalized, allow tx hash updates but block payouts
+            if (u.finalize) {
+                // Example: allow updating the final payout hash
+                // u.payoutTxHash[finalStage] = someHash;
+                revert("All payouts completed");
+            }
+
+            // Load pool data for this user's unlock quarter
+            UnlockD storage p = poolByUnlockQuarter[u.unlockQuarter];
+
+            // Define payout thresholds
+            uint16[7] memory thresholds = [100, 200, 300, 400, 500, 600, 700];
+
+            // Iterate through payout stages 1–7
+            for (uint8 stage = 1; stage <= 7; stage++) {
+
+                // User must have committed more than this stage
+                if (u.quartersCommitted <= stage) continue;
+
+                // Skip if already paid
+                if (u.amountout[stage] != 0) continue;
+
+                // Check if enough time has passed
+                if ((injectedTime - u.unlockQuarter) <= thresholds[stage - 1]) continue;
+
+                // Compute payout
+                uint256 payout = (u.userDividendAmount * p.poolBlalance) / u.termTotalSupply;
+
+                // If this is the final committed quarter, add converted amount
+                if (u.quartersCommitted == stage + 1) {
+                    payout += u.convertedDividendAmount;
+                    u.finalize = true; // mark as complete
+                }
+
+                // Save payout
+                u.amountout[stage] = payout;
+
+                // Optionally store tx hash
+                // u.payoutTxHash[stage] = keccak256(...);
+
+                emit UserWithdraw(ts, msg.sender, u.quartersCommitted, u.unlockQuarter, payout);
+
+                return; // Only ONE payout per call
+            }
+
+            revert("No payout available at this time");
+        }
+
     }
 
     function getEcoSupply(address token) public view returns (uint256){
@@ -556,6 +659,27 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         }
 
         return totalSupply; // Returns sum of supply for all eligible tokens
+    }
+
+    function getUserTermCount(address user) external view returns (uint256) {
+        return withdrawalsByUser[user].length;
+    }
+
+    function getUserTerm(address user, uint256 index)
+        external
+        view
+        returns (User memory)
+    {
+        return withdrawalsByUser[user][index];
+    }
+
+    function updatePayoutTxHash(
+        address user,
+        uint256 termIndex,
+        uint8 stage,
+        bytes32 txHash
+    ) external onlyOwner {
+        withdrawalsByUser[user][termIndex].payoutTxHash[stage] = txHash;
     }
 
     function getDeposit(uint256 timestamp) public {

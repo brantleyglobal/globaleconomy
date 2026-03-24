@@ -9,15 +9,27 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract TransferTracker is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
+    struct TransferT {
+        uint256 timestamp;
+        address user;
+        address recipient;
+        address token;
+        uint256 amount; 
+    }
+
     uint256 public feeBasisPoints;
     uint256 internal constant MAX_BPS = 10000;
+    uint256[] public transferTimestamps;
 
     address public feeRecipient;
 
     mapping(address => mapping(address => mapping(address => uint256))) private transferDetails;
     mapping(address => uint256) public nonces;
+    mapping(uint256 => TransferT) public transfersByTimestamp;
 
     event TransferRecorded(address indexed from, address indexed to, uint256 amount, uint256 nonce, bytes additionalData);
+    event TransferTimestamp( uint256 timestamp, address indexed user, address indexed recipient, address token, uint256 amount);
+
 
     /// @notice Initializes the contract with owner and optional stablecoin whitelist
     function initialize(address _owner) public initializer {
@@ -33,32 +45,22 @@ contract TransferTracker is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         feeBasisPoints = newBps;
     }
 
-    /// @notice Records a native currency transfer (ETH or GBDO) without executing it
+    /// @notice Records a native currency transfer (ETH or GBDo) without executing it
     function Transfer(
         address token,
         address recipient,
         uint128 amount,
         bytes calldata additionalData
     ) external payable {
-        //require(token == address(0), "Only native token supported");
         require(recipient != address(0), "Invalid recipient");
         require(amount > 0, "Amount must be greater than zero");
-        
-        //uint256 netAmount = (amount * MAX_BPS) / (feeBasisPoints + MAX_BPS);
-        //uint256 fee = amount - netAmount;
 
         transferDetails[msg.sender][recipient][token] += amount;
-
-
-        //IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-
-        // Transfer fee to feeRecipient if applicable
-        /*if (fee > 0) {
-            IERC20(token).safeTransfer(feeRecipient, fee);
-        }*/
-
-        //IERC20(token).safeTransfer(recipient, netAmount);
         uint256 currentNonce = nonces[msg.sender]++;
+
+        uint256 ts = block.timestamp;
+        transfersByTimestamp[ts] = TransferT(ts, msg.sender, recipient, token, amount);
+        transferTimestamps.push(ts);
 
         emit TransferRecorded(msg.sender, recipient, amount, currentNonce, additionalData);
     }
@@ -67,7 +69,21 @@ contract TransferTracker is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function getUserDetails(address sender, address recipient, address token) external view returns (uint256) {
         return transferDetails[sender][recipient][token];
 
+    }
 
+    function getTransfer(uint256 timestamp) public {
+        TransferT memory w = transfersByTimestamp[timestamp];
+        emit TransferTimestamp(w.timestamp, w.user, w.recipient, w.token, w.amount);
+    }
+
+    function getTransfersInRange(uint256 startTs, uint256 endTs) public {
+        for (uint256 i = 0; i < transferTimestamps.length; i++) {
+            uint256 ts = transferTimestamps[i];
+            if (ts >= startTs && ts <= endTs) {
+                TransferT memory w = transfersByTimestamp[ts];
+                emit TransferTimestamp(w.timestamp, w.user, w.recipient, w.token, w.amount);
+            }
+        }
     }
 
     /// @dev Required for UUPS upgradeability

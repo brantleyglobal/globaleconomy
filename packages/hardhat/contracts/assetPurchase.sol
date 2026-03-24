@@ -69,9 +69,9 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
     uint256 constant RATE_0073 = 73000000000000000;   // 0.0073 * 1e18
     uint256 constant RATE_058 = 580000000000000000;   // 0.58 * 1e18 (adjust if needed)
     uint256 constant RATE_062 = 620000000000000000;   // 0.62 * 1e18 (adjust if needed)
-    uint256 constant RATE_100000 = 100000000000000000000000;   // 105_000 * 1e18 (adjust if needed)
-    uint256 constant RATE_16000 = 16000000000000000000000;   // 16_000 * 1e18 (adjust if needed)
-    uint256 constant RATE_600 = 600000000000000000000;   // 600 * 1e18 (adjust if needed)
+    uint256 constant RATE_100000 = 90000000000000000000000;   // 90_000 * 1e18 (adjust if needed)
+    uint256 constant RATE_16000 = 3000000000000000000000;   // 3_000 * 1e18 (adjust if needed)
+    uint256 constant RATE_600 = 900000000000000000000;   // 900 * 1e18 (adjust if needed)
 
     modifier onlyPoolManager() {
         require(msg.sender == poolManagerAddress, "Not authorized");
@@ -123,7 +123,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         uint32 quantity,
         uint256 rate,
         uint8 region
-    ) external payable nonReentrant {
+    ) external payable onlyOwner nonReentrant {
         require(quantity > 0, "Invalid quantity: must be >0");
         require(_isWhitelisted(stable), "Token not whitelisted");
         require(rate > 0, "Missing rate: must be >0");

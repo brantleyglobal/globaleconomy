@@ -11,30 +11,6 @@ import "hardhat-deploy";
 import "hardhat-deploy-ethers";
 import "@typechain/hardhat";
 //import "hardhat-contract-sizer";
-import * as fs from "fs";
-import { Wallet } from "ethers";
-import { task } from "hardhat/config";
-
-// === Load and decrypt the keystore file ===
-const keystorePath = "./keystore/deployer.json"; // Geth UTC file
-const passwordPath = ".secret";
-
-let deployerPrivateKey = "";
-let deployerAddress = process.env.DEPLOYER_ADDRESS;
-
-try {
-  const keystoreJson = fs.readFileSync(keystorePath, "utf-8");
-  const password = fs.readFileSync(passwordPath, "utf-8").trim();
-  const wallet = Wallet.fromEncryptedJsonSync(keystoreJson, password);
-  deployerPrivateKey = wallet.privateKey;
-
-  // Fallback to the address from keystore if not provided in .env
-  if (!deployerAddress) {
-    deployerAddress = wallet.address;
-  }
-} catch (error) {
-  throw new Error("Failed to decrypt keystore file. Please check your path and .secret password.");
-}
 
 // === Network + Tooling Config ===
 const config: HardhatUserConfig = {
@@ -59,17 +35,12 @@ const config: HardhatUserConfig = {
     target: "ethers-v6",
   },
   defaultNetwork: "GLOBALCHAIN",
-  namedAccounts: {
-    deployer: {
-      default: deployerAddress!,
-    },
-  },
   networks: {
     hardhat: {},
     GLOBALCHAIN: {
       url: "http://10.100.100.20:8545",
-      accounts: [deployerPrivateKey],
-      chainId: 3503995874081207,
+      chainId: 38391207,
+      accounts: process.env.DEPLOYER_KEY ? [process.env.DEPLOYER_KEY] : [],
     },
   },
 };

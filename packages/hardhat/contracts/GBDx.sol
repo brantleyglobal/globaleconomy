@@ -18,6 +18,7 @@ contract GlobalDollarX is Initializable, ERC20Upgradeable, AccessControlUpgradea
 
     uint16 public unlockQuarter;
     uint16 public comingQuarter;
+    uint8 public committedQuarters;
     uint16 public previousComingQuarter;
     uint256 public credit;
     uint256 private _supply;

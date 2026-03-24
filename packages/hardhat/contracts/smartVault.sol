@@ -35,6 +35,26 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         uint256 amountout; 
     }
 
+    struct User {
+        address user;
+        address token;
+        uint8 quartersCommitted;
+        uint16 unlockQuarter;
+        uint256 userDividendAmount;
+        uint256 convertedDividendAmount;
+        uint256 termTotalSupply;
+        uint256[8] amountout;
+        bytes32[8] payoutTxHash;
+        bool finalize;
+    }
+
+    struct UnlockD {
+        uint16 unlockQuarter;
+        uint256 poolBlalance;
+        uint256 timestamp;
+        address token;
+    }
+
     address public payoutToken;
     address public payoutAddress;
     address public rtoken;
@@ -53,6 +73,8 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     uint256 public totalWithdrawn;
     uint256[] public depositTimestamps;
     uint256[] public withdrawTimestamps;
+    address[] public userWithdrawals;
+    uint16[] public unlockQuarterPool;
 
     // Mapping for quick stablecoin whitelist check
     mapping(address => bool) private stablecoinWhitelistMap;
@@ -63,8 +85,11 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     mapping(address => uint8) public quartersCommitted;
     mapping(uint256 => Deposit) public depositsByTimestamp;
     mapping(uint256 => Withdraw) public withdrawByTimestamp;
+    mapping(bytes32 => bool) public processedDeposits;
+    mapping(address => User[]) public withdrawalsByUser;
+    mapping(uint16 => UnlockD) public poolByUnlockQuarter;
 
-    event Deposited(address indexed user, uint256 amountOut, uint256 amountIn, uint256 fee, uint32 committedQuarters);
+    event Deposited(address indexed user, uint256 amountOut, uint256 amountIn, uint256 fee, uint8 committedQuarters);
     event DividendPaid(address indexed user, uint256 amount);
     event RedemptionPaid(address indexed user, uint256 amount);
     event RedemptionFulfilled(address indexed user, address indexed payoutToken, uint256 amount, uint256 tokenId);
@@ -80,6 +105,8 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     event DepositInRange( uint256 timestamp, address indexed user, address token, address dividend, uint8 quartersCommitted, uint256 amountin, uint256 amountout);
     event DepositTimestamp( uint256 timestamp, address indexed user, address token, address dividend, uint8 quartersCommitted, uint256 amountin, uint256 amountout);
     event WithdrawTimestamp( uint256 timestamp, address indexed user, address token, address dividend, uint8 quartersCommitted, uint256 amountin, uint256 amountout);
+    event UserWithdraw( uint256 timestamp, address indexed user, uint8 quartersCommitted, uint16 unlockQuarter, uint256 amountout);
+
 
     uint256 constant DECIMALS = 1e18;
     uint256 constant GBDr = 1030000000000000000;
@@ -106,10 +133,9 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     uint256 constant RATE_0073 = 73000000000000000;   // 0.0073 * 1e18
     uint256 constant RATE_058 = 580000000000000000;   // 0.58 * 1e18 (adjust if needed)
     uint256 constant RATE_062 = 620000000000000000;   // 0.62 * 1e18 (adjust if needed)
-    uint256 constant RATE_100000 = 100000000000000000000000;   // 105_000 * 1e18 (adjust if needed)
-    uint256 constant RATE_16000 = 16000000000000000000000;   // 16_000 * 1e18 (adjust if needed)
-    uint256 constant RATE_600 = 600000000000000000000;   // 600 * 1e18 (adjust if needed)
-
+    uint256 constant RATE_100000 = 90000000000000000000000;   // 90_000 * 1e18 (adjust if needed)
+    uint256 constant RATE_16000 = 3000000000000000000000;   // 3_000 * 1e18 (adjust if needed)
+    uint256 constant RATE_600 = 900000000000000000000;   // 900 * 1e18 (adjust if needed)
 
     // Events omitted for brevity...
 
@@ -187,10 +213,21 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     }
 
     function calldates(uint16 _injectedTime) public {
+        lastUpdatedTime = _injectedTime;
         // Unlock quarters already set, just update
         for (uint256 i = 0; i < stakeables.length; i++) {
             address addr = stakeables[i];
             //emit StakeableAddress(addr);
+
+            uint256 purgeAmount = 0;
+            uint16 redemptionEnd = GlobalDollarX(addr).comingQuarter();
+            if (_injectedTime >= redemptionEnd) {
+                purgeAmount += tokenPoolBalances[addr];
+                tokenPoolBalances[addr] = 0;
+                uint256 deduct = vaultSupply[addr];
+                uint256 updatedSupply = GlobalDollarX(addr).viewSupply() - deduct;
+                GlobalDollarX(addr).supply(updatedSupply);
+            }
 
             try GlobalDollarX(addr).update(_injectedTime) {
                 // success
@@ -204,18 +241,20 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
     // Deposit with reentrancy guard
     function deposit(
+        address investor,
         address token,
         uint256 amount,
         uint8 committedQuarters,
-        uint16 injectedTime
-    ) external payable nonReentrant {
-        lastUpdatedTime = injectedTime;
+        uint16 injectedTime,
+        uint256 incomingRate
+    ) external payable onlyOwner nonReentrant {
         require(_isWhitelisted(token), "Token not whitelisted");
         calldates(injectedTime);
         
         uint256 fee = (amount * depositFeeBps) / 10000;
-        uint256 netAmount = amount - fee;
-        uint256 gbdAmountout = 0;
+        uint256 baseAmount = (amount * incomingRate) / 1e18;
+        uint256 netAmount = baseAmount - fee;
+        uint256 gbdAmountout = amount - fee;
         
         for (uint256 i = 0; i < stablecoins.length; i++) {
             if (stablecoins[i] == token) {
@@ -268,7 +307,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
                         minRate = (((netAmount * DECIMALS) / GBDr) * RATE_600) / DECIMALS;
                     }
 
-                    if (gbdAmountout < minRate || gbdAmountout > maxRate) {
+                    if (netAmount < minRate || netAmount > maxRate) {
                         gbdAmountout = minRate;
                     }
 
@@ -276,22 +315,29 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             }
         }
 
+        _finalize(injectedTime, investor, token, committedQuarters, amount, gbdAmountout);
+
+
+        emit Deposited(investor, gbdAmountout, amount, fee, committedQuarters);
+    }
+
+    function _finalize(uint16 injectedTime, address investor, address token, uint8 _committedQuarters, uint256 amount, uint256 _gbdAmountout) internal {
         uint256 startIndex;
         uint256 endIndex;
         // Map committed quarter groups to array indices
-        if (committedQuarters == 2) {
+        if (_committedQuarters == 2) {
             startIndex = 0; endIndex = 3;
-        } else if (committedQuarters == 3) {
+        } else if (_committedQuarters == 3) {
             startIndex = 4; endIndex = 9;
-        } else if (committedQuarters == 4) {
+        } else if (_committedQuarters == 4) {
             startIndex = 10; endIndex = 15;
-        } else if (committedQuarters == 5) {
+        } else if (_committedQuarters == 5) {
             startIndex = 16; endIndex = 23;
-        } else if (committedQuarters == 6) {
-            startIndex = 23; endIndex = 31;
-        } else if (committedQuarters == 7) {
+        } else if (_committedQuarters == 6) {
+            startIndex = 24; endIndex = 31;
+        } else if (_committedQuarters == 7) {
             startIndex = 32; endIndex = 40;
-        } else if (committedQuarters == 8) {
+        } else if (_committedQuarters == 8) {
             startIndex = 41; endIndex = 49;
         }
 
@@ -304,11 +350,11 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             GlobalDollarX instance = GlobalDollarX(stakeables[i]);
             uint16 previousComingQuarter = instance.previousComingQuarter();
             if (injectedTime >= previousComingQuarter && injectedTime <= previousComingQuarter + 15 && previousComingQuarter != 0) {
-                instance.mint(msg.sender, gbdAmountout);
+                instance.mint(investor, _gbdAmountout);
                 minted = true;
                 mintedTokenAddress = stakeables[i]; // capture the address
                 uint256 tokenSupply = instance.viewSupply();
-                uint256 supply = (tokenSupply + gbdAmountout);
+                uint256 supply = (tokenSupply + _gbdAmountout);
                 instance.supply(supply);
                 break; // exit loop on first mint
             }
@@ -330,23 +376,21 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
             if (closestIndex != type(uint256).max) {
                 GlobalDollarX instance = GlobalDollarX(stakeables[closestIndex]);
-                instance.mint(msg.sender, gbdAmountout);
+                instance.mint(investor, _gbdAmountout);
                 minted = true;
                 mintedTokenAddress = stakeables[closestIndex];
                 uint256 tokenSupply = instance.viewSupply();
-                uint256 supply = (tokenSupply + gbdAmountout);
+                uint256 supply = (tokenSupply + _gbdAmountout);
                 instance.supply(supply);
             }
         }
 
         uint256 ts = block.timestamp;
-        depositsByTimestamp[ts] = Deposit(ts, msg.sender, token, mintedTokenAddress, committedQuarters, amount, gbdAmountout);
+        depositsByTimestamp[ts] = Deposit(ts, investor, token, mintedTokenAddress, _committedQuarters, amount, _gbdAmountout);
         depositTimestamps.push(ts);
-
-        emit Deposited(msg.sender, gbdAmountout, amount, fee, committedQuarters);
     }
 
-    function withdraw(address dividendToken, uint16 injectedTime, uint256 holderBalance) external payable nonReentrant{
+    function withdraw(address dividendToken, uint16 injectedTime, uint256 holderBalance, uint256 rate) external payable nonReentrant{
         //require(_isWhitelistedx(dividendToken), "Token not whitelisted");
 
         calldates(injectedTime);
@@ -354,77 +398,146 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         //*****Quarter Check ******/
         uint16 quarterCheck = GlobalDollarX(dividendToken).unlockQuarter();
         uint16 redemptionEnd = GlobalDollarX(dividendToken).comingQuarter();
+        uint8 committedQuarters = GlobalDollarX(dividendToken).committedQuarters();
 
-        uint256 stableAmountOut = 0;
+        uint256 stableAmountOut = (holderBalance * rate) / 1e18;
+
+        if (holderBalance != 0) {
         
-        if ((quarterCheck >= injectedTime) && (injectedTime < redemptionEnd)) {
-            for (uint256 i = 0; i < stablecoins.length; i++) {
-                if (stablecoins[i] == payoutToken) {
-                    uint256 minRate;
-                    uint256 maxRate;
-                    if (i == 1 || i == 3 || i == 5 || i == 9 || i == 11 || i == 12 || i == 13) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_098) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_102) * GBDr) / DECIMALS;
-                    } else if (i == 14) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_065) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_069) * GBDr) / DECIMALS;
-                    } else if (i == 2) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_072) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
-                    } else if (i == 4 || i == 19) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_108) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_112) * GBDr) / DECIMALS;
-                    } else if (i == 6) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_097) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_100) * GBDr) / DECIMALS;
-                    } else if (i == 7) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_0065) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_0073) * GBDr) / DECIMALS;
-                    } else if (i == 8) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_058) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_062) * GBDr) / DECIMALS;
-                    } else if (i == 10) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_074) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
-                    } else if (i == 15) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_054) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_064) * GBDr) / DECIMALS;
-                    } else if (i == 16) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_019) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_021) * GBDr) / DECIMALS;
-                    } else if (i == 17) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_120) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_130) * GBDr) / DECIMALS;
-                    } else if (i == 18) {
-                        maxRate = (((holderBalance * DECIMALS) / RATE_030) * GBDr) / DECIMALS;
-                        minRate = (((holderBalance * DECIMALS) / RATE_033) * GBDr) / DECIMALS;
-                    }
+            if ((quarterCheck >= injectedTime) && (injectedTime < redemptionEnd)) {
+                for (uint256 i = 0; i < stablecoins.length; i++) {
+                    if (stablecoins[i] == payoutToken) {
+                        uint256 minRate;
+                        uint256 maxRate;
+                        if (i == 1 || i == 3 || i == 5 || i == 9 || i == 11 || i == 12 || i == 13) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_098) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_102) * GBDr) / DECIMALS;
+                        } else if (i == 14) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_065) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_069) * GBDr) / DECIMALS;
+                        } else if (i == 2) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_072) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
+                        } else if (i == 4 || i == 19) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_108) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_112) * GBDr) / DECIMALS;
+                        } else if (i == 6) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_097) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_100) * GBDr) / DECIMALS;
+                        } else if (i == 7) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_0065) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_0073) * GBDr) / DECIMALS;
+                        } else if (i == 8) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_058) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_062) * GBDr) / DECIMALS;
+                        } else if (i == 10) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_074) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
+                        } else if (i == 15) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_054) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_064) * GBDr) / DECIMALS;
+                        } else if (i == 16) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_019) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_021) * GBDr) / DECIMALS;
+                        } else if (i == 17) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_120) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_130) * GBDr) / DECIMALS;
+                        } else if (i == 18) {
+                            maxRate = (((holderBalance * DECIMALS) / RATE_030) * GBDr) / DECIMALS;
+                            minRate = (((holderBalance * DECIMALS) / RATE_033) * GBDr) / DECIMALS;
+                        }
 
-                    if (stableAmountOut < minRate || stableAmountOut > maxRate) {
-                        stableAmountOut = minRate;
-                    }
+                        if (stableAmountOut < maxRate) {
+                            stableAmountOut = maxRate;
+                        } else if (stableAmountOut > maxRate) {
+                            stableAmountOut = maxRate;
+                        }
 
-                    break; // Exit loop once stable is matched and processed
+
+                        break; // Exit loop once stable is matched and processed
+                    }
                 }
             }
+
+            uint256 totalSupply = GlobalDollarX(dividendToken).viewSupply();
+            uint256 poolBalance = tokenPoolBalances[dividendToken];
+
+            uint256 payout = ((holderBalance * (poolBalance)) / (totalSupply)) + stableAmountOut;
+            uint8 place = 0;
+
+            IERC20(dividendToken).safeTransferFrom(msg.sender, address(this), holderBalance);
+
+            vaultSupply[dividendToken] += holderBalance;
+            
+            uint256 ts = block.timestamp;
+            withdrawByTimestamp[ts] = Withdraw(ts, msg.sender, payoutToken, dividendToken, place, holderBalance, payout);
+
+            withdrawTimestamps.push(ts);
+
+            address user = msg.sender;
+            withdrawalsByUser[user].push(User(msg.sender, dividendToken, committedQuarters, quarterCheck, holderBalance, stableAmountOut, totalSupply, [uint256(payout),0,0,0,0,0,0,0], [bytes32(0),0,0,0,0,0,0,0], false));
+
+            emit UserWithdraw(ts, msg.sender, committedQuarters, quarterCheck, payout);
+            emit AddressChecked(dividendToken, payoutToken, quarterCheck);
         }
 
-        uint256 totalSupply = GlobalDollarX(dividendToken).viewSupply();
-        uint256 test = 5000 * 1e18;
-        tokenPoolBalances[dividendToken] += test;
-        uint256 poolBalance = tokenPoolBalances[dividendToken];
+        if (holderBalance == 0) {
 
-        uint256 payout = ((stableAmountOut * (poolBalance)) / (totalSupply)) + stableAmountOut;
-        uint8 place = 0;
+            uint256 ts = block.timestamp;
 
-        vaultSupply[dividendToken] += holderBalance;
-        
-        uint256 ts = block.timestamp;
-        withdrawByTimestamp[ts] = Withdraw(ts, msg.sender, payoutToken, dividendToken, place, holderBalance, stableAmountOut);
-        withdrawTimestamps.push(ts);
+            // Load user record from storage
+            User storage u = withdrawalsByUser[msg.sender][withdrawalsByUser[msg.sender].length - 1];
 
-        emit RedemptionFulfilled(msg.sender, payoutToken, payout, holderBalance);
-        emit AddressChecked(dividendToken, payoutToken, quarterCheck);
+            require(u.user != address(0), "No prior withdrawal found");
+
+            // If finalized, allow tx hash updates but block payouts
+            if (u.finalize) {
+                // Example: allow updating the final payout hash
+                // u.payoutTxHash[finalStage] = someHash;
+                revert("All payouts completed");
+            }
+
+            // Load pool data for this user's unlock quarter
+            UnlockD storage p = poolByUnlockQuarter[u.unlockQuarter];
+
+            // Define payout thresholds
+            uint16[7] memory thresholds = [100, 200, 300, 400, 500, 600, 700];
+
+            // Iterate through payout stages 1–7
+            for (uint8 stage = 1; stage <= 7; stage++) {
+
+                // User must have committed more than this stage
+                if (u.quartersCommitted <= stage) continue;
+
+                // Skip if already paid
+                if (u.amountout[stage] != 0) continue;
+
+                // Check if enough time has passed
+                if ((injectedTime - u.unlockQuarter) <= thresholds[stage - 1]) continue;
+
+                // Compute payout
+                uint256 payout = (u.userDividendAmount * p.poolBlalance) / u.termTotalSupply;
+
+                // If this is the final committed quarter, add converted amount
+                if (u.quartersCommitted == stage + 1) {
+                    payout += u.convertedDividendAmount;
+                    u.finalize = true; // mark as complete
+                }
+
+                // Save payout
+                u.amountout[stage] = payout;
+
+                // Optionally store tx hash
+                // u.payoutTxHash[stage] = keccak256(...);
+
+                emit UserWithdraw(ts, msg.sender, u.quartersCommitted, u.unlockQuarter, payout);
+
+                return; // Only ONE payout per call
+            }
+
+            revert("No payout available at this time");
+        }
+
     }
 
     function getEcoSupply(address token) public view returns (uint256){
@@ -446,8 +559,6 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         uint256 length = stakeables.length;
         uint256 totalWeightedMultiplier = 0;
         uint256 totalRedemptions = 0;
-
-        //IERC20(payoutToken).safeTransferFrom(msg.sender, address(this), poolAmount);
 
         // First pass: identify redemption and eligible tokens, sum multipliers and total redemption amounts
         for (uint256 i = 0; i < length; i++) {
@@ -527,9 +638,6 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
                 emit UpdateFailed(addr, i, "Unknown error");
             }
         }
-
-        IERC20(payoutToken).safeTransfer(feeRecipient, purgeAmount);
-
     }
 
     function populateMultipliers() external {
@@ -614,6 +722,27 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         return totalSupply; // Returns sum of supply for all eligible tokens
     }
 
+    function getUserTermCount(address user) external view returns (uint256) {
+        return withdrawalsByUser[user].length;
+    }
+
+    function getUserTerm(address user, uint256 index)
+        external
+        view
+        returns (User memory)
+    {
+        return withdrawalsByUser[user][index];
+    }
+
+    function updatePayoutTxHash(
+        address user,
+        uint256 termIndex,
+        uint8 stage,
+        bytes32 txHash
+    ) external onlyOwner {
+        withdrawalsByUser[user][termIndex].payoutTxHash[stage] = txHash;
+    }
+
     function getDeposit(uint256 timestamp) public {
         Deposit memory d = depositsByTimestamp[timestamp];
         emit DepositTimestamp(d.timestamp, d.user, d.token, d.dividend, d.quartersCommitted, d.amountin, d.amountout);
@@ -622,6 +751,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     function getWithdraw(uint256 timestamp) public {
         Withdraw memory w = withdrawByTimestamp[timestamp];
         emit WithdrawTimestamp(w.timestamp, w.user, w.token, w.dividend, w.quartersCommitted, w.amountin, w.amountout);
+
     }
 
     function getDepositsInRange(uint256 startTs, uint256 endTs) public {

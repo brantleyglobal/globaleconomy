@@ -18,6 +18,7 @@ contract TGUSA is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUP
 
     uint16 public unlockQuarter;
     uint16 public comingQuarter;
+    uint8 public committedQuarters;
     uint256 public credit;
     uint256 private _supply;
 
@@ -94,7 +95,7 @@ contract TGUSA is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUP
                 day = 1;
             }
 
-            uint16 committedQuarters = 12;
+            committedQuarters = 12;
             uint16 redeemPeriod = 12;
 
             uint16 callQuarter = quarter + committedQuarters;

@@ -18,6 +18,7 @@ contract BGFRS is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUP
 
     uint16 public unlockQuarter;
     uint16 public comingQuarter;
+    uint8 public committedQuarters;
     uint256 public credit;
     uint256 private _supply;
 
@@ -81,7 +82,7 @@ contract BGFRS is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUP
             uint16 quarter = (injectedTime / 100) % 10;
             uint16 year = injectedTime / 1000;
 
-            if (day > 120) {
+            if (day > 90) {
                 day = 1;
                 if ((quarter + 1) > 4) {
                     quarter = 1;
@@ -94,7 +95,7 @@ contract BGFRS is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUP
                 day = 1;
             }
 
-            uint16 committedQuarters = 4;
+            committedQuarters = 4;
             uint16 redeemPeriod = 20;
 
             uint16 callQuarter = quarter + committedQuarters;

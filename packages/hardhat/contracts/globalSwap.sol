@@ -17,10 +17,18 @@ contract GlobalSwap is Initializable {
     bool public partyADeposited;
     bool public partyBDeposited;
     bool public completed;
+    bool public payoutACompleted;
+    bool public payoutBCompleted;
+    bool public refundACompleted;
+    bool public refundBCompleted;
 
     event SwapJoined(address indexed party, address indexed token, uint256 amount);
     event SwapCompleted(address indexed partyA, address indexed partyB, address tokenA, address tokenB, uint256 amountA, uint256 amountB);
     event Refund(address indexed party, address token, uint256 amount);
+
+    address public feeRecipient;
+    uint256 public feeBasisPoints;
+    uint256 internal constant MAX_BPS = 10000;
 
     function initialize(
         address _partyA,
@@ -28,12 +36,15 @@ contract GlobalSwap is Initializable {
         address _tokenA,
         uint256 _amountA,
         address _tokenB,
-        uint256 _amountB
+        uint256 _amountB,
+        address _feeRecipient
     ) external initializer {
 
         require(_partyA != address(0) && _partyB != address(0), "Invalid parties");
         require(_tokenA != address(0) && _tokenB != address(0), "Invalid tokens");
         require(_amountA > 0 && _amountB > 0, "Amounts must be > 0");
+
+        feeBasisPoints = 25;
 
         partyA = _partyA;
         partyB = _partyB;
@@ -41,6 +52,7 @@ contract GlobalSwap is Initializable {
         tokenB = _tokenB;
         amountA = _amountA;
         amountB = _amountB;
+        feeRecipient = _feeRecipient;
     }
 
     /// @notice Allows party A or B to deposit their tokens and complete the swap atomically once both deposits are made.
@@ -53,7 +65,6 @@ contract GlobalSwap is Initializable {
         if (msg.sender == partyA) {
             require(!partyADeposited, "Party A already deposited");
             // partyA can deposit anytime before completion
-            //IERC20(tokenA).safeTransferFrom(partyA, address(this), amountA);
             token = tokenA;
             amount = amountA;
             partyADeposited = true;
@@ -66,7 +77,6 @@ contract GlobalSwap is Initializable {
         } else {
             require(!partyBDeposited, "Party B already deposited");
             // partyB can deposit anytime before completion
-            //IERC20(tokenB).safeTransferFrom(partyB, address(this), amountB);
             token = tokenB;
             amount = amountB;
             partyBDeposited = true;
@@ -88,29 +98,41 @@ contract GlobalSwap is Initializable {
         completed = true;
 
         // Transfer tokens atomically
-        //IERC20(tokenA).safeTransfer(partyB, amountA);
-        //IERC20(tokenB).safeTransfer(partyA, amountB);
+        uint256 feeA = (amountA * feeBasisPoints) / MAX_BPS;
+        uint256 feeB = (amountA * feeBasisPoints) / MAX_BPS;
+        uint256 netAmountA = amountA - feeA;
+        uint256 netAmountB = amountB - feeB;
+
     }
 
     function refund() external {
         require(!completed, "Swap already completed");
 
-        completed = true;
         address token;
         uint256 amount;
 
         if (partyADeposited && (msg.sender == partyA)) {
-            //IERC20(tokenA).safeTransfer(partyA, amountA);
+            refundACompleted = true;
             token = tokenA;
             amount = amountA;
         }
+
         if (partyBDeposited && (msg.sender == partyB)) {
-            //IERC20(tokenB).safeTransfer(partyB, amountB);
+            refundBCompleted = true;
             token = tokenB;
             amount = amountB;
         }
 
         emit Refund(msg.sender, token, amount);
     }
+
+    function markPartyAPayoutCompleted() external {
+        payoutACompleted = true;
+    }
+
+    function markPartyBPayoutCompleted() external {
+        payoutBCompleted = true;
+    }
+
 
 }

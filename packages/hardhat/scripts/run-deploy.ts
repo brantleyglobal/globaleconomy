@@ -1,3 +1,4 @@
+// run-deploy.ts
 import fs from "fs";
 import { Wallet } from "ethers";
 import { promptSecret } from "./promptSecret";
@@ -13,7 +14,10 @@ async function main() {
 
   process.env.DEPLOYER_KEY = wallet.privateKey;
 
-  // ✅ Import AFTER key is set
+  const hre = await import("hardhat");
+
+  // Now start Hardhat AFTER the key is loaded
+  //await hre.run("run", { script: "scripts/deploy.ts" });
   await import("./deploy-inner");
 }
 

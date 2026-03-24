@@ -18,6 +18,7 @@ contract Dividend181 is Initializable, ERC20Upgradeable, AccessControlUpgradeabl
 
     uint16 public unlockQuarter;
     uint16 public comingQuarter;
+    uint8 public committedQuarters;
     uint16 public previousComingQuarter;
     uint256 public credit;
     uint256 private _supply;
@@ -95,14 +96,14 @@ contract Dividend181 is Initializable, ERC20Upgradeable, AccessControlUpgradeabl
                 day = 1;
             }
 
-            uint16 committedQuarters = 8;
+            committedQuarters = 8;
             uint16 redeemPeriod = 2;
 
             uint16 callQuarter = quarter + committedQuarters;
             uint16 newComing = callQuarter + redeemPeriod;
 
             if (callQuarter < 4 ) {
-                unlockQuarter = ((year) * 1000) + (unlockQuarter * 100) + day;
+                unlockQuarter = ((year) * 1000) + (callQuarter * 100) + day;
             } else if (callQuarter > 4 && callQuarter <= 8) {
                 unlockQuarter = ((year + 1) * 1000) + ((callQuarter - 4) * 100) + day;
             } else if (callQuarter > 8 && callQuarter <= 12) {

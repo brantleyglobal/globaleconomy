@@ -18,6 +18,7 @@ contract Dividend979 is Initializable, ERC20Upgradeable, AccessControlUpgradeabl
 
     uint16 public unlockQuarter;
     uint16 public comingQuarter;
+    uint8 public committedQuarters;
     uint16 public previousComingQuarter;
     uint256 public credit;
     uint256 private _supply;
@@ -95,7 +96,7 @@ contract Dividend979 is Initializable, ERC20Upgradeable, AccessControlUpgradeabl
                 day = 1;
             }
 
-            uint16 committedQuarters = 7;
+            committedQuarters = 7;
             uint16 redeemPeriod = 2;
 
             uint16 callQuarter = quarter + committedQuarters;
