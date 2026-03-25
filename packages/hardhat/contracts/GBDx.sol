@@ -106,7 +106,7 @@ contract GlobalDollarX is Initializable, ERC20Upgradeable, AccessControlUpgradea
                 day = 1;
             }
 
-            uint16 committedQuarters = 2;
+            committedQuarters = 2;
             uint16 redeemDate = 2;
 
             uint16 callQuarter = redeemDate + quarter;
