@@ -30,6 +30,8 @@ export const DividendRedeemModal = ({ openWalletModal }: FaucetProps) => {
   const { data: walletClient } = useWalletClient();
   const chainId = chain?.id;
 
+  const [autoPay, setAutoPay] = useState(false);
+
   const [walletTokens, setWalletTokens] = useState<(Token & { balance: bigint })[]>([]);
   const [selectedTokenSymbol, setSelectedTokenSymbol] = useState<string>("");
   const [amount, setAmount] = useState("");
@@ -82,6 +84,7 @@ export const DividendRedeemModal = ({ openWalletModal }: FaucetProps) => {
     available,
     signature: "",
     openWalletModal,
+    autoPay,   // ← add this
   });
 
   // Fetch balances on address or client change
@@ -289,6 +292,25 @@ export const DividendRedeemModal = ({ openWalletModal }: FaucetProps) => {
                 </div>
               </div>
             </div>
+
+            {/* AutoPay Seelection */}
+            <div className="flex items-center justify-between mt-6 mb-4 px-1">
+              <span className="text-xs font-light text-white/80 tracking-wide">
+                ENABLE AUTO‑PAY FOR FUTURE WITHDRAWALS
+              </span>
+
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoPay}
+                  onChange={() => setAutoPay(!autoPay)}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-5 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:bg-secondary transition-all"></div>
+                <div className="absolute w-4 h-4 bg-white rounded-full shadow transform peer-checked:translate-x-5 transition-all"></div>
+              </label>
+            </div>
+
             <div className="">
               <p className="text-white mb-2 mt-10 uppercase tracking-wide text-xs font-light">CONFIRMATION DETAILS</p>
               <input

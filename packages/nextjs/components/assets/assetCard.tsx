@@ -260,7 +260,7 @@ export const AssetCard: React.FC<Props> = ({ data }) => {
             setBuyModalOpen(true);
           }}
         >
-          CHECKOUT
+          CONFIGURE
         </button>
       </div>
 

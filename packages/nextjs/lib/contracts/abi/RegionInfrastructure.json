@@ -70,6 +70,17 @@
       "type": "error"
     },
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "SafeERC20FailedOperation",
+      "type": "error"
+    },
+    {
       "inputs": [],
       "name": "UUPSUnauthorizedCallContext",
       "type": "error"
@@ -176,49 +187,6 @@
         }
       ],
       "name": "DepositInRange",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "venture",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amountin",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amountout",
-          "type": "uint256"
-        }
-      ],
-      "name": "DepositTimestamp",
       "type": "event"
     },
     {
@@ -357,6 +325,43 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": false,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "quarter",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "old",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "newTxHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "payoutSetter",
+          "type": "address"
+        }
+      ],
+      "name": "PayoutTxHashCorrected",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": true,
           "internalType": "address",
           "name": "user",
@@ -485,6 +490,49 @@
         {
           "indexed": true,
           "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint16",
+          "name": "unlockQuarter",
+          "type": "uint16"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "existingHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "existingSetter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "attemptedSetter",
+          "type": "address"
+        }
+      ],
+      "name": "UnexpectedPayoutTxHash",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
           "name": "addr",
           "type": "address"
         },
@@ -534,30 +582,36 @@
         },
         {
           "indexed": false,
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
+          "internalType": "uint8",
+          "name": "quartersCommitted",
+          "type": "uint8"
         },
         {
           "indexed": false,
-          "internalType": "address",
-          "name": "venture",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amountin",
-          "type": "uint256"
+          "internalType": "uint16",
+          "name": "unlockQuarter",
+          "type": "uint16"
         },
         {
           "indexed": false,
           "internalType": "uint256",
           "name": "amountout",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint16",
+          "name": "termIndex",
+          "type": "uint16"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "stage",
+          "type": "uint8"
         }
       ],
-      "name": "WithdrawInRange",
+      "name": "UserWithdraw",
       "type": "event"
     },
     {
@@ -577,30 +631,30 @@
         },
         {
           "indexed": false,
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "venture",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amountin",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
           "internalType": "uint256",
           "name": "amountout",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "payoutToken",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint16",
+          "name": "termIndex",
+          "type": "uint16"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "stage",
+          "type": "uint8"
         }
       ],
-      "name": "WithdrawTimestamp",
+      "name": "WithdrawInRange",
       "type": "event"
     },
     {
@@ -653,6 +707,19 @@
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "autoPay",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "batchWithdraw",
       "outputs": [],
@@ -676,6 +743,52 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "changePayoutAddress",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "termIndex",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint8",
+          "name": "stage",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "newTxHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "correctPayoutTxHash",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
           "name": "token",
           "type": "address"
         },
@@ -693,6 +806,11 @@
           "internalType": "uint16",
           "name": "injectedTime",
           "type": "uint16"
+        },
+        {
+          "internalType": "uint256",
+          "name": "incomingRate",
+          "type": "uint256"
         }
       ],
       "name": "deposit",
@@ -748,6 +866,16 @@
           "type": "uint256"
         },
         {
+          "internalType": "uint256",
+          "name": "amountin",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountout",
+          "type": "uint256"
+        },
+        {
           "internalType": "address",
           "name": "user",
           "type": "address"
@@ -761,16 +889,6 @@
           "internalType": "address",
           "name": "venture",
           "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amountin",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amountout",
-          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -852,6 +970,121 @@
         {
           "internalType": "uint256",
           "name": "totalSupply",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "index",
+          "type": "uint256"
+        }
+      ],
+      "name": "getUserTerm",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "user",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "internalType": "uint8",
+              "name": "quartersCommitted",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint16",
+              "name": "startQuarter",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint16",
+              "name": "unlockQuarter",
+              "type": "uint16"
+            },
+            {
+              "internalType": "bool",
+              "name": "finalize",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "autoPay",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "userDividendAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "convertedDividendAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "termTotalSupply",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address[8]",
+              "name": "payoutSetter",
+              "type": "address[8]"
+            },
+            {
+              "internalType": "uint256[8]",
+              "name": "amountout",
+              "type": "uint256[8]"
+            },
+            {
+              "internalType": "bytes32[8]",
+              "name": "payoutTxHash",
+              "type": "bytes32[8]"
+            }
+          ],
+          "internalType": "struct RegionInfrastructure.User",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "getUserTermCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -982,6 +1215,40 @@
         {
           "internalType": "address",
           "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint16",
+          "name": "",
+          "type": "uint16"
+        }
+      ],
+      "name": "poolByUnlockQuarter",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "unlockQuarter",
+          "type": "uint16"
+        },
+        {
+          "internalType": "uint256",
+          "name": "poolBlalance",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "token",
           "type": "address"
         }
       ],
@@ -1236,6 +1503,34 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "termIndex",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint8",
+          "name": "stage",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "txHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "updatePayoutTxHash",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "newImplementation",
           "type": "address"
         },
@@ -1285,9 +1580,32 @@
           "internalType": "uint256",
           "name": "holderBalance",
           "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "rate",
+          "type": "uint256"
         }
       ],
       "name": "withdraw",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint16",
+          "name": "injectedTime",
+          "type": "uint16"
+        }
+      ],
+      "name": "withdrawAdmin",
       "outputs": [],
       "stateMutability": "payable",
       "type": "function"
@@ -1308,29 +1626,29 @@
           "type": "uint256"
         },
         {
+          "internalType": "uint256",
+          "name": "amountOut",
+          "type": "uint256"
+        },
+        {
           "internalType": "address",
           "name": "user",
           "type": "address"
         },
         {
           "internalType": "address",
-          "name": "token",
+          "name": "payoutToken",
           "type": "address"
         },
         {
-          "internalType": "address",
-          "name": "venture",
-          "type": "address"
+          "internalType": "uint16",
+          "name": "termIndex",
+          "type": "uint16"
         },
         {
-          "internalType": "uint256",
-          "name": "amountin",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amountout",
-          "type": "uint256"
+          "internalType": "uint8",
+          "name": "stage",
+          "type": "uint8"
         }
       ],
       "stateMutability": "view",
@@ -1362,6 +1680,80 @@
         {
           "internalType": "uint256",
           "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdrawalsByUser",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint8",
+          "name": "quartersCommitted",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint16",
+          "name": "startQuarter",
+          "type": "uint16"
+        },
+        {
+          "internalType": "uint16",
+          "name": "unlockQuarter",
+          "type": "uint16"
+        },
+        {
+          "internalType": "bool",
+          "name": "finalize",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "autoPay",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "userDividendAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "convertedDividendAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "termTotalSupply",
           "type": "uint256"
         }
       ],

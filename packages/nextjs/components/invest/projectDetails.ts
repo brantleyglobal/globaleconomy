@@ -41,7 +41,7 @@ export const projectDetails = {
   },
     CGRi: {
     title: "Clean Grid Infrastructure",
-    description: `Planned real estate energy farms function as decentralized power stations, similar in concept to solar farms but designed for vertical growth, much like server farms. Each farm acts as a central hub that continuously supplies clean energy to surrounding developments. Because the system is decentralized, major grid outages do not disrupt the network — only the individual station it connects to. This ensures uninterrupted power for supported projects, with milestone payouts beginning as each stage of development is completed.`,
+    description: `Planned real estate energy farms function as power stations, similar in concept to solar farms but designed for vertical growth, much like server farms. Each farm acts as a central hub that continuously supplies clean energy to surrounding developments and/or Interconnect substations. This ensures uninterrupted power for supported projects. Grid projects have a minimum term of 2 years(8 quarters) with a milestone payout at 1 year (4th quarter) of the developpment cycle. At year 2 (revenue generation) payouts are made in Amortized Simple Interest Payments over 10 years`,
     image: "",
     pdf: "/assets/bggrid.pdf",
   },

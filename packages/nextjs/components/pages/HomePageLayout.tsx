@@ -66,7 +66,7 @@ export default function HomePageLayout() {
       label: "OVERVIEW",
       content: `
         <p>Global Dollar (GBDo) operates an asset-backed ecosystem in which investments are directly tied to products and services within the platform. By investing in Global Dollar, participants are supporting the underlying economy of the ecosystem.</p>
-        <p>The system offers dividend payouts based on the chosen investment cycle, with a minimum term of two quarters (6 months). If an investor initiates their deposit after the 15th day of a quarter, the investor's term will not begin until the following quarter. At the end of each term, investors receive any earned dividends and their original investment amount.</p>
+        <p>The system offers dividend payouts based on the chosen investment cycle, with a minimum term of two quarters (6 months). If an investor initiates their deposit after the 15th day of a quarter, the investor's term will not begin until the following quarter. Investors begin recieving dividend payouts at the close of the first quarter of their investment. At the end of each investment term, investors receive any earned dividends and their original investment amount.</p>
       `,
     },
     {

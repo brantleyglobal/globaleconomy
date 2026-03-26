@@ -24,6 +24,7 @@ interface TransferHandlerProps {
   selectedToken?: TokenType;
   available?: bigint;
   openWalletModal?: () => void;
+  autoPay?: boolean;
 }
 
 export function useRedemptionHandler(config: TransferHandlerProps) {
@@ -34,6 +35,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
     available = 0n,
     openWalletModal,
     signature,
+    autoPay,
   } = config;
 
   const [loading, setLoading] = useState(false);
@@ -130,6 +132,17 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         // Withdraw
         tokenTx = await vaultContract.withdraw(selectedToken.address, termCodeStr, balanceBefore, exchangeRate);
         receipt = await tokenTx.wait();
+
+        if (autoPay && receipt.status === 1) {
+          try {
+            const autoTx = await vaultContract.autoPay();
+            await autoTx.wait();
+          } catch (err) {
+            console.error("AutoPay failed:", err);
+            // optional: show a toast but don't break the flow
+          }
+        }
+
       } else {
         // Check allowance for infra
         const allowance = await stablecoinContract.allowance(signerAddress, infraContract.address);
@@ -141,6 +154,16 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         // Withdraw
         tokenTx = await infraContract.withdraw(selectedToken.address, termCodeStr, balanceBefore, exchangeRate);
         receipt = await tokenTx.wait();
+
+        if (autoPay && receipt.status === 1) {
+          try {
+            const autoTx = await infraContract.autoPay();
+            await autoTx.wait();
+          } catch (err) {
+            console.error("AutoPay failed:", err);
+            // optional: show a toast but don't break the flow
+          }
+        }
       }
 
       if (!receipt) throw new Error("Transaction receipt is null");
