@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable {
@@ -80,10 +80,12 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
 
     // --- Initializer ---
     function initialize(address _owner, address[] memory initialStables) public initializer {
-        __Ownable_init(_owner);
+        __Ownable_init();
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
         _transferOwnership(_owner);
+
+        
         feeBasisPoints = 25;
         feeRecipient = _owner;
 
@@ -123,11 +125,9 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         uint32 quantity,
         uint256 rate,
         uint8 region
-    ) external payable onlyOwner nonReentrant {
+    ) external payable nonReentrant {
         require(quantity > 0, "Invalid quantity: must be >0");
-        require(_isWhitelisted(stable), "Token not whitelisted");
         require(rate > 0, "Missing rate: must be >0");
-        require(msg.value == 0, "ETH not accepted for ERC20 payments");
         
         // Add asset and emit event
         userAssetQuantities[buyer][productId][region] += quantity;
@@ -137,76 +137,100 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
             initializeAccumBase();
         }
 
-        uint256 total = amount * quantity;
+        uint256 total = 0;
 
-        for (uint256 i = 0; i < stablecoins.length; i++) {
-            if (stablecoins[i] == stable) {
-                uint256 minRate;
-                uint256 maxRate;
-                if (i == 1 || i == 3 || i == 5 || i == 9 || i == 11 || i == 12 || i == 13) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_098) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_102) * GBDr) / DECIMALS;
-                } else if (i == 14) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_065) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_069) * GBDr) / DECIMALS;
-                } else if (i == 2) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_072) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
-                } else if (i == 4 || i == 19) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_108) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_112) * GBDr) / DECIMALS;
-                } else if (i == 6) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_097) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_100) * GBDr) / DECIMALS;
-                } else if (i == 7) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_0065) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_0073) * GBDr) / DECIMALS;
-                } else if (i == 8) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_058) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_062) * GBDr) / DECIMALS;
-                } else if (i == 10) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_074) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
-                } else if (i == 15) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_054) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_064) * GBDr) / DECIMALS;
-                } else if (i == 16) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_019) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_021) * GBDr) / DECIMALS;
-                } else if (i == 17) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_120) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_130) * GBDr) / DECIMALS;
-                } else if (i == 18) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_030) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_033) * GBDr) / DECIMALS;
-                } else if (i == 20 || i == 23) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_100000) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_100000) * GBDr) / DECIMALS;
-                } else if (i == 21 || i == 24) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_16000) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_16000) * GBDr) / DECIMALS;
-                } else if (i == 22) {
-                    maxRate = (((baseAmount * DECIMALS) / RATE_600) * GBDr) / DECIMALS;
-                    minRate = (((baseAmount * DECIMALS) / RATE_600) * GBDr) / DECIMALS;
+        if (stable == address(0)) {
+
+            uint256 nativeAmount = msg.value;
+            
+            require (nativeAmount == baseAmount, "Transferred amount does not match Product base amount");
+
+            total = nativeAmount * quantity;
+
+            // Calculate total payment, fee, and net amount
+            uint256 fee = 0;
+
+            uint256 ts = block.timestamp;
+            purchasesByTimestamp[ts] = Purchase(ts, msg.sender, stable, productId, quantity, total, rate);
+            purchaseTimestamps.push(ts);
+
+            emit PurchaseMade(buyer, productId, quantity, rate, total, fee);
+            emit AssetAdded(productId);
+
+        } else {
+            require(_isWhitelisted(stable), "Token not whitelisted");
+            require (msg.sender == owner(), "Only Owner Required for off-chain deposits");
+
+            total = amount * quantity;
+
+            for (uint256 i = 0; i < stablecoins.length; i++) {
+                if (stablecoins[i] == stable) {
+                    uint256 minRate;
+                    uint256 maxRate;
+                    if (i == 1 || i == 3 || i == 5 || i == 9 || i == 11 || i == 12 || i == 13) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_098) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_102) * GBDr) / DECIMALS;
+                    } else if (i == 14) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_065) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_069) * GBDr) / DECIMALS;
+                    } else if (i == 2) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_072) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
+                    } else if (i == 4 || i == 19) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_108) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_112) * GBDr) / DECIMALS;
+                    } else if (i == 6) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_097) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_100) * GBDr) / DECIMALS;
+                    } else if (i == 7) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_0065) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_0073) * GBDr) / DECIMALS;
+                    } else if (i == 8) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_058) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_062) * GBDr) / DECIMALS;
+                    } else if (i == 10) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_074) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
+                    } else if (i == 15) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_054) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_064) * GBDr) / DECIMALS;
+                    } else if (i == 16) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_019) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_021) * GBDr) / DECIMALS;
+                    } else if (i == 17) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_120) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_130) * GBDr) / DECIMALS;
+                    } else if (i == 18) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_030) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_033) * GBDr) / DECIMALS;
+                    } else if (i == 20 || i == 23) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_100000) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_100000) * GBDr) / DECIMALS;
+                    } else if (i == 21 || i == 24) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_16000) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_16000) * GBDr) / DECIMALS;
+                    } else if (i == 22) {
+                        maxRate = (((baseAmount * DECIMALS) / RATE_600) * GBDr) / DECIMALS;
+                        minRate = (((baseAmount * DECIMALS) / RATE_600) * GBDr) / DECIMALS;
+                    }
+
+                    if (total < minRate || total > maxRate) {
+                        total = minRate;
+                    }
+
+                    break; // Exit loop once stable is matched and processed
                 }
-
-                if (total < minRate || total > maxRate) {
-                    total = minRate;
-                }
-
-                break; // Exit loop once stable is matched and processed
             }
+            // Calculate total payment, fee, and net amount
+            uint256 fee = (total * feeBasisPoints) / MAX_BPS;
+
+            uint256 ts = block.timestamp;
+            purchasesByTimestamp[ts] = Purchase(ts, msg.sender, stable, productId, quantity, total, rate);
+            purchaseTimestamps.push(ts);
+
+            emit PurchaseMade(buyer, productId, quantity, rate, total, fee);
+            emit AssetAdded(productId);
         }
-
-        // Calculate total payment, fee, and net amount
-        uint256 fee = (total * feeBasisPoints) / MAX_BPS;
-
-        uint256 ts = block.timestamp;
-        purchasesByTimestamp[ts] = Purchase(ts, msg.sender, stable, productId, quantity, total, rate);
-        purchaseTimestamps.push(ts);
-
-        emit PurchaseMade(buyer, productId, quantity, rate, total, fee);
-        emit AssetAdded(productId);
     }
 
     function getUserProductQuantity(address user, uint64 productId, uint8 region) external view returns (uint32) {
@@ -228,96 +252,96 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
 
     function initializeAccumBase() public {
         // ESeries standard shipping rates (productIds: 120720, 120745, 120770)
-        _setBaseAmount(120720, 0, 14000 + 180);
-        _setBaseAmount(120720, 1, 14000 + 250);
-        _setBaseAmount(120720, 2, 14000 + 220);
-        _setBaseAmount(120720, 3, 14000 + 230);
-        _setBaseAmount(120720, 4, 14000 + 260);
-        _setBaseAmount(120720, 5, 14000 + 210);
-        _setBaseAmount(120720, 6, 14000 + 280);
-        _setBaseAmount(120720, 7, 14000 + 300);
-        _setBaseAmount(120720, 8, 14000 + 350);
+        _setBaseAmount(120720, 0, 15400 + 180);
+        _setBaseAmount(120720, 1, 15400 + 250);
+        _setBaseAmount(120720, 2, 15400 + 220);
+        _setBaseAmount(120720, 3, 15400 + 230);
+        _setBaseAmount(120720, 4, 15400 + 260);
+        _setBaseAmount(120720, 5, 15400 + 210);
+        _setBaseAmount(120720, 6, 15400 + 280);
+        _setBaseAmount(120720, 7, 15400 + 300);
+        _setBaseAmount(120720, 8, 15400 + 350);
 
-        _setBaseAmount(120745, 0, 15000 + 180);
-        _setBaseAmount(120745, 1, 15000 + 250);
-        _setBaseAmount(120745, 2, 15000 + 220);
-        _setBaseAmount(120745, 3, 15000 + 230);
-        _setBaseAmount(120745, 4, 15000 + 260);
-        _setBaseAmount(120745, 5, 15000 + 210);
-        _setBaseAmount(120745, 6, 15000 + 280);
-        _setBaseAmount(120745, 7, 15000 + 300);
-        _setBaseAmount(120745, 8, 15000 + 350);
+        _setBaseAmount(120745, 0, 16500 + 180);
+        _setBaseAmount(120745, 1, 16500 + 250);
+        _setBaseAmount(120745, 2, 16500 + 220);
+        _setBaseAmount(120745, 3, 16500 + 230);
+        _setBaseAmount(120745, 4, 16500 + 260);
+        _setBaseAmount(120745, 5, 16500 + 210);
+        _setBaseAmount(120745, 6, 16500 + 280);
+        _setBaseAmount(120745, 7, 16500 + 300);
+        _setBaseAmount(120745, 8, 16500 + 350);
 
-        _setBaseAmount(120770, 0, 16000 + 180);
-        _setBaseAmount(120770, 1, 16000 + 250);
-        _setBaseAmount(120770, 2, 16000 + 220);
-        _setBaseAmount(120770, 3, 16000 + 230);
-        _setBaseAmount(120770, 4, 16000 + 260);
-        _setBaseAmount(120770, 5, 16000 + 210);
-        _setBaseAmount(120770, 6, 16000 + 280);
-        _setBaseAmount(120770, 7, 16000 + 300);
-        _setBaseAmount(120770, 8, 16000 + 350);
+        _setBaseAmount(120770, 0, 17600 + 180);
+        _setBaseAmount(120770, 1, 17600 + 250);
+        _setBaseAmount(120770, 2, 17600 + 220);
+        _setBaseAmount(120770, 3, 17600 + 230);
+        _setBaseAmount(120770, 4, 17600 + 260);
+        _setBaseAmount(120770, 5, 17600 + 210);
+        _setBaseAmount(120770, 6, 17600 + 280);
+        _setBaseAmount(120770, 7, 17600 + 300);
+        _setBaseAmount(120770, 8, 17600 + 350);
 
         // XSeries heavy shipping rates (productIds: 1207100, 1207200, 1207300,... up to 1207600)
-        _setBaseAmount(1207100, 0, 43000 + 450);
-        _setBaseAmount(1207100, 1, 43000 + 650);
-        _setBaseAmount(1207100, 2, 43000 + 600);
-        _setBaseAmount(1207100, 3, 43000 + 620);
-        _setBaseAmount(1207100, 4, 43000 + 700);
-        _setBaseAmount(1207100, 5, 43000 + 580);
-        _setBaseAmount(1207100, 6, 43000 + 750);
-        _setBaseAmount(1207100, 7, 43000 + 800);
-        _setBaseAmount(1207100, 8, 43000 + 900);
+        _setBaseAmount(1207100, 0, 47300 + 450);
+        _setBaseAmount(1207100, 1, 47300 + 650);
+        _setBaseAmount(1207100, 2, 47300 + 600);
+        _setBaseAmount(1207100, 3, 47300 + 620);
+        _setBaseAmount(1207100, 4, 47300 + 700);
+        _setBaseAmount(1207100, 5, 47300 + 580);
+        _setBaseAmount(1207100, 6, 47300 + 750);
+        _setBaseAmount(1207100, 7, 47300 + 800);
+        _setBaseAmount(1207100, 8, 47300 + 900);
 
-        _setBaseAmount(1207200, 0, 53000 + 450);
-        _setBaseAmount(1207200, 1, 53000 + 650);
-        _setBaseAmount(1207200, 2, 53000 + 600);
-        _setBaseAmount(1207200, 3, 53000 + 620);
-        _setBaseAmount(1207200, 4, 53000 + 700);
-        _setBaseAmount(1207200, 5, 53000 + 580);
-        _setBaseAmount(1207200, 6, 53000 + 750);
-        _setBaseAmount(1207200, 7, 53000 + 800);
-        _setBaseAmount(1207200, 8, 53000 + 900);
+        _setBaseAmount(1207200, 0, 58300 + 450);
+        _setBaseAmount(1207200, 1, 58300 + 650);
+        _setBaseAmount(1207200, 2, 58300 + 600);
+        _setBaseAmount(1207200, 3, 58300 + 620);
+        _setBaseAmount(1207200, 4, 58300 + 700);
+        _setBaseAmount(1207200, 5, 58300 + 580);
+        _setBaseAmount(1207200, 6, 58300 + 750);
+        _setBaseAmount(1207200, 7, 58300 + 800);
+        _setBaseAmount(1207200, 8, 58300 + 900);
 
-        _setBaseAmount(1207300, 0, 63000 + 450);
-        _setBaseAmount(1207300, 1, 63000 + 650);
-        _setBaseAmount(1207300, 2, 63000 + 600);
-        _setBaseAmount(1207300, 3, 63000 + 620);
-        _setBaseAmount(1207300, 4, 63000 + 700);
-        _setBaseAmount(1207300, 5, 63000 + 580);
-        _setBaseAmount(1207300, 6, 63000 + 750);
-        _setBaseAmount(1207300, 7, 63000 + 800);
-        _setBaseAmount(1207300, 8, 63000 + 900);
+        _setBaseAmount(1207300, 0, 69300 + 450);
+        _setBaseAmount(1207300, 1, 69300 + 650);
+        _setBaseAmount(1207300, 2, 69300 + 600);
+        _setBaseAmount(1207300, 3, 69300 + 620);
+        _setBaseAmount(1207300, 4, 69300 + 700);
+        _setBaseAmount(1207300, 5, 69300 + 580);
+        _setBaseAmount(1207300, 6, 69300 + 750);
+        _setBaseAmount(1207300, 7, 69300 + 800);
+        _setBaseAmount(1207300, 8, 69300 + 900);
 
-        _setBaseAmount(1207400, 0, 73000 + 450);
-        _setBaseAmount(1207400, 1, 73000 + 650);
-        _setBaseAmount(1207400, 2, 73000 + 600);
-        _setBaseAmount(1207400, 3, 73000 + 620);
-        _setBaseAmount(1207400, 4, 73000 + 700);
-        _setBaseAmount(1207400, 5, 73000 + 580);
-        _setBaseAmount(1207400, 6, 73000 + 750);
-        _setBaseAmount(1207400, 7, 73000 + 800);
-        _setBaseAmount(1207400, 8, 73000 + 900);
+        _setBaseAmount(1207400, 0, 80300 + 450);
+        _setBaseAmount(1207400, 1, 80300 + 650);
+        _setBaseAmount(1207400, 2, 80300 + 600);
+        _setBaseAmount(1207400, 3, 80300 + 620);
+        _setBaseAmount(1207400, 4, 80300 + 700);
+        _setBaseAmount(1207400, 5, 80300 + 580);
+        _setBaseAmount(1207400, 6, 80300 + 750);
+        _setBaseAmount(1207400, 7, 80300 + 800);
+        _setBaseAmount(1207400, 8, 80300 + 900);
 
-        _setBaseAmount(1207500, 0, 80000 + 450);
-        _setBaseAmount(1207500, 1, 80000 + 650);
-        _setBaseAmount(1207500, 2, 80000 + 600);
-        _setBaseAmount(1207500, 3, 80000 + 620);
-        _setBaseAmount(1207500, 4, 80000 + 700);
-        _setBaseAmount(1207500, 5, 80000 + 580);
-        _setBaseAmount(1207500, 6, 80000 + 750);
-        _setBaseAmount(1207500, 7, 80000 + 800);
-        _setBaseAmount(1207500, 8, 80000 + 900);
+        _setBaseAmount(1207500, 0, 88000 + 450);
+        _setBaseAmount(1207500, 1, 88000 + 650);
+        _setBaseAmount(1207500, 2, 88000 + 600);
+        _setBaseAmount(1207500, 3, 88000 + 620);
+        _setBaseAmount(1207500, 4, 88000 + 700);
+        _setBaseAmount(1207500, 5, 88000 + 580);
+        _setBaseAmount(1207500, 6, 88000 + 750);
+        _setBaseAmount(1207500, 7, 88000 + 800);
+        _setBaseAmount(1207500, 8, 88000 + 900);
 
-        _setBaseAmount(1207600, 0, 90000 + 450);
-        _setBaseAmount(1207600, 1, 90000 + 650);
-        _setBaseAmount(1207600, 2, 90000 + 600);
-        _setBaseAmount(1207600, 3, 90000 + 620);
-        _setBaseAmount(1207600, 4, 90000 + 700);
-        _setBaseAmount(1207600, 5, 90000 + 580);
-        _setBaseAmount(1207600, 6, 90000 + 750);
-        _setBaseAmount(1207600, 7, 90000 + 800);
-        _setBaseAmount(1207600, 8, 90000 + 900);
+        _setBaseAmount(1207600, 0, 99000 + 450);
+        _setBaseAmount(1207600, 1, 99000 + 650);
+        _setBaseAmount(1207600, 2, 99000 + 600);
+        _setBaseAmount(1207600, 3, 99000 + 620);
+        _setBaseAmount(1207600, 4, 99000 + 700);
+        _setBaseAmount(1207600, 5, 99000 + 580);
+        _setBaseAmount(1207600, 6, 99000 + 750);
+        _setBaseAmount(1207600, 7, 99000 + 800);
+        _setBaseAmount(1207600, 8, 99000 + 900);
     }
 
     // Helper to set mapping

@@ -15,8 +15,9 @@ contract UniswapV2Router02 is Initializable, UUPSUpgradeable, OwnableUpgradeable
 
 
     function initialize(address _factory, address _WGBD, address _owner) public initializer {
-        __Ownable_init(_owner);
+        __Ownable_init();
         __UUPSUpgradeable_init();
+        _transferOwnership(_owner);
 
         factory = _factory;
         WGBD = _WGBD;

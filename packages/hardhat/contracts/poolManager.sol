@@ -39,8 +39,9 @@ contract PoolManager is UUPSUpgradeable, OwnableUpgradeable {
 
     // Initializer for upgradeable contract
     function initialize(address _owner, address _vaultAddress) public initializer {
-        __Ownable_init(_owner);
+        __Ownable_init();
         __UUPSUpgradeable_init();
+        _transferOwnership(_owner);
         vaultAddress = _vaultAddress;
     }
 

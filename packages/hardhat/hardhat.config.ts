@@ -21,6 +21,7 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 1,
       },
+      viaIR: true,
     },
   },
   /*contractSizer: {
@@ -40,6 +41,7 @@ const config: HardhatUserConfig = {
     GLOBALCHAIN: {
       url: "http://10.100.100.20:8545",
       chainId: 38391207,
+      //GETH//accounts: process.env.NEXT_PUBLIC_PRIVATE_KEY_M ? [process.env.NEXT_PUBLIC_PRIVATE_KEY_M] : [],
       accounts: process.env.DEPLOYER_KEY ? [process.env.DEPLOYER_KEY] : [],
     },
   },

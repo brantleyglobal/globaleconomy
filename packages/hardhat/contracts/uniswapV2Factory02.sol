@@ -16,8 +16,9 @@ contract UniswapV2Factory is Initializable, OwnableUpgradeable, UUPSUpgradeable 
 
 
     function initialize(address _feeToSetter, address _owner) public initializer {
-        __Ownable_init(_owner);
+        __Ownable_init();
         __UUPSUpgradeable_init();
+        _transferOwnership(_owner);
 
         require(_feeToSetter != address(0), "Invalid feeToSetter");
         factoryData.feeToSetter = _feeToSetter;

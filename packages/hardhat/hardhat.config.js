@@ -15,9 +15,9 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 1,
+        runs: 10,
       },
-      evmVersion: "cancun",
+      viaIR: false,
     },
   },
   contractSizer: {
@@ -30,7 +30,7 @@ module.exports = {
   networks: {
     hardhat: {},
     GLOBALCHAIN: {
-      url: process.env.CUSTOM_RPC || "http://192.168.32.128:8545",
+      url: process.env.CUSTOM_RPC || "http://10.100.100.20:8545",
       chainId: 38391207
     }
   },

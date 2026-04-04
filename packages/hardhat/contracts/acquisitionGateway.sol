@@ -2,11 +2,10 @@
 pragma solidity ^0.8.22;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./libraries/smartVaultLib.sol";
 import "./GBDo.sol";
 import "./GBDx.sol";
 import "./COPx.sol";
@@ -74,9 +73,10 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         address _owner,
         address[] memory initialStables
     ) public initializer {
-        __Ownable_init(_owner);
+        __Ownable_init();
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
+        _transferOwnership(_owner);
 
         depositFeeBps = 25;
 

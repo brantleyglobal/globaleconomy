@@ -13,6 +13,14 @@ async function main() {
 
   process.env.DEPLOYER_KEY = wallet.privateKey;
 
+  /***Non Geth ***/
+
+  /*const privateKey = process.env.DEPLOYER_KEY!;
+
+  console.log("Using deployer key:", privateKey);
+
+  process.env.NEXT_PUBLIC_PRIVATE_KEY_M = privateKey;*/
+
   // ✅ Import AFTER key is set
   await import("./deploy-inner");
 }

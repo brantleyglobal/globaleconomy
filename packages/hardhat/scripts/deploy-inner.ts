@@ -2,6 +2,8 @@ import fs from "fs";
 import readline from "readline";import path from "path";
 import { parseUnits, Wallet } from "ethers";
 import gbdoxxAbi from "../artifacts/contracts/dividend/Dividend121.sol/Dividend121.json";
+import dotenv from "dotenv";
+dotenv.config();
 
 // Deployment Registry
 type DeployedContracts = Record<string, string>;
@@ -181,7 +183,7 @@ async function main() {
     }
   }
 
-   const stakeablecoinAddresses: string[] = [];
+  const stakeablecoinAddresses: string[] = [];
 
   // Deploy each Dividend contract and collect address
   for (const name of contractNames) {
@@ -191,11 +193,12 @@ async function main() {
   }
 
   const preaddr = [
-    "0xca17c338ef4aa7c00a53e1fefb69c464ab1afb5f",
-    "0x59Fc523864EbE08669AD17033245809ce15671be",
-    "0xc0da787791Ac23eb6D6470d3b660f5743662e65B",
-    "0x1ed17b6677228dbE99ea6b819ee305e1C5db33df",
-    "0x431dF2036a7471D7b556485169Ade9e609811Fb1"
+    //process.env.NEXT_PUBLIC_PAYMASTER_ADDRESS!,
+    process.env.NEXT_PUBLIC_SMARTVAULT!,
+    process.env.NEXT_PUBLIC_REGIONINFRA!,
+    process.env.NEXT_PUBLIC_ASSETPURCHASE!,
+    process.env.NEXT_PUBLIC_XCHANGE!,
+    process.env.NEXT_PUBLIC_ACQUIRE!,
   ]
 
   const preids = [
@@ -239,7 +242,8 @@ async function main() {
   const copx = await ethers.getContractAt("Copian", copxAddress);
 
   const stablecoinAddresses = [
-    gbdAddress, // COPx
+    //gbdoAddress, // COPx
+    gbdAddress, // GBDO
     "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC     1  
     "0x4A16BAf414b8e637Ed12019faD5Dd705735DB2e0", // QCAD     2
     "0x6B175474E89094C44Da98b954EedeAC495271d0F", // DAI      3
@@ -268,6 +272,8 @@ async function main() {
     //"0x05BBeD16620B352A7F889E23E3Cf427D1D379FFE", // NGNT
     //"0xc71daC923823D748a86D0A3618ABdA2d6dCd6bf4", // INRX
   ]
+  
+  const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 
   const UniswapV2Factory = await deployProxy("UniswapV2Factory", deployed, [
     deployer.address,
@@ -309,7 +315,7 @@ async function main() {
     deployer.address,
     stablecoinAddresses,
     stakeablecoinAddresses,
-    copxAddress,
+    usdc,
   ]);
 
   await gbdo.grantRole(await gbdo.MINTER_ROLE(), SmartVault);
@@ -397,7 +403,7 @@ async function main() {
   await BGGRID.grantRole(await BGGRID.MINTER_ROLE(), RegionInfrastructure);
   console.log(`RegionalInfra granted MINTER_ROLE on BGGRID`);
 
-  const TransferTracker = await deployProxy("TransferTracker", deployed, [
+  /*const TransferTracker = await deployProxy("TransferTracker", deployed, [
     deployer.address,
   ]);
 
@@ -411,7 +417,7 @@ async function main() {
   const MainPoolManager = await deployProxy("PoolManager", deployed, [
     deployer.address,
     deployed["SmartVault"],
-  ]);
+  ]);*/
 
   // ABI Generation
   const generateTsAbis = await import("./generateTsAbis").then((m) => m.default);
@@ -421,5 +427,5 @@ async function main() {
 
 main().catch((err) => {
   console.error(" Deployment failed:", err);
-  process.exit(1);
+  //process.exit(1);
 });

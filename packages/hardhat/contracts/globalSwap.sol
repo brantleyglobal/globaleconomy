@@ -97,12 +97,6 @@ contract GlobalSwap is Initializable {
 
         completed = true;
 
-        // Transfer tokens atomically
-        uint256 feeA = (amountA * feeBasisPoints) / MAX_BPS;
-        uint256 feeB = (amountA * feeBasisPoints) / MAX_BPS;
-        uint256 netAmountA = amountA - feeA;
-        uint256 netAmountB = amountB - feeB;
-
     }
 
     function refund() external {

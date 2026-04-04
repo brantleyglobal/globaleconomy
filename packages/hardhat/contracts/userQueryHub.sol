@@ -20,8 +20,9 @@ contract UserQueryHub is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address _assetPurchase,
         address _smartVault
     ) public initializer {
-        __Ownable_init(_owner);
+        __Ownable_init();
         __UUPSUpgradeable_init();
+        _transferOwnership(_owner);
 
         transferTracker = _transferTracker;
         assetPurchase = _assetPurchase;

@@ -33,8 +33,9 @@ contract TransferTracker is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /// @notice Initializes the contract with owner and optional stablecoin whitelist
     function initialize(address _owner) public initializer {
-        __Ownable_init(_owner);
+        __Ownable_init();
         __UUPSUpgradeable_init();
+        _transferOwnership(_owner);
         feeBasisPoints = 25;
         feeRecipient = _owner;
     }
