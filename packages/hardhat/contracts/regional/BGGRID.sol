@@ -25,6 +25,8 @@ contract BGGRID is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UU
     uint256 public credit;
     uint256 private _supply;
 
+    uint256 public constant annualRate = 500; // 5%
+
     modifier isUnlocked() {
         require(!locked, "contract is currently locked");
         _;
@@ -70,7 +72,7 @@ contract BGGRID is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UU
     function update(uint16 currentQuarter) public {
         // First-time initialization: start from current quarter
         if (unlockQuarter == 0) {
-            committedQuarters = 12;
+            committedQuarters = 8;
             redeemPeriod = 40;
             gracePeriod = 2;
 

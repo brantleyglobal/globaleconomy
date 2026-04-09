@@ -52,6 +52,14 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         bytes32[8] payoutTxHash;
     }
 
+    struct EcoQuarterData {
+        uint16 currentQuarter;
+        uint256 ecoSupply;
+        uint256 ecoPool;
+        uint256 poolMin;
+        uint256 poolMax;
+    }
+
     address public payoutToken;
     address public payoutAddress;
     address public rtoken;
@@ -75,8 +83,8 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     // Mapping for quick stablecoin whitelist check
     mapping(address => bool) private stablecoinWhitelistMap;
     mapping(address => bool) private stakeableWhitelistMap;
-    mapping(address => uint256) public tokenPoolBalances;
-    mapping(address => uint256) public vaultSupply;
+    mapping(address => uint256) public tokenPoolBalances; //UNUSED
+    mapping(address => uint256) public vaultSupply; //UNUNSED
     mapping(address => uint8) public multiplier;
     mapping(address => uint8) public quartersCommitted;
     mapping(uint256 => Deposit) public depositsByTimestamp;
@@ -84,9 +92,9 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     mapping(bytes32 => bool) public processedDeposits;
     mapping(uint256 => Withdraw) public withdrawByTimestamp;
     mapping(address => User[]) public withdrawalsByUser;
+    mapping(uint16 => EcoQuarterData) public ecoDataByQuarter;
 
     event Deposited(address indexed user, uint256 amountOut, uint256 amountIn, uint256 fee, uint8 committedQuarters);
-    event PoolAdjustment(address indexed user, uint256 totalWeightedMultiplier, uint256 totalToRedeem);
     event StakeableAddress(address indexed addr);
     event UpdateFailed(address indexed addr, uint256 index, string reason);
     event PoolBalanceUpdated(address indexed token, uint256 newBalance);
@@ -127,16 +135,6 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     uint256 constant RATE_16000 = 3000000000000000000000;   // 3_000 * 1e18 (adjust if needed)
     uint256 constant RATE_600 = 900000000000000000000;   // 900 * 1e18 (adjust if needed)
 
-    // Events omitted for brevity...
-
-    // Modifier to validate the injected time parameter //INVALID
-    modifier validInjectedTime(uint256 currentQuarter) {
-        require(currentQuarter > lastUpdatedTime, "Current quarter must advance");
-        // Optionally allow some future tolerance, e.g., not more than 10 minutes ahead of block.timestamp
-        require(currentQuarter <= block.timestamp + 10 minutes, "Current quarter too far in future");
-        _;
-    }
-
     function initialize(
         address _owner,
         address[] memory initialStables,
@@ -147,6 +145,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
         _transferOwnership(_owner);
+        populateMultipliers();
 
         feeRecipient = _owner;
         depositFeeBps = 25;
@@ -196,17 +195,12 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
     function calldates(uint16 _currentQuarter) public {
         // Unlock quarters already set, just update
+        lastUpdatedTime = _currentQuarter;
         for (uint256 i = 0; i < stakeables.length; i++) {
             address addr = stakeables[i];
-            //emit StakeableAddress(addr);
-
-            uint256 purgeAmount = 0;
             uint16 redemptionEnd = GlobalDollarX(addr).comingQuarter();
             if (_currentQuarter >= redemptionEnd) {
-                purgeAmount += tokenPoolBalances[addr];
-                tokenPoolBalances[addr] = 0;
-                uint256 updatedSupply = 0;
-                GlobalDollarX(addr).supply(updatedSupply);
+                GlobalDollarX(addr).supply(0);
             }
 
             try GlobalDollarX(addr).update(_currentQuarter) {
@@ -241,7 +235,6 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         } else {
             require(_isWhitelisted(token), "Token not whitelisted");
             require (msg.sender == owner(), "Only Owner Required for off-chain deposits");
-            calldates(startQuarter);
 
             fee = (amount * (depositFeeBps)) / 10000;
             uint256 baseAmount = (amount * incomingRate) / 1e18;
@@ -373,7 +366,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         depositTimestamps.push(ts);
     }
 
-   function computeQuarterData(
+    function computeTermData(
         address dividendToken,
         uint16 currentQuarter
     )
@@ -390,8 +383,12 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         unlockQuarter = GlobalDollarX(dividendToken).unlockQuarter();
         committedQuarters = GlobalDollarX(dividendToken).committedQuarters();
 
-        uint32 elapsed = currentQuarter - startQuarter;
-        stageCheck = uint8(elapsed);
+        startQuarter = unlockQuarter - committedQuarters;
+
+        require(currentQuarter >= startQuarter, "Quarter not reached");
+
+        stageCheck = uint8(currentQuarter - startQuarter);
+
     }
 
     function _computeStableAmountOut(
@@ -456,48 +453,19 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         return stableAmountOut;
     }
 
-    function _computeWithdrawData(
-        address dividendToken,
-        User storage u
-    )
-        internal
-        view
-        returns (
-            uint256 payout
-        )
-    {
-
-        // --- Pool for current stage ---
-        uint256 basePool = u.poolBalancePerStage[0];
-
-        // --- Apply Multiplier ---
-        uint256 effectivePool = basePool;
-
-        uint8 m = multiplier[dividendToken];
-        effectivePool = (basePool * m) / 100;
-
-        //User pro-rata share
-        uint256 dividend = (u.userDividendAmount * effectivePool) / u.termSupplyPerStage[0];
-
-        payout = dividend;
-    }
-
     function _processInitialWithdraw(
         address dividendToken,
         uint16 currentQuarter,
         uint256 holderBalance
     ) internal {
         uint256 rate = 107e16; // 1.07 * 1e18, placeholder for actual rate logic
-        (uint16 startQuarter, uint16 unlockQuarter, uint8 committedQuarters, uint8 stageCheck) = computeQuarterData(dividendToken, currentQuarter);
+        (uint16 startQuarter, uint16 unlockQuarter, uint8 committedQuarters, uint8 stageCheck) = computeTermData(dividendToken, currentQuarter);
 
-        bool quarterLapsed = stageCheck >= 1;
+        require(stageCheck >= 1, "Quarter has not lapsed or unlock quarter not reached");
 
-        require(quarterLapsed, "Quarter has not lapsed or unlock quarter not reached");
-
-        require (IERC20(dividendToken).allowance(msg.sender, address(this)) == holderBalance, "Total User Balance not allowed");
-        
         IERC20(dividendToken).safeTransferFrom(msg.sender, address(this), holderBalance);
-        vaultSupply[dividendToken] += holderBalance;
+
+        uint256 ts = block.timestamp;
 
         // Allocate a new struct slot
         withdrawalsByUser[msg.sender].push();
@@ -505,8 +473,6 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         // Now get the index of the new struct
         uint16 termIndex = uint16(withdrawalsByUser[msg.sender].length - 1);
         uint8 stage = 0;
-        uint256 ts = block.timestamp;
-
         User storage u = withdrawalsByUser[msg.sender][termIndex];
 
         u.user = msg.sender;
@@ -518,23 +484,52 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         u.userDividendAmount = holderBalance;
         u.finalize = false;
 
-        uint256 payout = _computeWithdrawData(dividendToken, u);
+        uint256 payout = 0;
+        if (stageCheck >= 1) {
+            for (uint8 i = 0; i < stageCheck; i++) {
+                uint8 updatedStage = stage + i;
 
-        u.amountout[0] = payout;
+                uint16 payoutQuarter = (startQuarter + 1) + i;
 
-        withdrawByTimestamp[ts] = Withdraw(
-            ts,
-            payout,
-            msg.sender,
-            payoutToken,
-            termIndex,
-            stage,
-            u.autoPay
-        );
+                EcoQuarterData storage g = ecoDataByQuarter[payoutQuarter];
 
-        withdrawTimestamps.push(ts);
+                if (g.currentQuarter == 0) {
+                    g.currentQuarter = payoutQuarter;
+                }
 
-        emit UserWithdraw(ts, msg.sender, committedQuarters, unlockQuarter, payout, termIndex, stage);
+                if (g.ecoPool == 0 || g.ecoSupply == 0 || u.amountout[i] != 0)
+                    continue;
+
+                u.termSupplyPerStage[i] = g.ecoSupply;
+                u.poolBalancePerStage[i] = g.ecoPool;
+                
+                payout = _computePayout(u, payoutQuarter, i);
+                u.amountout[i] = payout;
+                if ((i + 1) == u.quartersCommitted) {
+                    u.finalize = true;
+                }
+
+                ts = block.timestamp + i; // Ensure unique timestamp for each stage payout
+
+                withdrawByTimestamp[ts] = Withdraw(
+                    ts,
+                    payout,
+                    msg.sender,
+                    payoutToken,
+                    termIndex,
+                    i,
+                    u.autoPay
+                );
+
+                withdrawTimestamps.push(ts);
+
+                emit UserWithdraw(ts, msg.sender, committedQuarters, payoutQuarter, payout, termIndex, updatedStage);
+            }
+        
+            
+        } else {
+            revert("Payout for not available or payout has been processed");
+        }
     }
 
     function _findEligibleTerm(address user, uint16 currentQuarter)
@@ -553,7 +548,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             if (u.finalize) continue;
 
             // compute stage using your existing logic
-            (,,, uint8 stage) = computeQuarterData(u.token, currentQuarter);
+            (,,, uint8 stage) = computeTermData(u.token, currentQuarter);
 
             if (stage <= u.quartersCommitted && u.amountout[stage - 1] == 0) {
                 return uint16(i - 1);   // <-- safe cast
@@ -563,51 +558,42 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         revert("No eligible unpaid term found");
     }
 
-    function _computePayoutStage(
+    function _computePayout(
         User storage u,
-        uint16 currentQuarter
+        uint16 currentQuarter,
+        uint8 stageCheck
     )
         internal
         view
         returns (
-            uint8 stage,
             uint256 payout
         )
     {
-        (,,, uint8 stageCheck) = computeQuarterData(u.token, currentQuarter);
 
-        // --- Determine last completed stage ---
-        uint8 lastStage = 0;
-        for (uint8 i = 0; i < u.quartersCommitted; i++) {
-            if (u.amountout[i] == 0) {
-                lastStage = i;
-                break;
-            }
+        // --- Pool for current stage ---]
+        uint256 ecoPool = ecoDataByQuarter[currentQuarter].ecoPool;
+        
+        uint256 effectiveRawSupply = 0;
+        for (uint256 i = 0; i < stakeables.length; i++) {
+            address token = stakeables[i];
+            uint256 tokenSupply = GlobalDollarX(token).viewSupply();
+            effectiveRawSupply += (tokenSupply * multiplier[token]) / 100;
         }
 
-        // --- Determine next stage (sequential enforcement) ---
-        stage = lastStage;
-        require(stage < u.quartersCommitted, "No more payouts");
-        require(stageCheck >= stage, "Next stage not unlocked yet");
+        uint256 effectiveSupply = _computeStableAmountOut(effectiveRawSupply, 107e16);
 
-        // --- Pool for current stage ---
-        uint256 basePool = u.poolBalancePerStage[stage];
-
-        // --- Apply Multiplier ---
-        uint256 effectivePool = basePool;
-        if (stage < u.quartersCommitted){
-            uint8 m = multiplier[u.token];
-            effectivePool = (basePool * m) / 100;
-        }
+        uint256 effectiveStake = (u.convertedDividendAmount * multiplier[u.token]) / 100;
 
         //User pro-rata share
-        uint256 dividend = (u.userDividendAmount * effectivePool) / u.termSupplyPerStage[stage];
+        uint256 dividend = (ecoPool * effectiveStake) / effectiveSupply;
 
-        if (stage == u.quartersCommitted - 1) {
+
+        if ((stageCheck + 1) == u.quartersCommitted) {
             payout = dividend + u.convertedDividendAmount;
         } else {
             payout = dividend;
         }
+        
     }
 
     function _processPayout(
@@ -624,44 +610,71 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         if (u.finalize) revert("All payouts completed");
 
         // --- Compute payout for this stage ---
-        (uint8 stage, uint256 payout) = _computePayoutStage(u, currentQuarter);
+        (uint16 startQuarter,,, uint8 stageCheck) = computeTermData(u.token, currentQuarter);
 
-        // --- Write payout to the correct stage ---
-        u.amountout[stage] = payout;
+        uint256 payout = 0;
 
-        // --- Final stage logic ---
-        if (stage == u.quartersCommitted - 1) {
-            u.finalize = true;
+        // --- Determine last completed stage ---
+        uint8 stage = 0;
+        for (uint8 i = 0; i < u.quartersCommitted; i++) {
+            if (u.amountout[i] == 0) {
+                stage = i;
+                break;
+            }
         }
 
-        // --- Write Withdraw struct ---
-        withdrawByTimestamp[ts] = Withdraw(
-            ts,
-            payout,
-            user,
-            payoutToken,
-            termIndex,
-            stage,
-            u.autoPay
-        );
+        // --- Determine next stage (sequential enforcement) ---
+        require(stage < u.quartersCommitted, "No more payouts");
+        require(stageCheck >= stage, "Next stage not unlocked yet");
 
-        withdrawTimestamps.push(ts);
+        uint8 align = stageCheck - (stage + 1);
 
-        emit UserWithdraw(
-            ts,
-            user,
-            u.quartersCommitted,
-            u.unlockQuarter,
-            payout,
-            termIndex,
-            stage
-        );
+        if (align >= 1) {
+
+            // --- Write payout to the correct stage ---
+            for (uint8 i = stage; i < stageCheck; i++) {
+
+                uint16 payoutQuarter = startQuarter + (i + 1);
+                EcoQuarterData storage g = ecoDataByQuarter[payoutQuarter];
+
+                if (g.ecoPool == 0 || g.ecoSupply == 0)
+                    continue;
+
+                u.termSupplyPerStage[i] = g.ecoSupply;
+                u.poolBalancePerStage[i] = g.ecoPool;
+
+                payout = _computePayout(u, payoutQuarter, i);
+                u.amountout[stage + i] = payout;
+                if (((stage + i) + 1) == u.quartersCommitted) {
+                    u.finalize = true;
+                }
+
+                ts = block.timestamp + i; // Ensure unique timestamp for each stage payout
+
+                withdrawByTimestamp[ts] = Withdraw(
+                    ts,
+                    payout,
+                    msg.sender,
+                    payoutToken,
+                    termIndex,
+                    stage,
+                    u.autoPay
+                );
+
+                withdrawTimestamps.push(ts);
+
+                emit UserWithdraw(ts, user, u.quartersCommitted, u.unlockQuarter, payout, termIndex, i);
+            }
+
+        } else {
+            revert("Payout for not available or payout has been processed");
+        }
     }
 
     function withdraw(
-        address dividendToken
+        address dividendToken,
+        uint256 holderBalance
     ) external payable nonReentrant {
-        uint256 holderBalance = IERC20(dividendToken).balanceOf(msg.sender);
 
         if (holderBalance != 0) {
             _processInitialWithdraw(dividendToken, lastUpdatedTime, holderBalance);
@@ -678,145 +691,134 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         _processPayout(user, currentQuarter);
     }
 
-    function getEcoSupply(address token, uint16 currentQuarter) public view returns (uint256){
-        uint256 totalSupply = 0;
-        for (uint256 i = 0; i < stakeables.length; i++) {
-            if (stakeables[i] == token) {
-                GlobalDollarX instance = GlobalDollarX(stakeables[i]);
-
-                uint256 supply = 0;
-
-                (,,, uint8 stageCheck) = computeQuarterData(stakeables[i], currentQuarter);
-
-                if (stageCheck <= 1){
-                    supply = instance.viewSupply();
-                }
-
-                totalSupply += supply;
-            }
-        }
-        return totalSupply;
-    }
-
     function computeGlobalPoolRange(uint16 currentQuarter)
         public
-        onlyOwner
-        returns (uint256 minPool, uint256 maxPool)
+        returns (
+            uint256 poolMin,
+            uint256 poolMax,
+            uint256 totalEcoSupply
+        )
     {
+        if (currentQuarter != lastUpdatedTime) {
+            calldates(currentQuarter);
+        }
+
+        uint256 n = stakeables.length;
+
+        uint256 total = 0;
         uint256 principalBase = 0;     // payout token units
         uint256 unlockPrincipal = 0;   // payout token units
 
-        uint256 minRate = 3e16;  // 3%
-        uint256 maxRate = 10e16; // 10%
+        uint256 minRate = 30;  // 3%
+        uint256 maxRate = 120; // 10%
 
-        for (uint256 t = 0; t < stakeables.length; t++) {
-            address token = stakeables[t];
-            User[] storage terms = withdrawalsByUser[token];
+        uint256 exchangeRate = 107e16; // 1.07 * 1e18
 
-            for (uint256 i = 0; i < terms.length; i++) {
-                
-                User storage u = terms[i];
+        EcoQuarterData storage g = ecoDataByQuarter[currentQuarter];
 
-                // Skip if struct has been finalized
-                if (u.finalize) continue;
+        // ---------------------------------------------
+        // CASE 1: ecoSupply already exists → READ ONLY
+        // ---------------------------------------------
+        if (g.ecoSupply > 0) {
 
-                // Skip if before start or after unlock window
-                if (currentQuarter < u.startQuarter || currentQuarter > u.unlockQuarter)
-                    continue;
+            total = g.ecoSupply;
+            poolMin = g.poolMin;
+            poolMax = g.poolMax;
 
-                
+            return (poolMin, poolMax, total); // Done
+        }
 
-                (,,, uint8 stageCheck) = computeQuarterData(token, currentQuarter);
+        // ---------------------------------------------
+        // CASE 2: ecoSupply == 0 → INITIALIZE OR UPDATE
+        // ---------------------------------------------
+
+        if (g.ecoSupply == 0) {
+            // First pass: compute total supply
+            for (uint256 i = 0; i < n; i++) {
+                address token = stakeables[i];
+
+                (,,, uint8 stageCheck) = computeTermData(token, currentQuarter);
+
+                if (stageCheck >= 1) {
+                    uint256 supply = GlobalDollarX(token).viewSupply();
+                    uint16 unlockQuarter = GlobalDollarX(token).unlockQuarter();
+                    total += supply;
+                    if (currentQuarter >= unlockQuarter) {
+                        unlockPrincipal += supply;
+                    }
+                }
+            }
+
+            principalBase = _computeStableAmountOut(total, exchangeRate);
+            uint256 unlockPrincipalBase = _computeStableAmountOut(unlockPrincipal, exchangeRate);
 
 
-                u.termSupplyPerStage[stageCheck - 1] = getEcoSupply(token, currentQuarter);
-                u.poolBalancePerStage[stageCheck -1] = tokenPoolBalances[token];
+            uint256 minDividend = (principalBase * minRate) / 1000;
+            uint256 maxDividend = (principalBase * maxRate) / 1000;
 
-                // Convert claim token amount → payout token amount
+            /*poolMin = unlockPrincipalBase + minDividend;
+            poolMax = unlockPrincipalBase + maxDividend;*///MAYBE ADD TOTAL ECOREDEMPTIONS!!
 
-                principalBase += u.convertedDividendAmount;
+            poolMin = minDividend;
+            poolMax = maxDividend;
 
-                if (currentQuarter == u.unlockQuarter)
-                    unlockPrincipal += u.convertedDividendAmount;
+            // Initialize or update struct
+            if (g.currentQuarter == 0) {
+                // First-time creation
+                g.currentQuarter = currentQuarter;
+                g.ecoSupply = total;
+                g.ecoPool = minDividend; //Value used to calculate pool total, not including redemptions...
+                g.poolMin = unlockPrincipalBase + minDividend;
+                g.poolMax = unlockPrincipalBase + maxDividend;
+
+            } else {
+                // Struct exists → update supply
+                g.ecoSupply = total;
+                g.ecoPool = minDividend;
+                g.poolMin = unlockPrincipalBase + minDividend;
+                g.poolMax = unlockPrincipalBase + maxDividend;
             }
         }
 
-        uint256 minDividend = (principalBase * minRate) / 1e18;
-        uint256 maxDividend = (principalBase * maxRate) / 1e18;
-
-        minPool = unlockPrincipal + minDividend;
-        maxPool = unlockPrincipal + maxDividend;
+        return (poolMin, poolMax, total);
     }
 
     function addToDividendPools(
         uint256 poolAmount,
         uint16 currentQuarter
     ) external payable onlyOwner nonReentrant {
-        uint256 length = stakeables.length;
-        uint256 totalWeightedMultiplier = 0;
         uint256 totalRedemptions = 0;
 
         calldates(currentQuarter);
-
-        lastUpdatedTime = currentQuarter;
+         
         updatedStartQuarter = currentQuarter + 1;
-
-        // First pass: identify redemption and eligible tokens, sum multipliers and total redemption amounts
-        for (uint256 i = 0; i < length; i++) {
-            address token = stakeables[i];
-            GlobalDollarX instance = GlobalDollarX(token);
-
-            //uint16 redemptionEnd = instance.comingQuarter();
-            uint16 redemptionStart = instance.unlockQuarter();
-
-            if (currentQuarter >= redemptionStart) {
-                // Token in redemption period: sum redemption amounts to subtract later
-                totalRedemptions += vaultSupply[token];
-            } else {
-                // Token eligible for dividend pool
-                totalWeightedMultiplier += multiplier[token];
-            }
-        }
-
-        emit PoolAdjustment(msg.sender, totalWeightedMultiplier, totalRedemptions);
-
-        (, uint256 maxPool) =
-        computeGlobalPoolRange(currentQuarter);
-
-        require(poolAmount <= maxPool, "Pool amount out of range");
 
         // Adjust the pool amount by removing redemptions
         uint256 adjustedPoolAmount = poolAmount - totalRedemptions;
 
-        // Second pass: distribute adjusted pool amount proportionally to eligible tokens,
-        // add redemption amounts directly to pool balances for tokens in redemption.
-        for (uint256 i = 0; i < length; i++) {
-            address token = stakeables[i];
-            GlobalDollarX instance = GlobalDollarX(token);
+        EcoQuarterData storage g = ecoDataByQuarter[currentQuarter];
 
-            uint16 redemptionEnd = instance.comingQuarter();
-            uint16 redemptionStart = instance.unlockQuarter();
+        // If pool has never been set, allow initialization
+        if (g.ecoPool == 0) {
+            require(adjustedPoolAmount >= g.poolMin, "Below minimum");
+            require(adjustedPoolAmount <= g.poolMax, "Above maximum");
 
-            if (currentQuarter >= redemptionStart && currentQuarter <= redemptionEnd) {
-                // Add redemption amount directly to pool balance for this token
-                uint256 redemptionAmount = vaultSupply[token];
-                if (redemptionAmount > 0) {
-                    tokenPoolBalances[token] += redemptionAmount;
-                    emit PoolBalanceUpdated(token, tokenPoolBalances[token]);
-                }
-            } else {
-                // Allocate proportional share of adjustedPoolAmount based on multiplier
-                uint8 tokenMultiplier = multiplier[token];
-                if (tokenMultiplier > 0) {
-                    uint256 tokenShare = (adjustedPoolAmount * tokenMultiplier) / totalWeightedMultiplier;
-                    tokenPoolBalances[token] += tokenShare;
-                    emit PoolBalanceUpdated(token, tokenPoolBalances[token]);
-                }
-            }
+            g.ecoPool = poolAmount;
+            return;
         }
+
+        // If pool already exists, ensure we are not exceeding limits
+        uint256 newTotal = g.ecoPool;
+
+        require(newTotal >= g.poolMin, "Below minimum");
+        require(newTotal <= g.poolMax, "Above maximum");
+
+        // Update pool
+        g.ecoPool = poolAmount;
+
     }
 
-    function populateMultipliers() external {
+    function populateMultipliers() public {
         for (uint256 i = 0; i < stakeables.length; i++) {
             if (i <= 3) {
                 multiplier[stakeables[i]] = 110;
@@ -839,29 +841,9 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             } else if (i <= 48) {
                 multiplier[stakeables[i]] = 160;
                 quartersCommitted[stakeables[i]] = 8;
-            } else {
-                multiplier[stakeables[i]] = 100; // default or fallback multiplier if index > 48
-                quartersCommitted[stakeables[i]] = 9;
             }
         }
     }
-
-    // ============================================================
-    // Possible for future payouts in Platform Currency
-    // ============================================================
-    /*function batchWithdraw() external onlyOwner {
-        require(payoutAddress != address(0), "Payout address not set");
-        for (uint256 i = 0; i < stablecoins.length; i++) {
-            address token = stablecoins[i];
-            if (!stablecoinWhitelistMap[token]) continue;
-            uint256 tokenBalance = IERC20(token).balanceOf(address(this));
-            if (tokenBalance > 0) {
-                //IERC20(token).safeTransfer(payoutAddress, tokenBalance);
-                totalWithdrawn += tokenBalance;
-                emit FundsWithdrawn(token, payoutAddress, tokenBalance);
-            }
-        }
-    }*/
 
     function getUserTermCount(address user) external view returns (uint256) {
         return withdrawalsByUser[user].length;
@@ -886,6 +868,10 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     {
         uint256 ts = depositTimestampsByUser[user][index];
         return depositsByTimestamp[ts];
+    }
+
+    function getQuarterData(uint16 quarter) external view returns (EcoQuarterData memory) {
+        return ecoDataByQuarter[quarter];
     }
 
     function changePayoutAddress(address newUser) external onlyOwner {

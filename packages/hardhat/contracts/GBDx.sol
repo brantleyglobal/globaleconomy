@@ -25,6 +25,8 @@ contract GlobalDollarX is Initializable, ERC20Upgradeable, AccessControlUpgradea
     uint256 public credit;
     uint256 private _supply;
 
+    uint256 public constant annualRate = 500; // 5%
+
     modifier isUnlocked() {
         require(!locked, "contract is currently locked");
         _;

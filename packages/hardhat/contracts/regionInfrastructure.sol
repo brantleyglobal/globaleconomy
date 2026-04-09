@@ -89,6 +89,8 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     mapping(uint256 => Withdraw) public withdrawByTimestamp;
     mapping(address => User[]) public withdrawalsByUser;
     mapping(uint16 => UnlockD) public poolByUnlockQuarter;
+    mapping(address => uint256) public venturePoolRequirement;
+
 
     event Deposited(address indexed user, uint256 amountOut, uint256 amountIn, uint256 fee, uint32 committedQuarters);
     event DividendPaid(address indexed user, uint256 amount);
@@ -138,14 +140,6 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     uint256 constant RATE_600 = 900000000000000000000;   // 900 * 1e18 (adjust if needed)
 
     // Events omitted for brevity...
-
-    // Modifier to validate the injected time parameter //INVALID
-    modifier validInjectedTime(uint256 currentQuarter) {
-        require(currentQuarter > lastUpdatedTime, "Injected time must advance");
-        // Optionally allow some future tolerance, e.g., not more than 10 minutes ahead of block.timestamp
-        require(currentQuarter <= block.timestamp + 10 minutes, "Injected time too far in future");
-        _;
-    }
 
     function initialize(
         address _owner,
@@ -204,30 +198,21 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         return stakeableWhitelistMap[token];
     }
 
-    function calldates(uint16 _currentQuarter) public {
+    function calldates(address venture, uint16 _currentQuarter) public {
         // Unlock quarters already set, just update
         lastUpdatedTime = _currentQuarter;
-        for (uint256 i = 0; i < stakeables.length; i++) {
-            address addr = stakeables[i];
-            //emit StakeableAddress(addr);
 
-            uint256 purgeAmount = 0;
-            uint16 redemptionEnd = GlobalDollarX(addr).comingQuarter();
-            if (_currentQuarter >= redemptionEnd) {
-                purgeAmount += tokenPoolBalances[addr];
-                tokenPoolBalances[addr] = 0;
-                uint256 deduct = vaultSupply[addr];
-                uint256 updatedSupply = GlobalDollarX(addr).viewSupply() - deduct;
-                GlobalDollarX(addr).supply(updatedSupply);
-            }
+        uint16 redemptionEnd = GlobalDollarX(venture).comingQuarter();
 
-            try GlobalDollarX(addr).update(_currentQuarter) {
-                // success
-            } catch Error(string memory reason) {
-                emit UpdateFailed(addr, i, reason);
-            } catch {
-                emit UpdateFailed(addr, i, "Unknown error");
-            }
+        if (_currentQuarter >= redemptionEnd) {
+            GlobalDollarX(venture).supply(0);
+        }
+
+        try GlobalDollarX(venture).update(_currentQuarter) {
+        } catch Error(string memory reason) {
+            emit UpdateFailed(venture, 0, reason);
+        } catch {
+            emit UpdateFailed(venture, 0, "Unknown error");
         }
     }
 
@@ -246,7 +231,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             uint8 committedQuarters = GlobalDollarX(venture).committedQuarters();
             uint16 unlockQuarter = GlobalDollarX(venture).unlockQuarter();
 
-            require(lastUpdatedTime > (unlockQuarter - committedQuarters) + gracePeriod, "Deposit outside grace period");
+            require(lastUpdatedTime < (unlockQuarter - committedQuarters) + gracePeriod, "Deposit outside grace period");
 
             uint256 nativeAmount = msg.value;
             
@@ -280,13 +265,13 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             require(_isWhitelisted(token), "Token not whitelisted");
             require (msg.sender == owner(), "Only Owner Required for off-chain deposits");
 
+            calldates(venture, currentQuarter);
+
             uint8 gracePeriod = GlobalDollarX(venture).gracePeriod();
             uint8 committedQuarters = GlobalDollarX(venture).committedQuarters();
             uint16 unlockQuarter = GlobalDollarX(venture).unlockQuarter();
 
-            require(lastUpdatedTime > (unlockQuarter - committedQuarters) + gracePeriod, "Deposit outside grace period");
-
-            calldates(currentQuarter);
+            require(currentQuarter < (unlockQuarter - committedQuarters) + gracePeriod, "Deposit outside grace period");
 
             uint256 fee = (amount * (depositFeeBps)) / 10000;
             uint256 baseAmount = (amount * incomingRate) / 1e18;
@@ -366,7 +351,6 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             d.user = msg.sender;
             d.token = token;
             d.venture = venture;
-            //d.depositTxHash = depositHash;
             depositsByTimestamp[ts] = d;
 
             depositTimestamps.push(ts);
@@ -391,15 +375,18 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
 
         unlockQuarter = GlobalDollarX(dividendToken).unlockQuarter();
         committedQuarters   = GlobalDollarX(dividendToken).committedQuarters();
-
-        // Start quarter is simply unlock minus committed
         startQuarter = unlockQuarter - committedQuarters;
+        uint16 milestoneQuarter = unlockQuarter - 4;
 
         // -----------------------------
         // 2. Compute stageCheck
         // -----------------------------
 
-        stageCheck = uint8(currentQuarter - startQuarter);
+        if ((currentQuarter - (milestoneQuarter - 1)) >= 1 && (currentQuarter < (unlockQuarter - 1))) {
+            stageCheck = 1;
+        } else if ((currentQuarter - unlockQuarter) >= 1) {
+            stageCheck = uint8((currentQuarter - (unlockQuarter - 1)) + 1);
+        }
     }
 
     function _computeStableAmountOut(
@@ -413,7 +400,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
                 uint256 minRate;
                 uint256 maxRate;
 
-                if (i == 1 || i == 3 || i == 5 || i == 9 || i == 11 || i == 12 || i == 13) {
+                if (i == 0 || i == 1 || i == 3 || i == 5 || i == 9 || i == 11 || i == 12 || i == 13) {
                     maxRate = (((holderBalance * DECIMALS) / RATE_098) * GBDr) / DECIMALS;
                     minRate = (((holderBalance * DECIMALS) / RATE_102) * GBDr) / DECIMALS;
                 } else if (i == 14) {
@@ -464,125 +451,85 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         return stableAmountOut;
     }
 
-    function _computeWithdrawData(
+    function _processInitialWithdraw(
         address dividendToken,
         uint16 currentQuarter,
         uint256 holderBalance
-    )
-        internal
-        view
-        returns (
-            uint256 stableAmountOut,
-            uint256 payout,
-            uint256 totalSupply
-        )
-    {
-        // --- Load token parameters ---
-        (uint16 startQuarter, uint16 unlockQuarter,,) = computeQuarterData(dividendToken, currentQuarter);
-        uint8 redeemPeriod       = GlobalDollarX(dividendToken).redeemPeriod();
-        uint256 rate = 107e16; //1.07
-
-        // --- Stable amount (unchanged logic) ---
-        stableAmountOut = _computeStableAmountOut(holderBalance, rate);
-
-        uint16 milestoneQuarter = startQuarter + 4;
-        uint32 interestElapsed = 0;
-
-        // Before milestone
-        if (currentQuarter >= milestoneQuarter) {
-            // milestone counts as 1
-            interestElapsed = 1;
-
-            if (currentQuarter >= unlockQuarter) {
-                // unlock counts as 1 more
-                interestElapsed = 2 + (currentQuarter - unlockQuarter);
-            }
-        }
-        
-        if (interestElapsed > redeemPeriod) {
-            interestElapsed = redeemPeriod;
-        }
-
-        uint16 interestRate = 500; // 5% simple interest per quarter after milestone
-
-        // --- Simple interest amortized payout ---
-        uint256 principal = holderBalance;
-        uint256 principalSlice = principal / redeemPeriod;
-        uint256 interestSlice  = (principal * interestRate) / 10000;
-
-        // 1. Before milestone → no payout
-        if (interestElapsed == 0) {
-            payout = 0;
-        }
-
-        // 2. At milestone → first amortized payment
-        if (interestElapsed >= 1) {
-            payout = principalSlice + interestSlice;
-        }
-
-        // --- Total supply (if needed externally) ---
-        totalSupply = GlobalDollarX(dividendToken).viewSupply();
-    }
-
-    function _processInitialWithdraw(
-        address dividendToken,
-        uint16 injectedTime,
-        uint256 holderBalance
     ) internal {
+        uint256 rate = 107e16; // 1.07 * 1e18 (example rate, adjust as needed)
+        // --- Quarter Data ---
+        (uint16 startQuarter, uint16 unlockQuarter, uint8 committedQuarters, uint8 stageCheck) = computeQuarterData(dividendToken, currentQuarter);
 
-        (uint16 startQuarter, uint16 unlockQuarter, uint8 committedQuarters, uint8 stageCheck) = computeQuarterData(dividendToken, injectedTime);
-
-        // --- Quarter math (copied from _findEligibleTerm) ---
-
-        bool quarterLapsed = stageCheck >= 1;
-        //bool unlockReached = injectedTime >= quarterCheck;
-
-        require(quarterLapsed, "Quarter has not lapsed or unlock quarter not reached");
+        require(stageCheck >= 1, "Quarter has not lapsed or unlock quarter not reached");
 
         IERC20(dividendToken).safeTransferFrom(msg.sender, address(this), holderBalance);
-        vaultSupply[dividendToken] += holderBalance;
 
+        uint8 totalPayoutStages = GlobalDollarX(dividendToken).redeemPeriod(); 
+        uint16 milestoneQuarter = 8108 - 4;
+        uint256 totalSupply = 0;
+        if (currentQuarter >= milestoneQuarter) {
+            totalSupply = GlobalDollarX(dividendToken).viewSupply();
+        }
+
+        uint256 ts = block.timestamp;
         // Allocate a new struct slot
         withdrawalsByUser[msg.sender].push();
 
         // Now get the index of the new struct
         uint16 termIndex = uint16(withdrawalsByUser[msg.sender].length - 1);
-        uint8 stage = 0;
-        uint256 ts = block.timestamp;
 
         User storage u = withdrawalsByUser[msg.sender][termIndex];
 
-        (
-            uint256 stableAmountOut,
-            uint256 payout,
-            uint256 totalSupply
-        ) = _computeWithdrawData(dividendToken, injectedTime, holderBalance);
-
         u.user = msg.sender;
         u.token = dividendToken;
-        u.startQuarter = startQuarter;
         u.quartersCommitted = committedQuarters;
+        u.startQuarter = startQuarter;
         u.unlockQuarter = unlockQuarter;
         u.userDividendAmount = holderBalance;
-        u.convertedDividendAmount = stableAmountOut;
+        u.convertedDividendAmount = _computeStableAmountOut(holderBalance, rate);
         u.termTotalSupply = totalSupply;
-        u.amountout[0] = payout;
         u.finalize = false;
 
-        withdrawByTimestamp[ts] = Withdraw(
-            ts,
-            stableAmountOut,
-            msg.sender,
-            payoutToken,
-            termIndex,
-            stage,
-            u.autoPay
-        );
+        uint256 payout = 0;
+        uint8 stage = 0;  // stage = 0
+        // includes milestone
+        
+        if (stageCheck >= 1) {
+            for (stage = 0; stage < stageCheck; stage++) {
 
-        withdrawTimestamps.push(ts);
+                if (u.finalize) revert("All payouts completed");
 
-        emit UserWithdraw(ts, msg.sender, committedQuarters, unlockQuarter, payout, termIndex, stage);
-        emit AddressChecked(dividendToken, payoutToken, unlockQuarter);
+                // Skip if already paid
+                if (u.amountout[stage] != 0) continue;
+
+                // Skip if supply not ready
+                if (u.termTotalSupply == 0) continue;
+
+                payout = _computePayout(u);
+                u.amountout[stage] = payout;
+
+                if (stage + 1 == totalPayoutStages) {
+                    u.finalize = true;
+                }
+
+                ts = block.timestamp + stage;
+
+                withdrawByTimestamp[ts] = Withdraw(
+                    ts,
+                    payout,
+                    msg.sender,
+                    payoutToken,
+                    termIndex,
+                    stage,
+                    u.autoPay
+                );
+
+                withdrawTimestamps.push(ts);
+                emit UserWithdraw(ts, msg.sender, committedQuarters, unlockQuarter, payout, termIndex, stage);
+            }
+        } else {
+            revert("Payout for not available or payout has been processed");
+        }
     }
 
     function _findEligibleTerm(address user, uint16 currentQuarter)
@@ -618,10 +565,8 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         revert("No eligible unpaid term found");
     }
 
-    function _computePayoutStage(
-        User storage u,
-        uint8 lastStage,
-        uint16 currentQuarter
+    function _computePayout(
+        User storage u
     )
         internal
         view
@@ -631,30 +576,16 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     {
         uint8 redeemPeriod = GlobalDollarX(u.token).redeemPeriod();
 
-        // --- Interest-eligible elapsed quarters (after unlock) ---
-        uint32 rawInterestElapsed = currentQuarter - u.unlockQuarter;
-        uint32 uRawinterestElapsed = rawInterestElapsed > 0 ? rawInterestElapsed - 1 : 0;
-
-        // --- Skip if stage not yet unlocked ---
-        require(uRawinterestElapsed >= lastStage + 1, "Stage not unlocked yet");
-
-        // --- Force Term & Stage Alignment ---
-        uint8 stageAligned = lastStage + 1;
-
-        uint256 rate = 500; // 5% simple interest per quarter after milestone (adjust as needed)
-
-        uint32 interestElapsed = stageAligned;
-        if (interestElapsed > redeemPeriod) {
-            interestElapsed = redeemPeriod;
-        }
+        uint256 rate = GlobalDollarX(u.token).annualRate(); // 5% simple interest per quarter after milestone (adjust as needed)
+        uint256 quarterlyRate = rate / 4;
 
         uint256 principal = u.convertedDividendAmount;
 
         // --- Quarterly payout with principal + interest ---
         uint256 principalSlice = principal / redeemPeriod;
-        uint256 interestSlice  = (principal * rate) / 10000;
+        uint256 interestSlice  = ((principal * quarterlyRate) / 10000);
 
-        payout = principalSlice + interestSlice;
+        payout = (principalSlice + interestSlice);
 
         return (payout);
     }
@@ -669,68 +600,71 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
 
         User storage u = withdrawalsByUser[user][termIndex];
 
+        (, uint16 unlockQuarter, uint8 committedQuarters, uint8 stageCheck) = computeQuarterData(u.token, currentQuarter);
+
         require(u.user != address(0), "No prior withdrawal found");
         if (u.finalize) revert("All payouts completed");
 
-        require(currentQuarter >= u.unlockQuarter, "Unlock quarter not reached");
+        uint8 totalPayoutStages = GlobalDollarX(u.token).redeemPeriod(); // --- Includes the Milestone Quarter
 
         // --- Determine last completed stage ---
-        uint8 lastStage = 0;
-        for (uint8 i = 0; i < u.quartersCommitted; i++) {
+        uint8 nextStage = totalPayoutStages;
+        for (uint8 i = 0; i < totalPayoutStages; i++) {
             if (u.amountout[i] == 0) {
-                lastStage = i;
+                nextStage = i;
                 break;
             }
         }
-
-        // --- Determine eligible stage from time ---
-        uint8 stageCheck = uint8(currentQuarter - u.unlockQuarter);
-
-        // --- Enforce sequential progression ---
-        uint8 nextStage = lastStage;
-        require(nextStage < u.quartersCommitted, "No more payouts");
-        require(stageCheck >= nextStage, "Next stage not unlocked yet");
+        require(nextStage < totalPayoutStages, "All payouts completed");
 
         // --- Compute payout (ignore returned stage) ---
-        (uint256 payout) = _computePayoutStage(u, nextStage, currentQuarter);
 
-        uint8 stage = nextStage;
+        uint8 stage = 0;
+        uint256 payout = 0;
 
-        // --- Record payout ---
-        u.amountout[stage] = payout;
+        require(nextStage < stageCheck, "Next stage not unlocked yet");
 
-        withdrawByTimestamp[ts] = Withdraw(
-            ts,
-            payout,
-            user,
-            payoutToken,
-            termIndex,
-            stage,
-            u.autoPay
-        );
+        if (stageCheck >= 1) {
+            for (stage = nextStage; stage < stageCheck; stage++) {
+                if (u.finalize) revert("All payouts completed");
 
-        withdrawTimestamps.push(ts);
+                // Skip if already paid
+                if (u.amountout[stage] != 0) continue;
 
-        // --- Final payout completes the term ---
-        if (stage == u.quartersCommitted - 1) {
-            u.finalize = true;
+                // Skip if supply not ready
+                if (u.termTotalSupply == 0) continue;
+
+                payout = _computePayout(u);
+                u.amountout[stage] = payout;
+
+                if (stage + 1 == totalPayoutStages) {
+                    u.finalize = true;
+                }
+
+                ts = block.timestamp + stage;
+
+                withdrawByTimestamp[ts] = Withdraw(
+                    ts,
+                    payout,
+                    msg.sender,
+                    payoutToken,
+                    termIndex,
+                    stage,
+                    u.autoPay
+                );
+
+                withdrawTimestamps.push(ts);
+                emit UserWithdraw(ts, msg.sender, committedQuarters, unlockQuarter, payout, termIndex, stage);
+            }
+        } else {
+            revert("Payout for not available or payout has been processed");
         }
-
-        emit UserWithdraw(
-            ts,
-            user,
-            u.quartersCommitted,
-            u.unlockQuarter,
-            payout,
-            termIndex,
-            stage
-        );
     }
 
     function withdraw(
-        address dividendToken
+        address dividendToken,
+        uint256 holderBalance
     ) external payable nonReentrant {
-        uint256 holderBalance = IERC20(dividendToken).balanceOf(msg.sender);
 
         if (holderBalance != 0) {
             _processInitialWithdraw(dividendToken, lastUpdatedTime, holderBalance);
@@ -741,9 +675,10 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
 
     function withdrawAdmin(
         address user,
+        address venture,
         uint16 injectedTime
     ) external payable onlyOwner {
-        //calldates(injectedTime);
+        calldates(venture, injectedTime);
 
         _processPayout(user, injectedTime);
     }
@@ -760,128 +695,58 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         return totalSupply;
     }
 
-    function computeGlobalPoolRange(uint16 currentQuarter, address venture)
-        public
-        view
-        returns (uint256 minPool, uint256 maxPool)
+    function computeGlobalPool(address venture, uint16 currentQuarter)
+        external
+        onlyOwner
     {
-        uint256 annualRate = 500; // 5%
-        uint256 quarterlyRate = annualRate * 1e14 / 4; // 1.25% scaled
+        calldates(venture, currentQuarter);
 
         uint8 term = GlobalDollarX(venture).redeemPeriod();
+        uint256 annualRate = GlobalDollarX(venture).annualRate();
+        uint256 supply = GlobalDollarX(venture).totalSupply();
+        uint256 quarterlyRate = annualRate / 4;
 
-        for (uint256 t = 0; t < stakeables.length; t++) {
-            address token = stakeables[t];
-            User[] storage terms = withdrawalsByUser[token];
+        require(supply > 0 && term > 0 && annualRate > 0, "Venture not initialized");
 
-            for (uint256 i = 0; i < terms.length; i++) {
-                User storage u = terms[i];
+        // --- Convert supply to payout token
+        uint256 exchangeRate = 107e16; // 1.07 * 1e18,
+        uint256 principal = _computeStableAmountOut(supply, exchangeRate);
 
-                // Skip if struct has been finalized
-                if (u.finalize) continue;
+        // --- Amortized quarterly payment ---
+        uint256 principalSlice = principal / term;
+        uint256 interestSlice  = ((principal * quarterlyRate) / 10000);
 
-                // Skip if before start or after unlock window
-                if (currentQuarter < u.startQuarter || currentQuarter > u.unlockQuarter)
-                    continue;
+        uint256 poolRequirement = (principalSlice + interestSlice);
 
-                // Compute milestone index (1 year = 4 quarters)
-                uint32 milestoneIndex = u.startQuarter + 4;
+        venturePoolRequirement[venture] = poolRequirement;
+    }
 
-
-                uint256 principal = u.convertedDividendAmount;
-
-                // ============================================================
-                // 1. MILESTONE PAYMENT (include once)
-                // ============================================================
-                if (currentQuarter >= milestoneIndex && u.amountout[0] == 0) {
-                    uint256 milestoneInterest = (principal * 500) / 10000; // 5%
-                    uint256 milestonePayout = milestoneInterest + u.userDividendAmount;
-
-                    minPool += milestonePayout;
-                    maxPool += milestonePayout;
-                }
-
-                // ============================================================
-                // 2. POST-UNLOCK AMORTIZED PAYMENTS
-                // ============================================================
-
-                // Skip if before unlock window
-                if (currentQuarter < u.unlockQuarter)
-                    continue;
-
-                uint32 interestElapsed = currentQuarter - u.unlockQuarter;
-                if (interestElapsed > term)
-                    interestElapsed = term;
-
-                uint256 principalSlice = principal / term;
-                uint256 interestSlice  = (principal * quarterlyRate) / 1e18;
-
-                minPool += interestSlice;
-                maxPool += interestSlice;
-
-                // Final quarter adds remaining principal
-                if (interestElapsed == term) {
-                    uint256 remainingPrincipal = principal - (principalSlice * (term - 1));
-                    minPool += remainingPrincipal;
-                    maxPool += remainingPrincipal;
-                }
-            }
-        }
+    function getPoolRequirement(address venture) external view returns (uint256) {
+        return venturePoolRequirement[venture];
     }
 
     function addToDividendPools(
+        address venture,
         uint256 poolAmount,
         uint16 currentQuarter
     ) external onlyOwner nonReentrant {
 
-        calldates(currentQuarter);
+        calldates(venture, currentQuarter);
 
         for (uint256 i = 0; i < stakeables.length; i++) {
             address token = stakeables[i];
 
             // Compute the required payout range for THIS token
-            (uint256 minPool, uint256 maxPool) =
-                computeGlobalPoolRange(currentQuarter, token);
+            uint256 poolRequirement = venturePoolRequirement[token];
 
             // Ensure the poolAmount is valid for this token
-            require(poolAmount <= maxPool, "Pool amount out of range");
+            require(poolAmount <= poolRequirement, "Pool amount out of range");
 
             // Add the minimum required pool to this token’s pool balance
-            tokenPoolBalances[token] += minPool;
+            tokenPoolBalances[token] += poolRequirement;
 
             emit PoolBalanceUpdated(token, tokenPoolBalances[token]);
         }
-    }
-
-    function withdrawLapsed(uint16 _currentQuarter ) external onlyOwner nonReentrant {
-
-        uint256 purgeAmount = 0;
-
-        for (uint256 i = 0; i < stakeables.length; i++) {
-            address addr = stakeables[i];
-            //emit StakeableAddress(addr);
-
-            uint16 redemptionEnd = GlobalDollarX(addr).comingQuarter();
-            if (_currentQuarter >= redemptionEnd) {
-                purgeAmount += tokenPoolBalances[addr];
-                tokenPoolBalances[addr] = 0;
-                uint256 deduct = vaultSupply[addr];
-                uint256 updatedSupply = GlobalDollarX(addr).viewSupply() - deduct;
-                GlobalDollarX(addr).supply(updatedSupply);
-            }
-
-            try GlobalDollarX(addr).update(_currentQuarter) {
-                // success
-            } catch Error(string memory reason) {
-                emit UpdateFailed(addr, i, reason);
-            } catch {
-                emit UpdateFailed(addr, i, "Unknown error");
-            }
-        }
-
-        //IERC20(payoutToken).safeTransfer(feeRecipient, purgeAmount);
-        emit Purge(payoutToken, purgeAmount);
-
     }
 
     // ============================================================

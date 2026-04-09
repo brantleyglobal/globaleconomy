@@ -108,7 +108,7 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         uint256 fee = (amountin * depositFeeBps) / 10000;
         uint256 baseAmount = amountout / rate;
         uint256 netAmount = baseAmount - fee;
-        uint256 gbdAmountout = amountout - fee;
+        uint256 gbdAmountout = amountout;
         
         for (uint256 i = 0; i < stablecoins.length; i++) {
             if (stablecoins[i] == token) {
