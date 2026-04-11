@@ -158,7 +158,7 @@ export const featuredAssetsMockX600 = [
   {
     assetId: 1207600,
     asset: {
-      basePriceInGBDo: BigInt(990000000000),
+      basePriceInGBDo: BigInt(99000000000),
       baseDays: 180,
       perUnitDelay: 5,
       variant: "xseries",

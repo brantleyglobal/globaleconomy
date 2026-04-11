@@ -143,7 +143,7 @@ export const InvestmentModal: React.FC<Props> = ({
     (token) => token.symbol === selectedTokenSymbol
   ) as Token | undefined;
 
-  const selectedToken2: Token | undefined = supportedTokens.find(
+  const selectedToken2 = supportedTokens.find(
     (token2) => token2.symbol === selectedTokenSymbol2
   ) as Token | undefined;
 
@@ -220,9 +220,9 @@ export const InvestmentModal: React.FC<Props> = ({
           toast.error("Please select a valid token.");
           return;
         }
-        const receiptx = await infra(depositAmount, selectedToken2, selectedToken, connectedWallet!, selectedQuarter, provider);
+        receiptx = await infra(depositAmount, selectedToken2, selectedToken, selectedToken2, connectedWallet!, selectedQuarter, provider);
       } else {
-        const receiptx = await deposit(depositAmount, selectedQuarter, selectedToken, connectedWallet!, provider);
+        receiptx = await deposit(depositAmount, selectedQuarter, selectedToken, connectedWallet!, provider);
       }
 
       console.log("Transaction Hash:", receiptx);

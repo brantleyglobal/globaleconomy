@@ -1,89 +1,23 @@
 {
   "abi": [
     {
+      "anonymous": false,
       "inputs": [
         {
+          "indexed": false,
           "internalType": "address",
-          "name": "target",
+          "name": "previousAdmin",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "newAdmin",
           "type": "address"
         }
       ],
-      "name": "AddressEmptyCode",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "implementation",
-          "type": "address"
-        }
-      ],
-      "name": "ERC1967InvalidImplementation",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "ERC1967NonPayable",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "FailedCall",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InvalidInitialization",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "NotInitializing",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "owner",
-          "type": "address"
-        }
-      ],
-      "name": "OwnableInvalidOwner",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        }
-      ],
-      "name": "OwnableUnauthorizedAccount",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "ReentrancyGuardReentrantCall",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "UUPSUnauthorizedCallContext",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "slot",
-          "type": "bytes32"
-        }
-      ],
-      "name": "UUPSUnsupportedProxiableUUID",
-      "type": "error"
+      "name": "AdminChanged",
+      "type": "event"
     },
     {
       "anonymous": false,
@@ -96,6 +30,19 @@
         }
       ],
       "name": "AssetAdded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "beacon",
+          "type": "address"
+        }
+      ],
+      "name": "BeaconUpgraded",
       "type": "event"
     },
     {
@@ -147,9 +94,9 @@
       "inputs": [
         {
           "indexed": false,
-          "internalType": "uint64",
+          "internalType": "uint8",
           "name": "version",
-          "type": "uint64"
+          "type": "uint8"
         }
       ],
       "name": "Initialized",
@@ -191,6 +138,37 @@
         }
       ],
       "name": "PayoutAddressUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "old",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "newTxHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "payoutSetter",
+          "type": "address"
+        }
+      ],
+      "name": "PayoutTxHashCorrected",
       "type": "event"
     },
     {
@@ -291,25 +269,49 @@
         {
           "indexed": true,
           "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "existingHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "existingSetter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "attemptedSetter",
+          "type": "address"
+        }
+      ],
+      "name": "UnexpectedPayoutTxHash",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
           "name": "implementation",
           "type": "address"
         }
       ],
       "name": "Upgraded",
       "type": "event"
-    },
-    {
-      "inputs": [],
-      "name": "UPGRADE_INTERFACE_VERSION",
-      "outputs": [
-        {
-          "internalType": "string",
-          "name": "",
-          "type": "string"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
     },
     {
       "inputs": [
@@ -338,6 +340,29 @@
     {
       "inputs": [],
       "name": "batchWithdraw",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint16",
+          "name": "termIndex",
+          "type": "uint16"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "newTxHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "correctPayoutTxHash",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -423,6 +448,96 @@
           "internalType": "uint32",
           "name": "",
           "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "index",
+          "type": "uint32"
+        }
+      ],
+      "name": "getUserTerm",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "user",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "purchaseSetter",
+              "type": "address"
+            },
+            {
+              "internalType": "uint64",
+              "name": "id",
+              "type": "uint64"
+            },
+            {
+              "internalType": "uint32",
+              "name": "quantity",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "rate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "purchaseTxHash",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct AssetPurchase.Purchase",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "getUserTermCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -593,6 +708,11 @@
           "type": "address"
         },
         {
+          "internalType": "address",
+          "name": "purchaseSetter",
+          "type": "address"
+        },
+        {
           "internalType": "uint64",
           "name": "id",
           "type": "uint64"
@@ -611,6 +731,75 @@
           "internalType": "uint256",
           "name": "rate",
           "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "purchaseTxHash",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "purchasesByUser",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "purchaseSetter",
+          "type": "address"
+        },
+        {
+          "internalType": "uint64",
+          "name": "id",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint32",
+          "name": "quantity",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "rate",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "purchaseTxHash",
+          "type": "bytes32"
         }
       ],
       "stateMutability": "view",
@@ -703,6 +892,42 @@
         }
       ],
       "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint16",
+          "name": "termIndex",
+          "type": "uint16"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "txHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "updatePayoutTxHash",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newImplementation",
+          "type": "address"
+        }
+      ],
+      "name": "upgradeTo",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

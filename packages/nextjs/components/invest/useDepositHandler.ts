@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { parseUnits, Interface } from "ethers";
+import { parseUnits, Interface, Contract } from "ethers";
 import smartVaultAbi from "~~/lib/contracts/abi/SmartVault.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import type { Token } from "~~/components/constants/tokens";
@@ -7,12 +7,21 @@ import { logVaultCommit } from "./logVaultCommit";
 import { sendTransferOnTargetChain } from "~~/utils/targetChain";
 
 // Helper to generate term code (YYQDD)
-function generateTermCode(): string {
-  const date = new Date();
-  const year = date.getFullYear() % 100;
-  const quarter = Math.floor(date.getMonth() / 3) + 1;
-  const day = date.getDate().toString().padStart(2, "0");
-  return `${year}${quarter}${day}`;
+function generateTermCode(): number {
+  const now = new Date();
+  const year = now.getFullYear();
+  const quarter = Math.floor(now.getMonth() / 3) + 1;
+  const day = now.getDate();
+
+  const currentQuarterIndex = year * 4 + quarter;
+  let startQuarterIndex = year * 4 + quarter;
+
+  // Grace period rule: after day 15, roll to next quarter
+  if (day > 15) {
+      startQuarterIndex += 1;
+  }
+
+  return startQuarterIndex;
 }
 
 type TxResult = {
@@ -112,23 +121,54 @@ export function useDeposit(): UseDepositResult {
         if (!provider) {
           throw new Error("No provider available");
         }
-        const { txHash, receipt } = await sendTransferOnTargetChain(
-          holdingWalletAddress,
-          parsedValue,
-          {
-            address: token.address!,
-            decimals: token.decimals,
-            symbol: token.symbol,
-            chain: token.chain,
-          },
-          btcWallet,
-          provider // pass provider here
-        );
+
+        const signer = await provider.getSigner();
+        const signerAddress = await signer.getAddress();
+          
+        // Find selected token's rate from rates array
+        const exchangeRateFloat = 1;
+        const rate = parseUnits(exchangeRateFloat.toFixed(18), token.decimals);
+
+        const startQuarterIndex = generateTermCode();
+
+        const vaultContract = new Contract(deployments.SmartVault, smartVaultAbi.abi, signer);
+
+        let txHash;
+        let receipt;
+
+        if (token.symbol == "GBDo") {
+          txHash = await vaultContract.deposit!(
+            holdingWalletAddress,
+            token, 
+            parsedValue,
+            committedQuarters,
+            startQuarterIndex,
+            rate,
+            {
+              value: parsedValue,
+              gasLimit: 1_500_000
+            }
+          );
+          receipt = await txHash.wait();
+        } else {
+          ({ txHash, receipt } = await sendTransferOnTargetChain(
+            holdingWalletAddress,
+            parsedValue,
+            {
+              address: token.address!,
+              decimals: token.decimals,
+              symbol: token.symbol,
+              chain: token.chain,
+            },
+            btcWallet,
+            provider // pass provider here
+          ));
+        }
 
         const now = new Date().toISOString();
 
         const successPayload: VaultPayload = {
-          txhash: txHash.toString() ?? "",
+          txhash: txHash.hash ?? "",
           contractaddress: deployments.SmartVault,
           useraddress: userAddress,
           depositamount: parsedValue.toString(),

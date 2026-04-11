@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Interface } from "@ethersproject/abi";
 import { toast } from "react-hot-toast";
-import { parseUnits, formatUnits } from "ethers";
+import { parseUnits, formatUnits, Contract } from "ethers";
 import assetPurchaseAbi from "~~/lib/contracts/abi/AssetPurchase.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
@@ -535,7 +535,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
     if (selectedToken.symbol === "BTC"){
       holdingWalletAddress = process.env.NEXT_PUBLIC_BITCOLLECTOR_ADDRESS!;
     } else {        
-      holdingWalletAddress = deployments.AssetPurchase;
+      holdingWalletAddress = process.env.NEXT_PUBLIC_ASSETPURCHASE!;
     }
 
     /*************** CROSS CHAIN TRANSFER CALL ***************/
@@ -544,18 +544,47 @@ async function handleCryptoPurchase(params: InitiateParams) {
     if (!provider) {
       throw new Error("No provider available");
     }
-    const { txHash, receipt } = await sendTransferOnTargetChain(
-      holdingWalletAddress,
-      totalTokenAmount,
-      {
-        address: selectedToken.address!,
-        decimals: selectedToken.decimals,
-        symbol: selectedToken.symbol,
-        chain: selectedToken.chain,
-      },
-      btcWallet,
-      provider // pass provider here
-    );
+
+    const signer = await provider.getSigner();
+    const signerAddress = await signer.getAddress();
+      
+    // Find selected token's rate from rates array
+    const rate = parseUnits(exchangeRateFloat.toFixed(18), selectedToken.decimals);
+
+    const purchaseContract = new Contract(deployments.AssetPurchase, assetPurchaseAbi.abi, signer);
+
+    let txHash;
+    let receipt;
+    
+    if (selectedToken.symbol == "GBDo") {
+      txHash = await purchaseContract.purchase!(
+        holdingWalletAddress,
+        selectedToken,
+        checkoutAsset.id,
+        parsedValue,
+        quantity,
+        rate,
+        region,
+        {
+          value: parsedValue,
+          gasLimit: 1_500_000
+        }
+      );
+      receipt = await txHash.wait();
+    } else {
+      ({ txHash, receipt } = await sendTransferOnTargetChain(
+        holdingWalletAddress,
+        totalTokenAmount,
+        {
+          address: selectedToken.address!,
+          decimals: selectedToken.decimals,
+          symbol: selectedToken.symbol,
+          chain: selectedToken.chain,
+        },
+        btcWallet,
+        provider // pass provider here
+      ));
+    }
     
     /* Affiliate Logic */
     let affiliateAddress;

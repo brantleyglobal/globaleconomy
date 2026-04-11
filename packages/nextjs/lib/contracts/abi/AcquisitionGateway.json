@@ -1,91 +1,6 @@
 {
   "abi": [
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "target",
-          "type": "address"
-        }
-      ],
-      "name": "AddressEmptyCode",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "implementation",
-          "type": "address"
-        }
-      ],
-      "name": "ERC1967InvalidImplementation",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "ERC1967NonPayable",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "FailedCall",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InvalidInitialization",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "NotInitializing",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "owner",
-          "type": "address"
-        }
-      ],
-      "name": "OwnableInvalidOwner",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        }
-      ],
-      "name": "OwnableUnauthorizedAccount",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "ReentrancyGuardReentrantCall",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "UUPSUnauthorizedCallContext",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "slot",
-          "type": "bytes32"
-        }
-      ],
-      "name": "UUPSUnsupportedProxiableUUID",
-      "type": "error"
-    },
-    {
       "anonymous": false,
       "inputs": [
         {
@@ -115,9 +30,41 @@
       "inputs": [
         {
           "indexed": false,
-          "internalType": "uint64",
+          "internalType": "address",
+          "name": "previousAdmin",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "newAdmin",
+          "type": "address"
+        }
+      ],
+      "name": "AdminChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "beacon",
+          "type": "address"
+        }
+      ],
+      "name": "BeaconUpgraded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint8",
           "name": "version",
-          "type": "uint64"
+          "type": "uint8"
         }
       ],
       "name": "Initialized",
@@ -140,6 +87,74 @@
         }
       ],
       "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timeStamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint32",
+          "name": "termIndex",
+          "type": "uint32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "payoutHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "PayoutProcessed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "old",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "newTxHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "payoutSetter",
+          "type": "address"
+        }
+      ],
+      "name": "PayoutTxHashCorrected",
       "type": "event"
     },
     {
@@ -185,25 +200,49 @@
         {
           "indexed": true,
           "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "existingHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "existingSetter",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "attemptedSetter",
+          "type": "address"
+        }
+      ],
+      "name": "UnexpectedPayoutTxHash",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
           "name": "implementation",
           "type": "address"
         }
       ],
       "name": "Upgraded",
       "type": "event"
-    },
-    {
-      "inputs": [],
-      "name": "UPGRADE_INTERFACE_VERSION",
-      "outputs": [
-        {
-          "internalType": "string",
-          "name": "",
-          "type": "string"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
     },
     {
       "inputs": [
@@ -236,6 +275,49 @@
       "name": "acquisition",
       "outputs": [],
       "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "addToReconciliationPool",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "computeReconciliationPool",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "reconciliationAmount",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint16",
+          "name": "termIndex",
+          "type": "uint16"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "newTxHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "correctPayoutTxHash",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -286,6 +368,96 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "index",
+          "type": "uint32"
+        }
+      ],
+      "name": "getUserTerm",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "user",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "payoutSetter",
+              "type": "address"
+            },
+            {
+              "internalType": "uint32",
+              "name": "termIndex",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amountin",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amountout",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "purchaseTxHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "payoutTxHash",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct AcquisitionGateway.Purchase",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "getUserTermCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "_owner",
           "type": "address"
         },
@@ -308,6 +480,32 @@
           "internalType": "address",
           "name": "",
           "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "processTimeStampEnd",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "processTimeStampStart",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -371,6 +569,16 @@
           "type": "address"
         },
         {
+          "internalType": "address",
+          "name": "payoutSetter",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "termIndex",
+          "type": "uint32"
+        },
+        {
           "internalType": "uint256",
           "name": "amountin",
           "type": "uint256"
@@ -379,6 +587,80 @@
           "internalType": "uint256",
           "name": "amountout",
           "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "purchaseTxHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "payoutTxHash",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "purchasesByUser",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "payoutSetter",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "termIndex",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountin",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amountout",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "purchaseTxHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "payoutTxHash",
+          "type": "bytes32"
         }
       ],
       "stateMutability": "view",
@@ -411,6 +693,19 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "stakeablecoins",
+      "outputs": [
+        {
+          "internalType": "contract GlobalDollar",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",
@@ -419,6 +714,42 @@
         }
       ],
       "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint16",
+          "name": "termIndex",
+          "type": "uint16"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "txHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "updatePayoutTxHash",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newImplementation",
+          "type": "address"
+        }
+      ],
+      "name": "upgradeTo",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

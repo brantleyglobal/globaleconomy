@@ -7,6 +7,7 @@ import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { WalletIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { useState } from "react";
 import { useAccount } from "wagmi";
+import { useRpcStatus } from "~~/hooks/globalEco/statusRpc";
 
 type Props = {
   currentStep: number;
@@ -28,6 +29,7 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
   const [showWalletNotice, setShowWalletNotice] = useState(false);
   const [selectedTokenSymbol, setSelectedTokenSymbol] = useState<string>("");
   const [showStablecoinInfo, setShowStablecoinInfo] = useState(false);
+  const rpcUp = useRpcStatus();
   const getNetwork = (symbol: string, address: string): string => {
     if (symbol === "BTC") return "Bitcoin";
     if (address.startsWith("0x")) {
@@ -48,11 +50,17 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
         <div className="flex flex-col justify-between h-full rounded-xl"> 
           {/* Native Token */}
           <div className={`max-h-[300px] sm:max-h-[300px] max-h-[200px] overflow-y-auto rounded-lg border border-secondary/30 transition-all`}>
+            {!rpcUp &&(
+              <div className="bg-red-500/50 text-white text-xs p-3 rounded mb-3">
+                Native currency purchases temporarily unavailable. Please Try again later.
+              </div>
+            )}
             <button
               onClick={() => setField("tokenSymbol", "GBDo")}
               className={`w-full block rounded-lg px-4 pt-4 pb-2 bg-black/40 hover:bg-secondary/10 transition-colors text-left ${
                 paymentMethod === "native" ? "bg-secondary/20" : ""
               }`}
+              disabled={!rpcUp}
             >
               <div>
                 <h4 className="flex items-center gap-2 text-md mt-2 font-semibold text-white">

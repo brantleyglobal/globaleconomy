@@ -1,8 +1,8 @@
 
 
 import { useState, useCallback, useEffect } from "react";
-import { Interface, parseUnits, } from "ethers";
-import smartVaultAbi from "~~/lib/contracts/abi/SmartVault.json";
+import { Interface, parseUnits, Contract } from "ethers";
+import infraAbi from "~~/lib/contracts/abi/RegionInfrastructure.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import type { Token } from "~~/components/constants/tokens";
 import { logInfraCommit } from "./logInfraCommit";
@@ -49,6 +49,7 @@ interface UseDepositResult {
     amountStr: string,
     ventureAddress: Token,
     token: Token,
+    token2: Token,
     userAddress: string,
     committedQuarters: number,
     provider: any,
@@ -81,6 +82,7 @@ export function useInfra(): UseDepositResult {
       amountStr: string,
       ventureAddress: Token,
       token: Token,
+      token2: Token,
       userAddress: string,
       committedQuarters: number,
       provider: any,
@@ -93,7 +95,7 @@ export function useInfra(): UseDepositResult {
       try {
         if (!window.ethereum) throw new Error("Ethereum provider not found.");
 
-        const iface = new Interface(smartVaultAbi.abi);
+        const iface = new Interface(infraAbi.abi);
         parsedValue = parseUnits(amountStr, token.decimals);
 
         let callAddress;
@@ -118,18 +120,50 @@ export function useInfra(): UseDepositResult {
         if (!provider) {
           throw new Error("No provider available");
         }
-        const { txHash, receipt } = await sendTransferOnTargetChain(
-          holdingWalletAddress,
-          parsedValue,
-          {
-            address: token.address!,
-            decimals: token.decimals,
-            symbol: token.symbol,
-            chain: token.chain,
-          },
-          btcWallet,
-          provider // pass provider here
-        );
+
+        const signer = await provider.getSigner();
+        const signerAddress = await signer.getAddress();
+          
+        // Find selected token's rate from rates array
+        const exchangeRateFloat = 1;
+        const rate = parseUnits(exchangeRateFloat.toFixed(18), token.decimals);
+
+        const startQuarterIndex = generateTermCode();
+
+        const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
+
+        let txHash;
+        let receipt;
+
+        if (token.symbol == "GBDo") {
+          txHash = await infraContract.deposit!(
+            holdingWalletAddress,
+            token,
+            token2,
+            parsedValue,
+            committedQuarters,
+            startQuarterIndex,
+            rate,
+            {
+              value: parsedValue,
+              gasLimit: 1_500_000
+            }
+          );
+          receipt = await txHash.wait();
+        } else {
+          ({ txHash, receipt } = await sendTransferOnTargetChain(
+            holdingWalletAddress,
+            parsedValue,
+            {
+              address: token.address!,
+              decimals: token.decimals,
+              symbol: token.symbol,
+              chain: token.chain,
+            },
+            btcWallet,
+            provider // pass provider here
+          ));
+        }
 
         const now = new Date().toISOString();
 

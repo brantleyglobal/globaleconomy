@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Token } from "~~/components/constants/tokens";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import { useRpcStatus } from "~~/hooks/globalEco/statusRpc";
 
 export type Props = {
   supportedTokens: Token[];
@@ -42,6 +43,7 @@ export const TermStep: React.FC<Props> = ({
   const [userPromo, setUserPromo] = useState("");
   const [emailError, setEmailError] = useState("");
   const [showStablecoinInfo, setShowStablecoinInfo] = useState(false);
+  const rpcUp = useRpcStatus();
   const getNetwork = (symbol: string, address: string): string => {
       if (symbol === "BTC") return "Bitcoin";
       if (address.startsWith("0x")) {
@@ -98,6 +100,7 @@ export const TermStep: React.FC<Props> = ({
           >
             <option value="" disabled>Select Deposit Method</option>
             {supportedTokens
+              .filter(t => rpcUp || t.chain !== "global")   // Chain Status to Remove Native Transfers
               .filter(t => !["GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(t.symbol))
               .map(t => (
                 <option key={t.symbol} value={t.symbol}>

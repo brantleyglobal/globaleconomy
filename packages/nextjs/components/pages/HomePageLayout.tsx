@@ -71,10 +71,10 @@ export default function HomePageLayout() {
     },
     {
       id: "redemption",
-      label: "REDEMPTIONS",
+      label: "TERM DIVIDEND REDEMPTIONS",
       content: `
-        <p>If funds are not redeemed within the redemption period of 6 months immediately following the close of their selected term, dividends will be forfeited and added to the pool of the following term cycle.</p>
-        <p>While all investor’s tokens are redeemable, if an investor fails to redeem their tokens by the associated redemption period, the investor's tokens will automatically lock into the sequential cycle, and the original selected term will apply.</p>
+        <p>If the redemption process is not started within the redemption period of 6 months redmption period immediately following the close of their selected term, dividends will be forfeited.</p>
+        <p>While all investor’s tokens (associated invested amount) are redeemable, if an investor fails to initiate the redemption process by the associated redemption period, the investor's tokens will automatically lock into the sequential cycle, and the original selected term will apply.</p>
       `,
     },
     {

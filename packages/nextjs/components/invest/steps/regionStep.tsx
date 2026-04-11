@@ -3,6 +3,7 @@ import { Token } from "~~/components/constants/tokens";
 import { projectDetails } from "~~/components/invest/projectDetails";
 import { ProjectPreview } from "~~/components/invest/projectPreview";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import { useRpcStatus } from "~~/hooks/globalEco/statusRpc";
 
 type ProjectKey = keyof typeof projectDetails;
 
@@ -60,6 +61,7 @@ export const RegionStep: React.FC<Props> = ({
   const [emailError, setEmailError] = useState("");
   const [userPromo, setUserPromo] = useState("");
   const [showStablecoinInfo, setShowStablecoinInfo] = useState(false);
+  const rpcUp = useRpcStatus();
   const getNetwork = (symbol: string, address: string): string => {
       if (symbol === "BTC") return "Bitcoin";
       if (address.startsWith("0x")) {
@@ -140,6 +142,7 @@ export const RegionStep: React.FC<Props> = ({
                 Select Deposit Method
               </option>
               {supportedTokens
+                .filter(t => rpcUp || t.chain !== "global")   // Chain Status to Remove Native Transfers
                 .filter(t => !["GLB", "GBDx", "COPx", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(t.symbol))
                 .map(t => (
                   <option key={t.symbol} value={t.symbol}>

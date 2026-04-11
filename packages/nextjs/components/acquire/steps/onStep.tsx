@@ -5,6 +5,7 @@ import { WalletIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { getExchangeRates } from "~~/lib/exchangeRates";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { token } from "../../../../hardhat/typechain-types/@openzeppelin/contracts-upgradeable";
+import { useRpcStatus } from "~~/hooks/globalEco/statusRpc";
 
 export type Props = {
   supportedTokens: Token[];
@@ -60,6 +61,7 @@ export const OnStep: React.FC<Props> = ({
   const [emailError, setEmailError] = useState("");
   const [showWalletNotice, setShowWalletNotice] = useState(false);
   const [showStablecoinInfo, setShowStablecoinInfo] = useState(false);
+  const rpcUp = useRpcStatus();
   const getNetwork = (symbol: string, address?: string): string => {
     if (symbol === "BTC") return "Bitcoin";
 
@@ -326,6 +328,11 @@ export const OnStep: React.FC<Props> = ({
         </div>
 
         <div className="w-full sm:w-auto flex flex-col sm:flex-row justify-center sm:justify-end items-center gap-2">
+          {!rpcUp &&(
+            <div className="bg-red-500/50 text-white text-xs p-3 rounded mb-3">
+              Native currency purchases temporarily unavailable.Please try again later.
+            </div>
+          )}
           <button className="invisible btn btn-primary/15 btn-sm h-8 text-xs rounded-md px-6" aria-hidden="true">
               Previous
           </button>
@@ -334,7 +341,7 @@ export const OnStep: React.FC<Props> = ({
               console.log("click confirmed")
               onConfirm();
             }}
-            disabled={!connectedWallet || isProcessing}
+            disabled={!connectedWallet || isProcessing || !rpcUp}
           >
             {isProcessing ? "Processing..." : "CONFIRM"}
           </button>

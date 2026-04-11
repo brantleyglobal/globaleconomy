@@ -243,7 +243,11 @@ export const Header = () => {
         isOpen={modalState.redeem}
         onClose={() => setModalState(s => ({ ...s, redeem: false }))}
       >
-        <DividendRedeemModal openWalletModal={() => setModalState({ ...modalState, wallet: true })} />
+        <DividendRedeemModal
+          isOpen={modalState.redeem}         // boolean: whether modal is open
+          onClose={() => setModalState(s => ({ ...s, redeem: false }))}  // fn to close modal
+          openWalletModal={() => setModalState(s => ({ ...s, wallet: true }))}  // fn to open wallet modal
+        />
       </Modal>
       <Modal
         isOpen={modalState.swap}

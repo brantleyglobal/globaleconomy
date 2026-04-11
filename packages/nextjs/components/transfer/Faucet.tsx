@@ -28,6 +28,7 @@ import HelpStep from "~~/components/transfer/helpStep";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { mainnet, polygon } from "viem/chains";
 import { GLOBALCHAIN } from '~~/utils/globalEco/customChains';
+import { useRpcStatus } from "~~/hooks/globalEco/statusRpc";
 
 const RPC_URLS = {
   global: process.env.NEXT_PUBLIC_DEX_RPC_URL || "",
@@ -74,6 +75,7 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
   const [isHelpMode, setIsHelpMode] = useState(false);
   const [savedStep, setSavedStep] = useState<ModalStep | null>(null);
   const [showStablecoinInfo, setShowStablecoinInfo] = useState(false);
+  const rpcUp = useRpcStatus();
   const getNetwork = (symbol: string, address?: string): string => {
     if (symbol === "BTC") return "Bitcoin";
 
@@ -387,6 +389,7 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
                         : "Select Token to Transfer"}
                     </option>
                     {mergedTokens
+                      .filter(t => rpcUp || t.chain !== "global")   // Chain Status to Remove Native Transfers
                       .filter(
                         (t) =>
                           t.symbol !== "COPx" &&
