@@ -30,7 +30,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         uint256 amountOut;
         address user;
         address token;
-        uint16 termIndex;
+        uint32 termIndex;
         uint8 stage; 
         bool autoPay;
     }
@@ -77,14 +77,10 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     uint256 public depositFeeBps;
     uint256[] public depositTimestamps;
     uint256[] public withdrawTimestamps;
-    address[] public userWithdrawals;
-    uint16[] public unlockQuarterPool;
 
     // Mapping for quick stablecoin whitelist check
     mapping(address => bool) private stablecoinWhitelistMap;
     mapping(address => bool) private stakeableWhitelistMap;
-    mapping(address => uint256) public tokenPoolBalances; //UNUSED
-    mapping(address => uint256) public vaultSupply; //UNUNSED
     mapping(address => uint8) public multiplier;
     mapping(address => uint8) public quartersCommitted;
     mapping(uint256 => Deposit) public depositsByTimestamp;
@@ -100,9 +96,9 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     event PoolBalanceUpdated(address indexed token, uint256 newBalance);
     event PayoutAddressUpdated(address indexed oldAddress, address indexed newAddress);
     event FundsWithdrawn(address indexed token, address indexed to, uint256 amount);
-    event WithdrawInRange( uint256 timestamp, address indexed user, uint256 amountout, address payoutToken, uint16 termIndex, uint8 stage);
+    event WithdrawInRange( uint256 timestamp, address indexed user, uint256 amountout, address payoutToken, uint32 termIndex, uint8 stage);
     event DepositInRange( uint256 timestamp, address indexed user, address token, address dividend, uint8 quartersCommitted, uint256 amountin, uint256 amountout);
-    event UserWithdraw( uint256 timestamp, address indexed user, uint8 quartersCommitted, uint16 unlockQuarter, uint256 amountout, uint16 termIndex, uint8 stage );
+    event UserWithdraw( uint256 timestamp, address indexed user, uint8 quartersCommitted, uint16 unlockQuarter, uint256 amountout, uint32 termIndex, uint8 stage );
     event PayoutTxHashCorrected(address user, uint8 quarter, bytes32 old, bytes32 newTxHash, address payoutSetter);
     event UnexpectedPayoutTxHash(address indexed user,  uint16 unlockQuarter, bytes32 existingHash, address existingSetter, uint256 amount, address attemptedSetter);
 
@@ -360,8 +356,6 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         d.token = token;
         d.dividend = mintedTokenAddress;
         d.quartersCommitted = _committedQuarters;
-
-        depositsByTimestamp[ts] = d;
         
         depositTimestamps.push(ts);
     }
@@ -471,7 +465,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         withdrawalsByUser[msg.sender].push();
 
         // Now get the index of the new struct
-        uint16 termIndex = uint16(withdrawalsByUser[msg.sender].length - 1);
+        uint32 termIndex = uint16(withdrawalsByUser[msg.sender].length - 1);
         uint8 stage = 0;
         User storage u = withdrawalsByUser[msg.sender][termIndex];
 
@@ -601,7 +595,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         uint16 currentQuarter
     ) internal {
 
-        uint16 termIndex = _findEligibleTerm(user, currentQuarter);
+        uint32 termIndex = _findEligibleTerm(user, currentQuarter);
         uint256 ts = block.timestamp;
 
         User storage u = withdrawalsByUser[user][termIndex];
@@ -710,7 +704,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         uint256 unlockPrincipal = 0;   // payout token units
 
         uint256 minRate = 30;  // 3%
-        uint256 maxRate = 120; // 10%
+        uint256 maxRate = 120; // 12%
 
         uint256 exchangeRate = 107e16; // 1.07 * 1e18
 
@@ -849,7 +843,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         return withdrawalsByUser[user].length;
     }
 
-    function getUserTerm(address user, uint256 index)
+    function getUserTerm(address user, uint32 index)
         external
         view
         returns (User memory)
@@ -861,7 +855,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         return depositTimestampsByUser[user].length;
     }
 
-    function getUserDeposit(address user, uint256 index)
+    function getUserDeposit(address user, uint32 index)
         external
         view
         returns (Deposit memory)
@@ -897,7 +891,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
     function updatePayoutTxHash(
         address user,
-        uint16 termIndex,
+        uint32 termIndex,
         uint8 stage,
         bytes32 txHash
     ) external {
@@ -934,7 +928,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
     function correctPayoutTxHash(
         address user,
-        uint16 termIndex,
+        uint32 termIndex,
         uint8 stage,
         bytes32 newTxHash
     ) external onlyOwner {

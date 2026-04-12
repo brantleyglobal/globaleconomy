@@ -17,8 +17,12 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         uint256 timestamp;
         address user;
         address token;
+        address payoutSetter;
+        uint32 termIndex;
         uint256 amountin;
         uint256 amountout;
+        bytes32 purchaseTxHash;
+        bytes32 payoutTxHash;
     }
 
     GlobalDollar public stakeablecoins;
@@ -29,14 +33,20 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
 
     uint256[] public purchaseTimestamps;
     uint256 public depositFeeBps;
+    uint256 public processTimeStampStart;
+    uint256 public processTimeStampEnd;
+    uint256 private _supply;
     
     // Mapping for quick stablecoin whitelist check
     mapping(address => bool) private stablecoinWhitelistMap;
     mapping(uint256 => Purchase) public purchasesByTimestamp;
+    mapping(address => Purchase[]) public purchasesByUser;
 
     event Acquisitioned(address indexed user, uint256 amountOut, uint256 amountIn);
     event PurchaseTimestamp( uint256 timestamp, address indexed user, address token, uint256 amountOut, uint256 amountIn);
-
+    event PayoutTxHashCorrected(address user, bytes32 old, bytes32 newTxHash, address payoutSetter);
+    event UnexpectedPayoutTxHash(address indexed user, bytes32 existingHash, address existingSetter, uint256 amount, address attemptedSetter);
+    event PayoutProcessed(uint256 timeStamp, address user, uint256 amount, uint32 termIndex, bytes32 payoutHash);
 
     uint256 constant DECIMALS = 1e18;
     uint256 constant GBDr = 1030000000000000000;
@@ -101,6 +111,7 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         address token,
         uint256 amountin,
         uint256 amountout,
+
         uint256 rate
     ) external payable onlyOwner nonReentrant {
         require(_isWhitelisted(token), "Token not whitelisted");
@@ -169,14 +180,182 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
             }
         }
 
-        /*GlobalDollar gbdo = GlobalDollar(stablecoins[0]);
-        gbdo.mint(user, gbdAmountout);*/
+        uint256 currentSupply = viewSupply();
+        uint256 updatedSupply = currentSupply + gbdAmountout;
 
+        supply(updatedSupply);
+        
         uint256 ts = block.timestamp;
-        purchasesByTimestamp[ts] = Purchase(ts, user, token, amountin, gbdAmountout);
+
+        // 1. Allocate new user purchase slot
+        purchasesByUser[user].push();
+        uint256 index = purchasesByUser[user].length - 1;
+        Purchase storage p = purchasesByUser[user][index];
+
+        // 2. Fill the struct
+        p.timestamp = ts;
+        p.user = user;
+        p.token = token;
+        p.amountin = amountin;
+        p.amountout = gbdAmountout;
+        p.termIndex = uint32(index);
+
+        // 3. Store in timestamp mapping (NOT automatic)
+        purchasesByTimestamp[ts] = p;
+
+        // 4. Store timestamp for iteration (NOT automatic)
         purchaseTimestamps.push(ts);
 
+        if (processTimeStampStart == 0) {
+            processTimeStampStart = ts;
+        }
+
+        processTimeStampEnd = ts;
+
         emit Acquisitioned(user, gbdAmountout, amountin);
+    }
+
+    function getUserTermCount(address user) external view returns (uint256) {
+        return purchasesByUser[user].length;
+    }
+
+    function getUserTerm(address user, uint32 index)
+        external
+        view
+        returns (Purchase memory)
+    {
+        return purchasesByUser[user][index];
+    }
+
+    function viewSupply() internal view returns (uint256) {
+        return _supply;
+    }
+
+    function supply(uint256 amount) internal {
+        _supply = amount;
+    }
+
+    function computeReconciliationPool()
+        public
+        view
+        returns (
+            uint256 reconciliationAmount
+        )
+    {
+
+        reconciliationAmount = viewSupply();
+
+        return (reconciliationAmount);
+    }
+
+    function addToReconciliationPool() external payable onlyOwner nonReentrant {
+
+        require(processTimeStampStart != 0, "No timestamps to process");
+
+        uint256 start = processTimeStampStart;
+        uint256 end = processTimeStampEnd;
+
+        for (uint256 i = 0; i < purchaseTimestamps.length; i++) {
+            uint256 ts = purchaseTimestamps[i];
+
+            // Skip timestamps outside the batch
+            if (ts < start || ts > end) continue;
+
+            Purchase storage w = purchasesByTimestamp[ts];
+
+            // Skip already processed payouts
+            if (w.payoutTxHash != bytes32(0)) continue;
+
+            // Execute payout
+            payable(w.user).transfer(w.amountout);
+
+            // Compute tx hash
+            bytes32 txHash = keccak256(
+                abi.encodePacked(block.timestamp, w.user, w.amountout)
+            );
+
+            // Update timestamp-mapped struct
+            w.payoutTxHash = txHash;
+            w.payoutSetter = msg.sender;
+
+            // Update the user's struct using the stored index
+            Purchase storage userPurchase =
+                purchasesByUser[w.user][w.termIndex];
+
+            userPurchase.payoutTxHash = txHash;
+            userPurchase.payoutSetter = msg.sender;
+
+            // Emit event
+            emit PayoutProcessed(
+                ts,
+                w.user,
+                w.amountout,
+                w.termIndex,
+                txHash
+            );
+        }
+
+        // Reset batch
+        processTimeStampStart = 0;
+        processTimeStampEnd = 0;
+
+    }
+
+    function updatePayoutTxHash(
+        address user,
+        uint16 termIndex,
+        bytes32 txHash
+    ) external {
+
+        require(termIndex < purchasesByUser[user].length, "Invalid term index");
+
+        Purchase storage u = purchasesByUser[user][termIndex];
+
+        // Must have a payout computed
+        uint256 payout = u.amountout;
+        require(payout != 0, "Payout not yet computed");
+
+        // Prevent overwriting
+        if (u.payoutTxHash != bytes32(0)) {
+            emit UnexpectedPayoutTxHash(
+                user,
+                u.payoutTxHash,
+                u.payoutSetter,
+                payout,
+                msg.sender
+            );
+            return;
+        }
+
+        // Record tx hash
+        u.payoutTxHash = txHash;
+        u.payoutSetter = msg.sender;
+    }
+
+    function correctPayoutTxHash(
+        address user,
+        uint16 termIndex,
+        bytes32 newTxHash
+    ) external onlyOwner {
+
+        // Validate term index
+        //require(termIndex < withdrawalsByUser[user].length, "Invalid term index");
+
+        // Load the correct term record
+        Purchase memory u = purchasesByUser[user][termIndex];
+
+        // A payout must exist for this stage before correcting a hash
+        require(u.amountout != 0, "Payout not yet computed");
+
+        // Old hash must exist
+        bytes32 old = u.payoutTxHash;
+        require(old != bytes32(0), "Nothing to correct");
+
+        // Apply correction
+        u.payoutTxHash = newTxHash;
+        u.payoutSetter = msg.sender;
+
+        emit PayoutTxHashCorrected(user, old, newTxHash, msg.sender);
     }
 
     function getPurchase(uint256 timestamp) public {

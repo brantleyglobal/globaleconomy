@@ -14,10 +14,13 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         uint256 timestamp;
         address user;
         address token;
+        address purchaseSetter;
         uint64 id;
         uint32 quantity;
         uint256 amount;
         uint256 rate;
+        bytes32 purchaseTxHash;
+
     }
     // --- Storage ---
     uint256 public feeBasisPoints;
@@ -35,6 +38,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
     mapping(address => mapping(uint64 => mapping(uint8 => uint32))) private userAssetQuantities;
     mapping(uint32 => mapping(uint8 => uint256)) public accumBase;
     mapping(uint256 => Purchase) public purchasesByTimestamp;
+    mapping(address => Purchase[]) public purchasesByUser;
 
     // --- Events ---
     event AssetAdded(uint64 indexed id);
@@ -43,6 +47,8 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
     event PurchaseMade(address indexed buyer, uint64 assetId, uint32 quantity, uint256 rate, uint256 baseAmount, uint256 fee);
     event DebugPurchase(uint32 productId, uint256 base);
     event PurchaseTimestamp( uint256 timestamp, address indexed user, address token, uint64 id, uint32 quantity, uint256 amount, uint256 rate);
+    event PayoutTxHashCorrected(address user, bytes32 old, bytes32 newTxHash, address payoutSetter);
+    event UnexpectedPayoutTxHash(address indexed user, bytes32 existingHash, address existingSetter, uint256 amount, address attemptedSetter);
 
     uint256 constant DECIMALS = 1e18;
     uint256 constant GBDr = 1030000000000000000;
@@ -151,7 +157,25 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
             uint256 fee = 0;
 
             uint256 ts = block.timestamp;
-            purchasesByTimestamp[ts] = Purchase(ts, msg.sender, stable, productId, quantity, total, rate);
+
+            // 1. Allocate new user purchase slot
+            purchasesByUser[buyer].push();
+            uint256 index = purchasesByUser[buyer].length - 1;
+            Purchase storage p = purchasesByUser[buyer][index];
+
+            // 2. Fill the struct
+            p.timestamp = ts;
+            p.user = buyer;
+            p.token = stable;
+            p.id = productId;
+            p.quantity = quantity;
+            p.amount = total;
+            p.rate = rate;
+
+            // 3. Store in timestamp mapping (NOT automatic)
+            purchasesByTimestamp[ts] = p;
+
+            // 4. Store timestamp for iteration (NOT automatic)
             purchaseTimestamps.push(ts);
 
             emit PurchaseMade(buyer, productId, quantity, rate, total, fee);
@@ -225,7 +249,25 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
             uint256 fee = (total * feeBasisPoints) / MAX_BPS;
 
             uint256 ts = block.timestamp;
-            purchasesByTimestamp[ts] = Purchase(ts, msg.sender, stable, productId, quantity, total, rate);
+
+            // 1. Allocate new user purchase slot
+            purchasesByUser[buyer].push();
+            uint256 index = purchasesByUser[buyer].length - 1;
+            Purchase storage p = purchasesByUser[buyer][index];
+
+            // 2. Fill the struct
+            p.timestamp = ts;
+            p.user = buyer;
+            p.token = stable;
+            p.id = productId;
+            p.quantity = quantity;
+            p.amount = total;
+            p.rate = rate;
+
+            // 3. Store in timestamp mapping (NOT automatic)
+            purchasesByTimestamp[ts] = p;
+
+            // 4. Store timestamp for iteration (NOT automatic)
             purchaseTimestamps.push(ts);
 
             emit PurchaseMade(buyer, productId, quantity, rate, total, fee);
@@ -347,6 +389,71 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
     // Helper to set mapping
     function _setBaseAmount(uint32 productId, uint8 region, uint256 baseAmount) internal {
         accumBase[productId][region] = baseAmount;
+    }
+
+    function getUserTermCount(address user) external view returns (uint256) {
+        return purchasesByUser[user].length;
+    }
+
+    function getUserTerm(address user, uint32 index)
+        external
+        view
+        returns (Purchase memory)
+    {
+        return purchasesByUser[user][index];
+    }
+
+    function updatePayoutTxHash(
+        address user,
+        uint16 termIndex,
+        bytes32 txHash
+    ) external {
+
+        require(termIndex < purchasesByUser[user].length, "Invalid term index");
+
+        Purchase storage u = purchasesByUser[user][termIndex];
+
+        // Prevent overwriting
+        if (u.purchaseTxHash != bytes32(0)) {
+            emit UnexpectedPayoutTxHash(
+                user,
+                u.purchaseTxHash,
+                u.purchaseSetter,
+                u.amount,
+                msg.sender
+            );
+            return;
+        }
+
+        // Record tx hash
+        u.purchaseTxHash = txHash;
+        u.purchaseSetter = msg.sender;
+    }
+
+    function correctPayoutTxHash(
+        address user,
+        uint16 termIndex,
+        bytes32 newTxHash
+    ) external onlyOwner {
+
+        // Validate term index
+        //require(termIndex < withdrawalsByUser[user].length, "Invalid term index");
+
+        // Load the correct term record
+        Purchase memory u = purchasesByUser[user][termIndex];
+
+        // A payout must exist for this stage before correcting a hash
+        require(u.amount != 0, "Payout not yet computed");
+
+        // Old hash must exist
+        bytes32 old = u.purchaseTxHash;
+        require(old != bytes32(0), "Nothing to correct");
+
+        // Apply correction
+        u.purchaseTxHash = newTxHash;
+        u.purchaseSetter = msg.sender;
+
+        emit PayoutTxHashCorrected(user, old, newTxHash, msg.sender);
     }
 
     function getPurchase(uint256 timestamp) public {
