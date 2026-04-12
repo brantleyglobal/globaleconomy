@@ -217,9 +217,6 @@ export const OnStep: React.FC<Props> = ({
                 </option>
               ))}
           </select>
-          <p className="text-xs text-justify text-white mt-">
-            Includes routing fee of 0.25%. Non-Stablecoin purchases are not based live conversion rates in an effort to protect products on this platform from volatility. Users are encouraged to convert to Stablecoin for investment and energy related product purchases on this platform.
-          </p>
           <button
               type="button"
               onClick={() => setShowStablecoinInfo(true)}
@@ -328,11 +325,11 @@ export const OnStep: React.FC<Props> = ({
         </div>
 
         <div className="w-full sm:w-auto flex flex-col sm:flex-row justify-center sm:justify-end items-center gap-2">
-          {!rpcUp &&(
+          {/*{!rpcUp &&(
             <div className="bg-red-500/50 text-white text-xs p-3 rounded mb-3">
               Native currency purchases temporarily unavailable.Please try again later.
             </div>
-          )}
+          )}*/}
           <button className="invisible btn btn-primary/15 btn-sm h-8 text-xs rounded-md px-6" aria-hidden="true">
               Previous
           </button>
@@ -341,7 +338,7 @@ export const OnStep: React.FC<Props> = ({
               console.log("click confirmed")
               onConfirm();
             }}
-            disabled={!connectedWallet || isProcessing || !rpcUp}
+            disabled={!connectedWallet || isProcessing}
           >
             {isProcessing ? "Processing..." : "CONFIRM"}
           </button>
