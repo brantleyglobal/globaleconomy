@@ -76,6 +76,9 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
   const [savedStep, setSavedStep] = useState<ModalStep | null>(null);
   const [showStablecoinInfo, setShowStablecoinInfo] = useState(false);
   const rpcUp = useRpcStatus();
+
+  console.log("RPC status:", rpcUp);
+
   const getNetwork = (symbol: string, address?: string): string => {
     if (symbol === "BTC") return "Bitcoin";
 

@@ -3,7 +3,8 @@
 import {useEffect, useState } from "react";
 
 export function useRpcStatus(interval = 5000) {
-    const[rpcUp, setRpcUp] = useState(true);
+    const [rpcUp, setRpcUp] = useState<boolean | null>(null);
+
 
     useEffect(() => {
         const check = async () => {
@@ -14,7 +15,7 @@ export function useRpcStatus(interval = 5000) {
                     body: JSON.stringify({
                         jsonrpc: "2.0",
                         id: 1,
-                        method: "eth-blockNumber",
+                        method: "eth_blockNumber",
                         params: []
                     })
                 }); //check if correct to call this way

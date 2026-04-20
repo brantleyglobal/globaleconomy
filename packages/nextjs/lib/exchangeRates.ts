@@ -109,18 +109,43 @@ const UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const SMOOTHING_THRESHOLD = 0.02;
 const RATE_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
-const rpcUrls: Record<string, string> = {
-  ethereum: "https://1rpc.io/eth",
-  arbitrum: "https://arb1.arbitrum.io/rpc",
-  optimism: "https://mainnet.optimism.io",
-  polygon: "https://polygon-rpc.com",
-  base: "https://mainnet.base.org",
-  avalanche: "https://api.avax.network/ext/bc/C/rpc",
-  bsc: "https://bsc-dataseed.binance.org",
-  gnosis: "https://rpc.gnosischain.com"
+const rpcFallbacks: Record<string, string[]> = {
+  ethereum: [
+    //"https://1rpc.io/eth",
+    "https://eth.llamarpc.com",
+    "https://cloudflare-eth.com"
+  ],
+  arbitrum: [
+    "https://arb1.arbitrum.io/rpc",
+    "https://arbitrum.llamarpc.com"
+  ],
+  optimism: [
+    "https://mainnet.optimism.io",
+    "https://optimism.llamarpc.com"
+  ],
+  polygon: [
+    "https://polygon-rpc.com",
+    "https://polygon.llamarpc.com"
+  ],
+  base: [
+    "https://mainnet.base.org",
+    "https://base.llamarpc.com"
+  ],
+  avalanche: [
+    "https://api.avax.network/ext/bc/C/rpc",
+    "https://avalanche-c-chain.llamarpc.com"
+  ],
+  bsc: [
+    "https://bsc-dataseed.binance.org",
+    "https://bsc.llamarpc.com"
+  ],
+  gnosis: [
+    "https://rpc.gnosischain.com",
+    "https://gnosis.llamarpc.com"
+  ]
 };
 
-const trustedNetworks = Object.keys(rpcUrls);
+const trustedNetworks = Object.keys(rpcFallbacks);
 
 const rateCache = new Map<string, StablecoinRate>();
 let cachedGBDoRate: number | null = null;
@@ -134,6 +159,23 @@ const stablecoins: StablecoinMeta[] = supportedTokens.map(token => ({
   pythFeed: pythFeeds[token.symbol],
   redstoneFeed: redstoneFeeds[token.symbol],
 }));
+
+async function getSafeProvider(network: string): Promise<JsonRpcProvider | null> {
+  const urls = rpcFallbacks[network];
+  if (!urls) return null;
+
+  for (const url of urls) {
+    try {
+      const provider = new JsonRpcProvider(url);
+      await provider.getBlockNumber(); // lightweight test
+      return provider;
+    } catch {
+      continue; // try next RPC
+    }
+  }
+
+  return null; // all RPCs failed
+}
 
 async function fetchChainlinkRate(
   coin: StablecoinMeta,
@@ -250,7 +292,7 @@ async function fetchRate(coin: StablecoinMeta): Promise<StablecoinRate | null> {
     };
   }
 
-  const rpcUrl = rpcUrls[coin.network];
+  const rpcUrl = rpcFallbacks[coin.network];
   if (!rpcUrl) {
     //console.warn(`[FetchRate] Missing RPC URL for ${coin.symbol} on ${coin.network}`);
     return null;
@@ -263,7 +305,11 @@ async function fetchRate(coin: StablecoinMeta): Promise<StablecoinRate | null> {
     return cached;
   }
 
-  const provider = new JsonRpcProvider(rpcUrl);
+  const provider = await getSafeProvider(coin.network);
+  if (!provider) {
+    console.warn(`All RPCs failed for ${coin.network}`);
+    return null;
+  }
   let rate: StablecoinRate | null = null;
 
   // Try Chainlink first

@@ -13,7 +13,11 @@ export const supportedChains: Chain[] = [
     },
     rpcUrls: {
       default: {
-        http: ["https://1rpc.io/eth"],
+        http: [ 
+          "https://eth.llamarpc.com",
+          "https://cloudflare-eth.com",
+          "https://1rpc.io/eth"
+        ],
       },
     },
     blockExplorers: {

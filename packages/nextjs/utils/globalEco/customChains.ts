@@ -23,6 +23,12 @@ export const GLOBALCHAIN = defineChain({
       ],
     },
   },
+  contracts: {
+    multicall3: {
+      address: '0x8868d98c0C945Ee8b5CCcB0b5387a35F408BCb14',
+      blockCreated: 1,
+    },
+  },
   blockExplorers: {
     default: {
       name: "globaldash",
