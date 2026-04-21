@@ -58,6 +58,11 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         address token;
     }
 
+    struct RateRange {
+        uint256 min;
+        uint256 max;
+    }
+
     address public payoutToken;
     address public payoutAddress;
     address public rtoken;
@@ -90,7 +95,8 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     mapping(address => User[]) public withdrawalsByUser;
     mapping(uint16 => UnlockD) public poolByUnlockQuarter;
     mapping(address => uint256) public venturePoolRequirement;
-
+    mapping(address => uint8) stablecoinIndex;
+    mapping(uint8 => RateRange) public rateRange;
 
     event Deposited(address indexed user, uint256 amountOut, uint256 amountIn, uint256 fee, uint32 committedQuarters);
     event DividendPaid(address indexed user, uint256 amount);
@@ -157,10 +163,21 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         payoutToken = _payoutToken;
 
         // Initialize stablecoin whitelist and store in map and array for iteration
-        for (uint256 i = 0; i < initialStables.length; i++) {
+        /*for (uint256 i = 0; i < initialStables.length; i++) {
             require(initialStables[i] != address(0), "Zero address not allowed");
             stablecoinWhitelistMap[initialStables[i]] = true;
             stablecoins.push(initialStables[i]);
+        }*/
+
+       for (uint256 i = 0; i < initialStables.length; i++) {
+            address sc = initialStables[i];
+            require(sc != address(0), "Zero address not allowed");
+
+            stablecoinWhitelistMap[sc] = true;
+            stablecoins.push(sc);
+
+            // NEW: map stablecoin → index
+            stablecoinIndex[sc] = uint8(i);
         }
 
         for (uint256 i = 0; i < initialStakeables.length; i++) {
@@ -278,62 +295,14 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             uint256 netAmount = baseAmount - fee;
             uint256 gbdAmountout = amount - fee;
 
-            for (uint256 i = 0; i < stablecoins.length; i++) {
-                if (stablecoins[i] == token) {
-                    uint256 minRate;
-                    uint256 maxRate;
-                    if (i == 0 || i == 1 || i == 3 || i == 5 || i == 9 || i == 11 || i == 12 || i == 13) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_098) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_102) / DECIMALS;
-                    } else if (i == 14) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_065) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_069) / DECIMALS;
-                    } else if (i == 2) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_072) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_076) / DECIMALS;
-                    } else if (i == 4 || i == 19) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_108) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_112) / DECIMALS;
-                    } else if (i == 6) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_097) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_100) / DECIMALS;
-                    } else if (i == 7) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_0065) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_0073) / DECIMALS;
-                    } else if (i == 8) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_058) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_062) / DECIMALS;
-                    } else if (i == 10) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_074) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_076) / DECIMALS;
-                    } else if (i == 15) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_054) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_064) / DECIMALS;
-                    } else if (i == 16) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_019) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_021) / DECIMALS;
-                    } else if (i == 17) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_120) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_130) / DECIMALS;
-                    } else if (i == 18) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_030) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_033) / DECIMALS;
-                    } else if (i == 20) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_100000) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_100000) / DECIMALS;
-                    } else if (i == 21) {
-                        maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_16000) / DECIMALS;
-                        minRate = (((netAmount * DECIMALS) / GBDr) * RATE_16000) / DECIMALS;
-                    }
+            uint8 i = stablecoinIndex[token];
+            RateRange memory r = rateRange[i];
 
-                    if (gbdAmountout < maxRate) {
-                        gbdAmountout = maxRate;
-                    } else if (gbdAmountout > maxRate) {
-                        gbdAmountout = maxRate;
-                    }
+            uint256 minRate = (((netAmount * DECIMALS) / GBDr) * r.min) / DECIMALS;
+            uint256 maxRate = (((netAmount * DECIMALS) / GBDr) * r.max) / DECIMALS;
 
-                    break; // Exit loop once stable is matched and processed
-                }
+            if (netAmount < minRate || netAmount > maxRate) {
+                gbdAmountout = minRate;
             }
             // Phase 1: Check 15 day window first
             GlobalDollarX(venture).mint(user, gbdAmountout);
@@ -394,57 +363,16 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     ) internal view returns (uint256) {
         uint256 stableAmountOut = (holderBalance * rate) / 1e18;
 
-        for (uint256 i = 0; i < stablecoins.length; i++) {
-            if (stablecoins[i] == payoutToken) {
-                uint256 minRate;
-                uint256 maxRate;
+        uint8 i = stablecoinIndex[payoutToken];
 
-                if (i == 0 || i == 1 || i == 3 || i == 5 || i == 9 || i == 11 || i == 12 || i == 13) {
-                    maxRate = (((holderBalance * DECIMALS) / RATE_098) * GBDr) / DECIMALS;
-                    minRate = (((holderBalance * DECIMALS) / RATE_102) * GBDr) / DECIMALS;
-                } else if (i == 14) {
-                    maxRate = (((holderBalance * DECIMALS) / RATE_065) * GBDr) / DECIMALS;
-                    minRate = (((holderBalance * DECIMALS) / RATE_069) * GBDr) / DECIMALS;
-                } else if (i == 2) {
-                    maxRate = (((holderBalance * DECIMALS) / RATE_072) * GBDr) / DECIMALS;
-                    minRate = (((holderBalance * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
-                } else if (i == 4 || i == 19) {
-                    maxRate = (((holderBalance * DECIMALS) / RATE_108) * GBDr) / DECIMALS;
-                    minRate = (((holderBalance * DECIMALS) / RATE_112) * GBDr) / DECIMALS;
-                } else if (i == 6) {
-                    maxRate = (((holderBalance * DECIMALS) / RATE_097) * GBDr) / DECIMALS;
-                    minRate = (((holderBalance * DECIMALS) / RATE_100) * GBDr) / DECIMALS;
-                } else if (i == 7) {
-                    maxRate = (((holderBalance * DECIMALS) / RATE_0065) * GBDr) / DECIMALS;
-                    minRate = (((holderBalance * DECIMALS) / RATE_0073) * GBDr) / DECIMALS;
-                } else if (i == 8) {
-                    maxRate = (((holderBalance * DECIMALS) / RATE_058) * GBDr) / DECIMALS;
-                    minRate = (((holderBalance * DECIMALS) / RATE_062) * GBDr) / DECIMALS;
-                } else if (i == 10) {
-                    maxRate = (((holderBalance * DECIMALS) / RATE_074) * GBDr) / DECIMALS;
-                    minRate = (((holderBalance * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
-                } else if (i == 15) {
-                    maxRate = (((holderBalance * DECIMALS) / RATE_054) * GBDr) / DECIMALS;
-                    minRate = (((holderBalance * DECIMALS) / RATE_064) * GBDr) / DECIMALS;
-                } else if (i == 16) {
-                    maxRate = (((holderBalance * DECIMALS) / RATE_019) * GBDr) / DECIMALS;
-                    minRate = (((holderBalance * DECIMALS) / RATE_021) * GBDr) / DECIMALS;
-                } else if (i == 17) {
-                    maxRate = (((holderBalance * DECIMALS) / RATE_120) * GBDr) / DECIMALS;
-                    minRate = (((holderBalance * DECIMALS) / RATE_130) * GBDr) / DECIMALS;
-                } else if (i == 18) {
-                    maxRate = (((holderBalance * DECIMALS) / RATE_030) * GBDr) / DECIMALS;
-                    minRate = (((holderBalance * DECIMALS) / RATE_033) * GBDr) / DECIMALS;
-                }
+        RateRange memory r = rateRange[i];
 
-                if (stableAmountOut < maxRate) {
-                    stableAmountOut = maxRate;
-                } else if (stableAmountOut > maxRate) {
-                    stableAmountOut = maxRate;
-                }
+        // Compute min/max using the mapped rate values
+        uint256 minRate = (((holderBalance * DECIMALS) / r.min) * GBDr) / DECIMALS;
+        uint256 maxRate = (((holderBalance * DECIMALS) / r.max) * GBDr) / DECIMALS;
 
-                break;
-            }
+        if (stableAmountOut < minRate || stableAmountOut > maxRate) {
+            stableAmountOut = maxRate;
         }
 
         return stableAmountOut;
@@ -748,9 +676,9 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         }
     }
 
-    // ============================================================
-    // Possible for future payouts in Platform Currency
-    // ============================================================
+    // ==================================================================
+    // Possible for future payouts in Platform Currency **Needs Updating
+    // ==================================================================
 
     /*function batchWithdraw() external onlyOwner {
         require(payoutAddress != address(0), "Payout address not set");

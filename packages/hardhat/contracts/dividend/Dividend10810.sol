@@ -74,7 +74,7 @@ contract Dividend10810 is Initializable, ERC20Upgradeable, AccessControlUpgradea
             redeemPeriod = 2;
             gracePeriod = 0;
 
-            uint16 callQuarter = currentQuarter + committedQuarters;
+            uint16 callQuarter = currentQuarter + committedQuarters + 10;
             uint16 newComing   = callQuarter + redeemPeriod;
 
             unlockQuarter = callQuarter;

@@ -275,10 +275,10 @@ async function main() {
   
   const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 
-  const UniswapV2Factory = await deployProxy("UniswapV2Factory", deployed, [
+  /*const UniswapV2Factory = await deployProxy("UniswapV2Factory", deployed, [
     deployer.address,
     deployer.address,
-  ]);
+  ]);*/
 
     // Deploy Counter implementation (non-upgradeable)
   const GlobalSwap = await deployContract("GlobalSwap", deployed, []);
@@ -367,7 +367,10 @@ async function main() {
     deployer.address,
   ]);
 
-  const BGGRID = await ethers.getContractAt("BGFRS", bggridAddress);
+  const BGGRID = await ethers.getContractAt("BGGRID", bggridAddress);
+
+  const MultiCall3 = await deployContract("Multicall3", deployed, []);
+  console.log(`MultiCall deployed at: ${MultiCall3}`);
 
   const ventureAddresses = [
     globeAddress,

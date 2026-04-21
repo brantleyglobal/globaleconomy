@@ -22,6 +22,11 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         bytes32 purchaseTxHash;
 
     }
+
+    struct RateRange {
+        uint256 min;
+        uint256 max;
+    }
     // --- Storage ---
     uint256 public feeBasisPoints;
     uint256 public totalWithdrawn;
@@ -39,6 +44,8 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
     mapping(uint32 => mapping(uint8 => uint256)) public accumBase;
     mapping(uint256 => Purchase) public purchasesByTimestamp;
     mapping(address => Purchase[]) public purchasesByUser;
+    mapping(address => uint8) stablecoinIndex;
+    mapping(uint8 => RateRange) public rateRange;
 
     // --- Events ---
     event AssetAdded(uint64 indexed id);
@@ -187,63 +194,14 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
 
             total = amount * quantity;
 
-            for (uint256 i = 0; i < stablecoins.length; i++) {
-                if (stablecoins[i] == stable) {
-                    uint256 minRate;
-                    uint256 maxRate;
-                    if (i == 1 || i == 3 || i == 5 || i == 9 || i == 11 || i == 12 || i == 13) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_098) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_102) * GBDr) / DECIMALS;
-                    } else if (i == 14) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_065) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_069) * GBDr) / DECIMALS;
-                    } else if (i == 2) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_072) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
-                    } else if (i == 4 || i == 19) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_108) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_112) * GBDr) / DECIMALS;
-                    } else if (i == 6) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_097) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_100) * GBDr) / DECIMALS;
-                    } else if (i == 7) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_0065) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_0073) * GBDr) / DECIMALS;
-                    } else if (i == 8) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_058) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_062) * GBDr) / DECIMALS;
-                    } else if (i == 10) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_074) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_076) * GBDr) / DECIMALS;
-                    } else if (i == 15) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_054) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_064) * GBDr) / DECIMALS;
-                    } else if (i == 16) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_019) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_021) * GBDr) / DECIMALS;
-                    } else if (i == 17) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_120) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_130) * GBDr) / DECIMALS;
-                    } else if (i == 18) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_030) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_033) * GBDr) / DECIMALS;
-                    } else if (i == 20 || i == 23) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_100000) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_100000) * GBDr) / DECIMALS;
-                    } else if (i == 21 || i == 24) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_16000) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_16000) * GBDr) / DECIMALS;
-                    } else if (i == 22) {
-                        maxRate = (((baseAmount * DECIMALS) / RATE_600) * GBDr) / DECIMALS;
-                        minRate = (((baseAmount * DECIMALS) / RATE_600) * GBDr) / DECIMALS;
-                    }
+            uint8 i = stablecoinIndex[stable];
+            RateRange memory r = rateRange[i];
 
-                    if (total < minRate || total > maxRate) {
-                        total = minRate;
-                    }
+            uint256 minRate = (((baseAmount * DECIMALS) / GBDr) * r.min) / DECIMALS;
+            uint256 maxRate = (((baseAmount * DECIMALS) / GBDr) * r.max) / DECIMALS;
 
-                    break; // Exit loop once stable is matched and processed
-                }
+            if (baseAmount < minRate || baseAmount > maxRate) {
+                total = minRate;
             }
             // Calculate total payment, fee, and net amount
             uint256 fee = (total * feeBasisPoints) / MAX_BPS;
@@ -405,7 +363,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
 
     function updatePayoutTxHash(
         address user,
-        uint16 termIndex,
+        uint32 termIndex,
         bytes32 txHash
     ) external {
 
@@ -432,7 +390,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
 
     function correctPayoutTxHash(
         address user,
-        uint16 termIndex,
+        uint32 termIndex,
         bytes32 newTxHash
     ) external onlyOwner {
 

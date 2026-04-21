@@ -74,7 +74,7 @@ contract Dividend686 is Initializable, ERC20Upgradeable, AccessControlUpgradeabl
             redeemPeriod = 2;
             gracePeriod = 0;
 
-            uint16 callQuarter = currentQuarter + committedQuarters;
+            uint16 callQuarter = currentQuarter + committedQuarters + 6;
             uint16 newComing   = callQuarter + redeemPeriod;
 
             unlockQuarter = callQuarter;
