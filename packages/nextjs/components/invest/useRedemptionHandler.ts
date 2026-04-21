@@ -151,7 +151,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           }
 
           // Withdraw
-          tokenTx = await vaultContract.withdraw(selectedToken.address);
+          tokenTx = await vaultContract.withdraw(selectedToken.address, {gasLimit: 1_700_000});
           receipt = await tokenTx.wait();
 
           if (autoPay && receipt.status === 1) {
@@ -177,7 +177,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           }
 
           // Withdraw
-          tokenTx = await infraContract.withdraw(selectedToken.address);
+          tokenTx = await infraContract.withdraw(selectedToken.address, {gasLimit: 1_700_000});
           receipt = await tokenTx.wait();
 
           if (autoPay && receipt.status === 1) {

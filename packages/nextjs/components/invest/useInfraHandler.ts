@@ -146,7 +146,7 @@ export function useInfra(): UseDepositResult {
             rate,
             {
               value: parsedValue,
-              gasLimit: 1_500_000
+              gasLimit: 600_000
             }
           );
           receipt = await txHash.wait();
