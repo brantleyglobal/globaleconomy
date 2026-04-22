@@ -44,6 +44,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
     mapping(uint32 => mapping(uint8 => uint256)) public accumBase;
     mapping(uint256 => Purchase) public purchasesByTimestamp;
     mapping(address => Purchase[]) public purchasesByUser;
+    mapping(bytes32 => bool) public processedDeposits;
     mapping(address => uint8) stablecoinIndex;
     mapping(uint8 => RateRange) public rateRange;
 
@@ -137,7 +138,8 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         uint256 amount,
         uint32 quantity,
         uint256 rate,
-        uint8 region
+        uint8 region,
+        bytes32 depositHash
     ) external payable nonReentrant {
         require(quantity > 0, "Invalid quantity: must be >0");
         require(rate > 0, "Missing rate: must be >0");
@@ -178,6 +180,8 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
             p.quantity = quantity;
             p.amount = total;
             p.rate = rate;
+            p.purchaseTxHash = depositHash;
+            p.purchaseSetter = msg.sender;
 
             // 3. Store in timestamp mapping (NOT automatic)
             purchasesByTimestamp[ts] = p;
@@ -191,6 +195,8 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         } else {
             require(_isWhitelisted(stable), "Token not whitelisted");
             require (msg.sender == owner(), "Only Owner Required for off-chain deposits");
+            require(!processedDeposits[depositHash], "Duplicate Hash");
+            processedDeposits[depositHash] = true;
 
             total = amount * quantity;
 
@@ -221,6 +227,8 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
             p.quantity = quantity;
             p.amount = total;
             p.rate = rate;
+            p.purchaseTxHash = depositHash;
+            p.purchaseSetter = msg.sender;
 
             // 3. Store in timestamp mapping (NOT automatic)
             purchasesByTimestamp[ts] = p;
@@ -361,33 +369,6 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         return purchasesByUser[user][index];
     }
 
-    function updatePayoutTxHash(
-        address user,
-        uint32 termIndex,
-        bytes32 txHash
-    ) external {
-
-        require(termIndex < purchasesByUser[user].length, "Invalid term index");
-
-        Purchase storage u = purchasesByUser[user][termIndex];
-
-        // Prevent overwriting
-        if (u.purchaseTxHash != bytes32(0)) {
-            emit UnexpectedPayoutTxHash(
-                user,
-                u.purchaseTxHash,
-                u.purchaseSetter,
-                u.amount,
-                msg.sender
-            );
-            return;
-        }
-
-        // Record tx hash
-        u.purchaseTxHash = txHash;
-        u.purchaseSetter = msg.sender;
-    }
-
     function correctPayoutTxHash(
         address user,
         uint32 termIndex,
@@ -406,6 +387,8 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         // Old hash must exist
         bytes32 old = u.purchaseTxHash;
         require(old != bytes32(0), "Nothing to correct");
+        require(!processedDeposits[newTxHash], "Duplicate Hash");
+        processedDeposits[newTxHash] = true;
 
         // Apply correction
         u.purchaseTxHash = newTxHash;

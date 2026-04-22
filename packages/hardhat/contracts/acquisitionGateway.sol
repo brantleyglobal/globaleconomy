@@ -25,6 +25,11 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         bytes32 payoutTxHash;
     }
 
+    struct RateRange {
+        uint256 min;
+        uint256 max;
+    }
+
     GlobalDollar public stakeablecoins;
 
     address[] public stablecoins;
@@ -41,6 +46,9 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
     mapping(address => bool) private stablecoinWhitelistMap;
     mapping(uint256 => Purchase) public purchasesByTimestamp;
     mapping(address => Purchase[]) public purchasesByUser;
+    mapping(bytes32 => bool) public processedDeposits;
+    mapping(address => uint8) stablecoinIndex;
+    mapping(uint8 => RateRange) public rateRange;
 
     event Acquisitioned(address indexed user, uint256 amountOut, uint256 amountIn);
     event PurchaseTimestamp( uint256 timestamp, address indexed user, address token, uint256 amountOut, uint256 amountIn);
@@ -92,9 +100,13 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
 
         // Initialize stablecoin whitelist and store in map and array for iteration
         for (uint256 i = 0; i < initialStables.length; i++) {
-            require(initialStables[i] != address(0), "Zero address not allowed");
-            stablecoinWhitelistMap[initialStables[i]] = true;
-            stablecoins.push(initialStables[i]);
+            address sc = initialStables[i];
+            require(sc != address(0), "Zero address not allowed");
+
+            stablecoinWhitelistMap[sc] = true;
+            stablecoins.push(sc);
+
+            stablecoinIndex[sc] = uint8(i);
         }
     }
 
@@ -111,79 +123,35 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         address token,
         uint256 amountin,
         uint256 amountout,
-
-        uint256 rate
+        uint256 rate,
+        bytes32 depositHash
     ) external payable onlyOwner nonReentrant {
         require(_isWhitelisted(token), "Token not whitelisted");
+        require(!processedDeposits[depositHash], "Duplicate Hash");
+        processedDeposits[depositHash] = true;
         
         uint256 fee = (amountin * depositFeeBps) / 10000;
         uint256 baseAmount = amountout / rate;
         uint256 netAmount = baseAmount - fee;
         uint256 gbdAmountout = amountout;
-        
-        for (uint256 i = 0; i < stablecoins.length; i++) {
-            if (stablecoins[i] == token) {
-                uint256 minRate;
-                uint256 maxRate;
-                if (i == 1 || i == 3 || i == 5 || i == 9 || i == 11 || i == 12 || i == 13) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_098) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_102) / DECIMALS;
-                } else if (i == 14) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_065) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_069) / DECIMALS;
-                } else if (i == 2) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_072) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_076) / DECIMALS;
-                } else if (i == 4 || i == 19) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_108) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_112) / DECIMALS;
-                } else if (i == 6) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_097) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_100) / DECIMALS;
-                } else if (i == 7) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_0065) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_0073) / DECIMALS;
-                } else if (i == 8) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_058) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_062) / DECIMALS;
-                } else if (i == 10) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_074) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_076) / DECIMALS;
-                } else if (i == 15) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_054) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_064) / DECIMALS;
-                } else if (i == 16) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_019) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_021) / DECIMALS;
-                } else if (i == 17) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_120) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_130) / DECIMALS;
-                } else if (i == 18) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_030) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_033) / DECIMALS;
-                } else if (i == 20) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_100000) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_100000) / DECIMALS;
-                } else if (i == 21) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_16000) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_16000) / DECIMALS;
-                } else if (i == 22) {
-                    maxRate = (((netAmount * DECIMALS) / GBDr) * RATE_600) / DECIMALS;
-                    minRate = (((netAmount * DECIMALS) / GBDr) * RATE_600) / DECIMALS;
-                }
 
-                if (gbdAmountout < minRate || gbdAmountout > maxRate) {
-                    gbdAmountout = minRate;
-                }
+        uint8 i = stablecoinIndex[token];
+        RateRange memory r = rateRange[i];
+        uint256 minRate = (((netAmount * DECIMALS) / GBDr) * r.min) / DECIMALS;
+        uint256 maxRate = (((netAmount * DECIMALS) / GBDr) * r.max) / DECIMALS;
 
-                break; // Exit loop once stable is matched and processed
-            }
+        if (gbdAmountout < minRate || gbdAmountout > maxRate) {
+            gbdAmountout = minRate;
         }
 
         uint256 currentSupply = viewSupply();
         uint256 updatedSupply = currentSupply + gbdAmountout;
 
+        (bool ok,) = user.call{value:amountout}("");
+        require(ok, "Native Transfer Failed.. Check Balance");
+
         supply(updatedSupply);
+
         
         uint256 ts = block.timestamp;
 
@@ -199,6 +167,8 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         p.amountin = amountin;
         p.amountout = gbdAmountout;
         p.termIndex = uint32(index);
+        p.purchaseTxHash = depositHash;
+        p.payoutSetter = msg.sender;
 
         // 3. Store in timestamp mapping (NOT automatic)
         purchasesByTimestamp[ts] = p;
@@ -299,37 +269,6 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         processTimeStampStart = 0;
         processTimeStampEnd = 0;
 
-    }
-
-    function updatePayoutTxHash(
-        address user,
-        uint16 termIndex,
-        bytes32 txHash
-    ) external {
-
-        require(termIndex < purchasesByUser[user].length, "Invalid term index");
-
-        Purchase storage u = purchasesByUser[user][termIndex];
-
-        // Must have a payout computed
-        uint256 payout = u.amountout;
-        require(payout != 0, "Payout not yet computed");
-
-        // Prevent overwriting
-        if (u.payoutTxHash != bytes32(0)) {
-            emit UnexpectedPayoutTxHash(
-                user,
-                u.payoutTxHash,
-                u.payoutSetter,
-                payout,
-                msg.sender
-            );
-            return;
-        }
-
-        // Record tx hash
-        u.payoutTxHash = txHash;
-        u.payoutSetter = msg.sender;
     }
 
     function correctPayoutTxHash(

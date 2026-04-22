@@ -230,7 +230,8 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         uint256 amount,
         uint8 committedQuarters,
         uint16 startQuarter,
-        uint256 incomingRate
+        uint256 incomingRate,
+        bytes32 depositHash 
     ) external payable nonReentrant {        
         // Calculate total payment, fee, and net amount
         uint256 fee = 0;
@@ -239,12 +240,14 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             
             uint256 nativeAmount = msg.value;
 
-            _finalize(updatedStartQuarter, investor, token, committedQuarters, amount, nativeAmount);
+            _finalize(updatedStartQuarter, investor, token, committedQuarters, amount, nativeAmount, depositHash);
             emit Deposited(investor, nativeAmount, amount, fee, committedQuarters);
 
         } else {
             require(_isWhitelisted(token), "Token not whitelisted");
             require (msg.sender == owner(), "Only Owner Required for off-chain deposits");
+            require(!processedDeposits[depositHash], "Duplicate Hash");
+            processedDeposits[depositHash] = true;
 
             fee = (amount * (depositFeeBps)) / 10000;
             uint256 baseAmount = (amount * incomingRate) / 1e18;
@@ -261,13 +264,13 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
                 gbdAmountout = minRate;
             }
 
-            _finalize(startQuarter, investor, token, committedQuarters, amount, gbdAmountout);
+            _finalize(startQuarter, investor, token, committedQuarters, amount, gbdAmountout, depositHash);
             emit Deposited(investor, gbdAmountout, amount, fee, committedQuarters);
         }
 
     }
 
-    function _finalize(uint16 startQuarter, address investor, address token, uint8 _committedQuarters, uint256 amount, uint256 _gbdAmountout) internal {
+    function _finalize(uint16 startQuarter, address investor, address token, uint8 _committedQuarters, uint256 amount, uint256 _gbdAmountout, bytes32 _depositHash) internal {
         uint256 startIndex;
         uint256 endIndex;
         // Map committed quarter groups to array indices
@@ -321,6 +324,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         d.token = token;
         d.dividend = mintedTokenAddress;
         d.quartersCommitted = _committedQuarters;
+        d.depositTxHash = _depositHash;
         
         depositTimestamps.push(ts);
     }
@@ -915,6 +919,8 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     ) external {
 
         require(termIndex < withdrawalsByUser[user].length, "Invalid term index");
+        require(!processedDeposits[txHash], "Duplicate Hash");
+        processedDeposits[txHash] = true;
 
         User storage u = withdrawalsByUser[user][termIndex];
 

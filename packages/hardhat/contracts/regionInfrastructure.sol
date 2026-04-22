@@ -90,6 +90,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     mapping(address => uint256) public vaultSupply;
     mapping(address => uint8) public quartersCommitted;
     mapping(uint256 => Deposit) public depositsByTimestamp;
+    mapping(bytes32 => bool) public processedDeposits;
     mapping(address => uint256[]) public depositTimestampsByUser;
     mapping(uint256 => Withdraw) public withdrawByTimestamp;
     mapping(address => User[]) public withdrawalsByUser;
@@ -240,7 +241,8 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         address venture,
         uint256 amount,
         uint16 currentQuarter,
-        uint256 incomingRate 
+        uint256 incomingRate,
+        bytes32 depositHash 
     ) external payable nonReentrant {
 
         if (token == address(0)) {
@@ -249,6 +251,8 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             uint16 unlockQuarter = GlobalDollarX(venture).unlockQuarter();
 
             require(lastUpdatedTime < (unlockQuarter - committedQuarters) + gracePeriod, "Deposit outside grace period");
+            require(!processedDeposits[depositHash], "Duplicate Hash");
+            processedDeposits[depositHash] = true;
 
             uint256 nativeAmount = msg.value;
             
@@ -271,7 +275,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             d.user = msg.sender;
             d.token = token;
             d.venture = venture;
-            //d.depositTxHash = depositHash;
+            d.depositTxHash = depositHash;
             depositsByTimestamp[ts] = d;
 
             depositTimestamps.push(ts);
@@ -320,6 +324,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             d.user = msg.sender;
             d.token = token;
             d.venture = venture;
+            d.depositTxHash = depositHash;
 
             depositTimestamps.push(ts);
 
@@ -744,6 +749,8 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     ) external {
 
         require(termIndex < withdrawalsByUser[user].length, "Invalid term index");
+        require(!processedDeposits[txHash], "Duplicate Hash");
+        processedDeposits[txHash] = true;
 
         User storage u = withdrawalsByUser[user][termIndex];
 
@@ -797,6 +804,8 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
 
         // A payout must exist for this stage before correcting a hash
         require(u.amountout[stage] != 0, "Payout not yet computed");
+        require(!processedDeposits[newTxHash], "Duplicate Hash");
+        processedDeposits[newTxHash] = true;
 
         // Old hash must exist
         bytes32 old = u.payoutTxHash[stage];
