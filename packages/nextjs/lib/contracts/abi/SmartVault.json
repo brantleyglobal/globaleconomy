@@ -604,6 +604,11 @@
           "internalType": "uint256",
           "name": "incomingRate",
           "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "depositHash",
+          "type": "bytes32"
         }
       ],
       "name": "deposit",

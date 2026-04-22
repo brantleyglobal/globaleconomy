@@ -565,6 +565,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
         quantity,
         rate,
         region,
+        0,
         {
           value: parsedValue,
           gasLimit: 1_500_000

@@ -144,6 +144,7 @@ export function useDeposit(): UseDepositResult {
             committedQuarters,
             startQuarterIndex,
             rate,
+            0,
             {
               value: parsedValue,
               gasLimit: 600_000
