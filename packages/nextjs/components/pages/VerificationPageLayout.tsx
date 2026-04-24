@@ -56,20 +56,20 @@ const userFunctions: Record<string, string[]> = {
     "getPurchasesInRange(uint256 startTs, uint256 endTs)",
   ],
   AcquisitionGateway: [
-    "acquisition(address user, address token, uint256 amountin, uint256 amountout) **Admin Only**",
+    "acquisition(address user, address token, uint256 amountin, uint256 amountout, uint256 rate, bytes32 depositHash) **Admin Only**",
     "getPurchasesInRange(uint256 startTs, uint256 endTs)"
   ],
   SmartVault: [
-    "deposit(address user, address token, uint256 amount, uint8 committedQuarters, uint16 injectedTime) **Admin Only**",
+    "deposit(address user, address token, uint256 amount, uint8 committedQuarters, uint16 injectedTime, uint256 rate, bytes32 depositHash) **Admin Only**",
     "(address dividendToken, uint256 _holderBalance)",
-    "withdraw(address dividendToken, uint16 injectedTime, uint256 holderBalance)",
+    "withdraw(address dividendToken, uint256 holderBalance)",
     "getWithdrawInRange(uint256 startTs, uint256 endTs)",
     "getDepositsInRange(uint256 startTs, uint256 endTs)",
   ],
   RegionInfrastructure: [
-    "deposit(address user, address token, address venture, uint256 amount, uint16 injectedTime) **Admin Only**",
+    "deposit(address user, address token, address venture, uint256 amount, uint16 injectedTime, uint256 rate, bytes32 depositHash) **Admin Only**",
     "(address dividendToken, uint256 _holderBalance)",
-    "withdraw(address dividendToken, uint16 injectedTime, uint256 holderBalance)",
+    "withdraw(address dividendToken, uint256 holderBalance)",
     "getWithdrawInRange(uint256 startTs, uint256 endTs)",
     "getDepositsInRange(uint256 startTs, uint256 endTs)",
   ],
