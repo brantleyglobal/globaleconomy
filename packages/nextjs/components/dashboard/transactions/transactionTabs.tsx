@@ -8,16 +8,23 @@ import { PurchaseTable } from "./tabs/purchaseTable";
 import { GBDoTable } from "./tabs/GBDoTable";
 import { XchangeCardList } from "./tabs/xchangeTable";
 import { mergeXchange, XchangeEvent, XchangeCard } from "./utils/mergeXchange";
-import { VaultTable, SmartVaultRecord } from "./tabs/vaultTable";
+import { VaultTable, SmartVaultRecord, DepositRecord } from "./tabs/vaultTable";
 import { InfraTable, InfrastructureRecord } from "./tabs/infraTable";
 import { TransferTable } from "./tabs/transfersTable"
 import { PartnerTable } from "./tabs/partnerTable"
 import deployments from "~~/lib/contracts/deployments.json";
 
-const tabs = ["PRODUCT PURCHASES", "GBDo PURCHASES", "TRANSFERS", "XCHANGE CONTRACTS", "VAULT WITHDRAWALS", "INFRASTRUCTURE WITHDRAWALS", "PARTNERS"];
+const tabs = [
+  "PRODUCT PURCHASES",
+  "GBDo PURCHASES",
+  "TRANSFERS",
+  "XCHANGE CONTRACTS",
+  "VAULT WITHDRAWALS",
+  "INFRASTRUCTURE WITHDRAWALS",
+  "PARTNERS"
+] as const;
 
 type TabKey = keyof DataState;
-
 
 type DataState = {
   "PRODUCT PURCHASES": Transaction[];
@@ -25,10 +32,18 @@ type DataState = {
   "TRANSFERS": Transaction[];
   "XCHANGE CONTRACTS": XchangeCard[];
   "PARTNERS": Transaction[];
-  "VAULT WITHDRAWALS": SmartVaultRecord[];
-  "INFRASTRUCTURE WITHDRAWALS": InfrastructureRecord[];
-};
 
+  // These tabs show BOTH deposits + withdrawals
+  "VAULT WITHDRAWALS": {
+    deposits: DepositRecord[];
+    withdrawals: SmartVaultRecord[];
+  };
+
+  "INFRASTRUCTURE WITHDRAWALS": {
+    deposits: DepositRecord[];
+    withdrawals: InfrastructureRecord[];
+  };
+};
 
 export const TransactionTabs = () => {
   const [userAddress, setUserAddress] = useState<string | null>(null);
@@ -51,11 +66,19 @@ export const TransactionTabs = () => {
   const [data, setData] = useState<DataState>({
     "PRODUCT PURCHASES": [],
     "GBDo PURCHASES": [],
-    "XCHANGE CONTRACTS": [],
     "TRANSFERS": [],
+    "XCHANGE CONTRACTS": [],
     "PARTNERS": [],
-    "VAULT WITHDRAWALS": [],
-    "INFRASTRUCTURE WITHDRAWALS": [],
+
+    "VAULT WITHDRAWALS": {
+      deposits: [],
+      withdrawals: []
+    },
+
+    "INFRASTRUCTURE WITHDRAWALS": {
+      deposits: [],
+      withdrawals: []
+    }
   });
 
   const isTransactionTab = (
@@ -110,6 +133,50 @@ export const TransactionTabs = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const withdrawalTabs = [
+    "VAULT WITHDRAWALS",
+    "INFRASTRUCTURE WITHDRAWALS"
+  ];
+
+  const depositTabs = [
+    "VAULT_DEPOSITS",
+    "INFRA_DEPOSITS"
+  ];
+
+  const dbTabs = [
+    "PRODUCT PURCHASES",
+    "GBDo PURCHASES",
+    "XCHANGE CONTRACTS",
+    "TRANSFERS",
+    "PARTNERS",
+    ...depositTabs
+  ] as const;
+
+  const endpointMap = {
+    "PRODUCT PURCHASES": "getPurchase",
+    "GBDo PURCHASES": "getAcquisition",
+    "XCHANGE CONTRACTS": "getSwap",
+    "TRANSFERS": "getTransfer",
+    "PARTNERS": "getPurchase",
+    "VAULT WITHDRAWALS": "getVault",
+    "INFRASTRUCTURE WITHDRAWALS": "getRegion",
+  } as const;
+
+  const responseKeyMap = {
+    "PRODUCT PURCHASES": "purchases",
+    "GBDo PURCHASES": "acquisitions",
+    "XCHANGE CONTRACTS": "swaps",
+    "TRANSFERS": "transfers",
+    "PARTNERS": "purchases",
+    "VAULT WITHDRAWALS": "vault",
+    "INFRASTRUCTURE WITHDRAWALS": "infra",
+  } as const;
+
+  const subtypeMap: Partial<Record<TabKey, string>> = {
+    "XCHANGE CONTRACTS": "contract",
+    "PARTNERS": "affiliates",
+  };
+
   useEffect(() => {
     if (isConnected && userAddress) {
       fetchData(activeTab);
@@ -145,40 +212,45 @@ export const TransactionTabs = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "XCHANGE CONTRACTS") {
-      const now = new Date();
-      const currentYear = Number(now.getFullYear());
-      const currentMonth = Number(now.getMonth() + 1);
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
 
+    // Xchange requires year + month
+    if (activeTab === "XCHANGE CONTRACTS") {
       if (!selectedYear) setSelectedYear(currentYear);
       if (!selectedMonth) setSelectedMonth(currentMonth);
+      return;
     }
-    if (activeTab === "VAULT WITHDRAWALS") {
-      const now = new Date();
-      const currentYear = Number(now.getFullYear());
 
+    // Withdrawals require year only
+    if (withdrawalTabs.includes(activeTab)) {
       if (!selectedYear) setSelectedYear(currentYear);
+      return;
     }
-    if (activeTab === "INFRASTRUCTURE WITHDRAWALS") {
-      const now = new Date();
-      const currentYear = Number(now.getFullYear());
 
+    // Deposits require year only
+    if (depositTabs.includes(activeTab)) {
       if (!selectedYear) setSelectedYear(currentYear);
+      return;
     }
+
   }, [activeTab]);
 
   useEffect(() => {
+    // Leaving XCHANGE → reset year + month
     if (activeTab !== "XCHANGE CONTRACTS") {
-      setSelectedYear(null);
       setSelectedMonth(null);
     }
-    if (activeTab !== "VAULT WITHDRAWALS") {
+
+    // Leaving any year-based tab → reset year
+    if (
+      !withdrawalTabs.includes(activeTab) &&
+      !depositTabs.includes(activeTab)
+    ) {
       setSelectedYear(null);
     }
 
-    if (activeTab !== "INFRASTRUCTURE WITHDRAWALS") {
-      setSelectedYear(null);
-    }
   }, [activeTab]);
 
   const fetchVaultWithdrawals = async () => {
@@ -218,8 +290,13 @@ export const TransactionTabs = () => {
 
     setData(prev => ({
       ...prev,
-      "VAULT WITHDRAWALS": formatted
+      "VAULT WITHDRAWALS": {
+        ...prev["VAULT WITHDRAWALS"],
+        withdrawals: formatted
+      }
     }));
+    return formatted;
+
   };
 
   const fetchInfraWithdrawals = async () => {
@@ -259,36 +336,90 @@ export const TransactionTabs = () => {
 
     setData(prev => ({
       ...prev,
-      "INFRASTRUCTURE WITHDRAWALS": formatted
+      "INFRASTRUCTURE WITHDRAWALS": {
+        ...prev["INFRASTRUCTURE WITHDRAWALS"],
+        withdrawals: formatted
+      }
     }));
+    return formatted;
+
   };
+
+  async function fetchDeposits(tab: "VAULT WITHDRAWALS" | "INFRASTRUCTURE WITHDRAWALS") {
+    const method = endpointMap[tab];
+    const responseKey = responseKeyMap[tab];
+
+    let page = 1;
+    let all: DepositRecord[] = [];
+
+    while (true) {
+      const res = await fetch("https://gateway.brantley-global.com", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method,
+          params: { useraddress: userAddress, page, pageSize: 10 },
+          id: `dep-${tab}-${page}`,
+        }),
+      });
+
+      const json = await res.json();
+      const items = json.result?.[responseKey] ?? [];
+
+      if (!items.length) break;
+
+      all.push(...items);
+      page++;
+    }
+
+    return all;
+  }
 
   const fetchData = async (tab: TabKey) => {
     setLoading(true);
     setError(null);
 
-    if (tab === "VAULT WITHDRAWALS") {
-      await fetchVaultWithdrawals();
-      return;
-    }
+    try{
 
-    if (tab === "INFRASTRUCTURE WITHDRAWALS") {
-      await fetchInfraWithdrawals();
-      return;
-    }
+      if (tab === "VAULT WITHDRAWALS") {
+        const deposits = await fetchDeposits("VAULT WITHDRAWALS");
+        const withdrawals = await fetchVaultWithdrawals();
 
-    if (!isTransactionTab(tab)) {
-      return; // prevents TypeScript from thinking tab could be a withdrawal tab
-    }
+        setData(prev => ({
+          ...prev,
+          "VAULT WITHDRAWALS": { deposits, withdrawals }
+        }));
 
-    if (!isDbTransactionTab(tab)) {
-      // This prevents TypeScript from thinking tab could be a withdrawal tab
-      return;
-    }
+        return;
+      }
 
-    try {
+      if (tab === "INFRASTRUCTURE WITHDRAWALS") {
+        const deposits = await fetchDeposits("INFRASTRUCTURE WITHDRAWALS");
+        const withdrawals = await fetchInfraWithdrawals();
 
-      const endpointMap = {
+        setData(prev => ({
+          ...prev,
+          "INFRASTRUCTURE WITHDRAWALS": { deposits, withdrawals }
+        }));
+
+        return;
+      }
+
+      if (!isTransactionTab(tab)) {
+        return; // prevents TypeScript from thinking tab could be a withdrawal tab
+      }
+
+      if (!isDbTransactionTab(tab)) {
+        // This prevents TypeScript from thinking tab could be a withdrawal tab
+        return;
+      }
+
+
+      /*const endpointMap = {
         "PRODUCT PURCHASES": "getPurchase",
         "GBDo PURCHASES": "getAcquisition",
         "XCHANGE CONTRACTS": "getSwap",
@@ -310,9 +441,11 @@ export const TransactionTabs = () => {
         "XCHANGE CONTRACTS": "swaps",
         "TRANSFERS": "transfers",
         "PARTNERS": "purchases",
+
+        // These now correctly map to deposit arrays returned by the DB
         "VAULT WITHDRAWALS": "vault",
         "INFRASTRUCTURE WITHDRAWALS": "infra",
-      };
+      };*/
 
       const method = endpointMap[tab];
       const responseKey = responseKeyMap[tab];
@@ -450,20 +583,21 @@ export const TransactionTabs = () => {
       case "VAULT WITHDRAWALS":
         return (
           <VaultTable
-            deposits={[]}
-            withdrawals={data["VAULT WITHDRAWALS"]}
+            deposits={data["VAULT WITHDRAWALS"].deposits}
+            withdrawals={data["VAULT WITHDRAWALS"].withdrawals}
             selectedYear={selectedYear ?? new Date().getFullYear()}
             onYearChange={setSelectedYear}
             page={currentPage}
             setPage={setCurrentPage}
           />
+
         );
 
       case "INFRASTRUCTURE WITHDRAWALS":
         return (
           <InfraTable
-            deposits={[]}
-            withdrawals={data["INFRASTRUCTURE WITHDRAWALS"]}
+            deposits={data["INFRASTRUCTURE WITHDRAWALS"].deposits}
+            withdrawals={data["INFRASTRUCTURE WITHDRAWALS"].withdrawals}
             selectedYear={selectedYear ?? new Date().getFullYear()}
             onYearChange={setSelectedYear}
             page={currentPage}
@@ -484,9 +618,10 @@ export const TransactionTabs = () => {
   const rawData = data[activeTab];
   const needsPagination = !["VAULT WITHDRAWALS", "INFRASTRUCTURE WITHDRAWALS"].includes(activeTab);
 
-  const paginatedData = needsPagination
-    ? rawData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-    : rawData;
+  const paginatedData =
+    needsPagination && Array.isArray(rawData)
+      ? rawData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+      : rawData;
 
   return (
     <div className="flex flex-col h-full">
@@ -537,13 +672,14 @@ export const TransactionTabs = () => {
 
         <span className="text-xs text-gray-400">
           Page {currentPage} of {needsPagination
-            ? Math.max(1, Math.ceil(rawData.length / pageSize))
+            ? Math.max(1, Math.ceil((Array.isArray(rawData) ? rawData.length : 0) / pageSize)
+)
             : 1}
         </span>
 
         <button
           disabled={needsPagination
-            ? currentPage >= Math.ceil(rawData.length / pageSize)
+            ? currentPage >= Math.ceil((Array.isArray(rawData) ? rawData.length : 0) / pageSize)
             : true}
           onClick={() => setCurrentPage(p => p + 1)}
           className="px-2 py-1 text-xs bg-base-200 rounded disabled:opacity-50"

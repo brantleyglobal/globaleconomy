@@ -8,7 +8,7 @@ export type InfrastructureRecord = {
   autopay: boolean;
   timestamp: number;
   dividendamount: number;
-  payoutamount: number[]; // 8-stage payout array
+  payoutamount: number[]; //40-stage payout array
 };
 
 export type DepositRecord = {
