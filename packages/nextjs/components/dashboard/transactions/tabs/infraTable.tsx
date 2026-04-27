@@ -52,9 +52,19 @@ function getActiveYear(
   years: number[],
   fallbackYear: number
 ) {
-  return selectedYear ?? years[0] ?? fallbackYear;
-}
+  // If user selected a valid year, use it
+  if (selectedYear && years.includes(selectedYear)) {
+    return selectedYear;
+  }
 
+  // If we have real years from data, use the most recent one
+  if (years.length > 0) {
+    return years[0];
+  }
+
+  // Only fallback when there is no data at all
+  return fallbackYear;
+}
 
 function getYearsFromRecords(
   deposits: { timestamp: number }[],
@@ -94,10 +104,7 @@ export const InfraTable = ({
 
   const fallbackYear = new Date().getFullYear();
 
-  // unified year list
   const years = getYearsFromRecords(deposits, withdrawals);
-
-  // fixed active year logic
   const activeYear = getActiveYear(selectedYear, years, fallbackYear);
 
   // filter
@@ -109,6 +116,16 @@ export const InfraTable = ({
     w => new Date(w.timestamp * 1000).getFullYear() === activeYear
   );
 
+  // If current page is out of range for deposits, reset to page 1
+  if (page > 1 && yearDeposits.length <= (page - 1) * pageSize) {
+    setPage(1);
+  }
+
+  // If current page is out of range for withdrawals, reset to page 1
+  if (page > 1 && yearWithdrawals.length <= (page - 1) * pageSize) {
+    setPage(1);
+  }
+
   // paginate
   const paginatedDeposits = paginate(yearDeposits, page, pageSize);
   const paginatedWithdrawals = paginate(yearWithdrawals, page, pageSize);
@@ -119,24 +136,18 @@ export const InfraTable = ({
       {/* Year Selector */}
       <div className="flex justify-end">
         <select
-            value={activeYear}
-            onChange={e => {
-                onYearChange(Number(e.target.value));
-                setPage(1);
-            }}
-            className="select select-sm bg-base-200 text-white"
-            >
-            {/* Always show fallback year */}
-            <option value={fallbackYear}>
-                {fallbackYear}
+          value={activeYear}
+          onChange={e => {
+            onYearChange(Number(e.target.value));
+            setPage(1);
+          }}
+          className="select select-sm bg-base-200 text-white"
+        >
+          {years.map(y => (
+            <option key={y} value={y}>
+              {y}
             </option>
-
-            {/* Show real years if available */}
-            {years.map(y => (
-                <option key={y} value={y}>
-                {y}
-                </option>
-            ))}
+          ))}
         </select>
 
       </div>

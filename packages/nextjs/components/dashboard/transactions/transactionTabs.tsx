@@ -36,8 +36,12 @@ export const TransactionTabs = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
-  const withdrawalAbi = [
-    "function getUserWithdrawals(address user) view returns (tuple(/*NEED CORRECT VALUES*/)"
+  const vaultWithdrawalAbi = [
+    "function getUserWithdrawals(address user) view returns (tuple(address user, address token, uint8 quartersCommitted, uint16 startQuarter, uint16 unlockQuarter, bool finalize, bool autoPay, uint256 userDividendAmount, uint256 convertedDividendAmount, uint256[8] termSupplyPerStage, uint256[8] poolBalancePerStage, address[8] payoutSetter, uint256[8] amountout, bytes32[8] payoutTxHash)[])"
+  ];
+
+  const infraWithdrawalAbi = [
+    "function getUserWithdrawals(address user) view returns (tuple(address user, address token, uint8 quartersCommitted, uint16 startQuarter, uint16 unlockQuarter, bool finalize, bool autoPay, uint256 timestamp, uint256 userDividendAmount, uint256 convertedDividendAmount, uint256 termTotalSupply, address[39] payoutSetter, uint256[39] amountout, bytes32[39] payoutTxHash)[])"
   ];
 
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -181,58 +185,82 @@ export const TransactionTabs = () => {
     const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_DEX_RPC_URL);
 
     const contract = new ethers.Contract(
-      deployments.SmartVault, // <-- replace with correct address
-      withdrawalAbi,
+      deployments.SmartVault,
+      vaultWithdrawalAbi,
       provider
     );
 
-    const raw = await contract.getUserWithdrawals(userAddress);
+    let raw: any[] = [];
 
+    try {
+      const result = await contract.getUserWithdrawals(userAddress);
+
+      // Normalize to array
+      raw = Array.isArray(result) ? result : result ? [result] : [];
+    } catch (err) {
+      console.error("RPC error:", err);
+      raw = []; // fallback to empty
+    }
+
+    // Format safely
     const formatted: SmartVaultRecord[] = raw.map((w: any) => ({
-      quarters: Number(w.quartersCommitted),
-      startquarter: Number(w.startQuarter),
-      unlockquarter: Number(w.unlockQuarter),
-      completed: w.finalized,
-      autopay: w.autoPay,
-      timestamp: Number(w.timestamp),
-      dividendamount: Number(w.userDividendAmount) / 1e18,
-      payoutamount: w.amountout.map((v: string) => Number(v) / 1e18)
+      quarters: Number(w.quartersCommitted ?? 0),
+      startquarter: Number(w.startQuarter ?? 0),
+      unlockquarter: Number(w.unlockQuarter ?? 0),
+      completed: Boolean(w.finalize),
+      autopay: Boolean(w.autoPay),
+      timestamp: Number(w.timestamp ?? 0),
+      dividendamount: Number(w.userDividendAmount ?? 0) / 1e18,
+      payoutamount: Array.isArray(w.amountout)
+        ? w.amountout.map((v: any) => Number(v ?? 0) / 1e18)
+        : []
     }));
 
     setData(prev => ({
       ...prev,
       "VAULT WITHDRAWALS": formatted
     }));
-
   };
 
   const fetchInfraWithdrawals = async () => {
     const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_DEX_RPC_URL);
 
     const contract = new ethers.Contract(
-      deployments.RegionInfrastructure, // <-- replace with correct address
-      withdrawalAbi,
+      deployments.RegionInfrastructure,
+      infraWithdrawalAbi,
       provider
     );
 
-    const raw = await contract.getUserWithdrawals(userAddress);
+    let raw: any[] = [];
 
+    try {
+      const result = await contract.getUserWithdrawals(userAddress);
+
+      // Normalize to array
+      raw = Array.isArray(result) ? result : result ? [result] : [];
+    } catch (err) {
+      console.error("RPC error:", err);
+      raw = []; // fallback to empty
+    }
+
+    // Format safely
     const formatted: InfrastructureRecord[] = raw.map((w: any) => ({
-      quarters: Number(w.quartersCommitted),
-      startquarter: Number(w.startQuarter),
-      unlockquarter: Number(w.unlockQuarter),
-      completed: w.finalized,
-      autopay: w.autoPay,
-      timestamp: Number(w.timestamp),
-      dividendamount: Number(w.userDividendAmount) / 1e18,
-      payoutamount: w.amountout.map((v: string) => Number(v) / 1e18)
+      quarters: Number(w.quartersCommitted ?? 0),
+      startquarter: Number(w.startQuarter ?? 0),
+      unlockquarter: Number(w.unlockQuarter ?? 0),
+      completed: Boolean(w.finalize),
+      autopay: Boolean(w.autoPay),
+      timestamp: Number(w.timestamp ?? 0),
+      dividendamount: Number(w.userDividendAmount ?? 0) / 1e18,
+      payoutamount: Array.isArray(w.amountout)
+        ? w.amountout.map((v: any) => Number(v ?? 0) / 1e18)
+        : []
     }));
 
     setData(prev => ({
       ...prev,
       "INFRASTRUCTURE WITHDRAWALS": formatted
     }));
-
   };
 
   const fetchData = async (tab: TabKey) => {
@@ -375,11 +403,6 @@ export const TransactionTabs = () => {
     if (loading) return <div className="text-gray-400">Loading...</div>;
     if (error) return <div className="text-red-500">{error}</div>;
 
-    const paginatedData = data[activeTab].slice(
-      (currentPage - 1) * pageSize,
-      currentPage * pageSize
-    );
-
     switch (activeTab) {
       case "PRODUCT PURCHASES":
       case "GBDo PURCHASES":
@@ -458,6 +481,13 @@ export const TransactionTabs = () => {
     setCurrentPage(1);
   }, [activeTab]);
 
+  const rawData = data[activeTab];
+  const needsPagination = !["VAULT WITHDRAWALS", "INFRASTRUCTURE WITHDRAWALS"].includes(activeTab);
+
+  const paginatedData = needsPagination
+    ? rawData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    : rawData;
+
   return (
     <div className="flex flex-col h-full">
       {/* Tabs header */}
@@ -506,11 +536,15 @@ export const TransactionTabs = () => {
         </button>
 
         <span className="text-xs text-gray-400">
-          Page {currentPage} of {Math.max(1, Math.ceil(data[activeTab].length / pageSize))}
+          Page {currentPage} of {needsPagination
+            ? Math.max(1, Math.ceil(rawData.length / pageSize))
+            : 1}
         </span>
 
         <button
-          disabled={currentPage >= Math.ceil(data[activeTab].length / pageSize)}
+          disabled={needsPagination
+            ? currentPage >= Math.ceil(rawData.length / pageSize)
+            : true}
           onClick={() => setCurrentPage(p => p + 1)}
           className="px-2 py-1 text-xs bg-base-200 rounded disabled:opacity-50"
         >
