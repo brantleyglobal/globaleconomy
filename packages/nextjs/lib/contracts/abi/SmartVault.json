@@ -858,99 +858,9 @@
           "internalType": "address",
           "name": "user",
           "type": "address"
-        },
-        {
-          "internalType": "uint32",
-          "name": "index",
-          "type": "uint32"
         }
       ],
-      "name": "getUserDeposit",
-      "outputs": [
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "timestamp",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "amountin",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "amountout",
-              "type": "uint256"
-            },
-            {
-              "internalType": "address",
-              "name": "user",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "token",
-              "type": "address"
-            },
-            {
-              "internalType": "address",
-              "name": "dividend",
-              "type": "address"
-            },
-            {
-              "internalType": "uint8",
-              "name": "quartersCommitted",
-              "type": "uint8"
-            },
-            {
-              "internalType": "bytes32",
-              "name": "depositTxHash",
-              "type": "bytes32"
-            }
-          ],
-          "internalType": "struct SmartVault.Deposit",
-          "name": "",
-          "type": "tuple"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        }
-      ],
-      "name": "getUserDepositCount",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "uint32",
-          "name": "index",
-          "type": "uint32"
-        }
-      ],
-      "name": "getUserTerm",
+      "name": "getUserCurrentTerm",
       "outputs": [
         {
           "components": [
@@ -1039,6 +949,91 @@
           "internalType": "address",
           "name": "user",
           "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "index",
+          "type": "uint32"
+        }
+      ],
+      "name": "getUserDeposit",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amountin",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amountout",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "user",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "dividend",
+              "type": "address"
+            },
+            {
+              "internalType": "uint8",
+              "name": "quartersCommitted",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "depositTxHash",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct SmartVault.Deposit",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "getUserDepositCount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
         }
       ],
       "name": "getUserTermCount",
@@ -1047,6 +1042,97 @@
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "getUserWithdrawals",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "user",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "internalType": "uint8",
+              "name": "quartersCommitted",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint16",
+              "name": "startQuarter",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint16",
+              "name": "unlockQuarter",
+              "type": "uint16"
+            },
+            {
+              "internalType": "bool",
+              "name": "finalize",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "autoPay",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "userDividendAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "convertedDividendAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256[8]",
+              "name": "termSupplyPerStage",
+              "type": "uint256[8]"
+            },
+            {
+              "internalType": "uint256[8]",
+              "name": "poolBalancePerStage",
+              "type": "uint256[8]"
+            },
+            {
+              "internalType": "address[8]",
+              "name": "payoutSetter",
+              "type": "address[8]"
+            },
+            {
+              "internalType": "uint256[8]",
+              "name": "amountout",
+              "type": "uint256[8]"
+            },
+            {
+              "internalType": "bytes32[8]",
+              "name": "payoutTxHash",
+              "type": "bytes32[8]"
+            }
+          ],
+          "internalType": "struct SmartVault.User[]",
+          "name": "",
+          "type": "tuple[]"
         }
       ],
       "stateMutability": "view",

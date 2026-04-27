@@ -29,8 +29,8 @@ export async function logVaultCommit(payload: VaultPayload): Promise<boolean> {
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
-        id: "infra",
-        method: "infraCommit",
+        id: "vault",
+        method: "vaultCommit",
         params: payload,
       }),
     });

@@ -1,9 +1,6 @@
-"use client";
 
-import type { Transaction } from "~~/components/dashboard/transactions/transactions";
-import { SharedColumns } from "./sharedColumns";
 
-export type SmartVaultRecord = {
+export type InfrastructureRecord = {
   quarters: number;
   startquarter: number;
   unlockquarter: number;
@@ -21,9 +18,9 @@ export type DepositRecord = {
   note?: string;
 };
 
-export interface VaultTableProps {
+export interface InfraTableProps {
   deposits: DepositRecord[];
-  withdrawals: SmartVaultRecord[];
+  withdrawals: InfrastructureRecord[];
   selectedYear: number;
   onYearChange: (year: number) => void;
   page: number;
@@ -31,17 +28,16 @@ export interface VaultTableProps {
   pageSize?: number;
 }
 
-function groupByYear(records: SmartVaultRecord[]) {
+function groupByYear(records: InfrastructureRecord[]) {
   return records.reduce((acc, r) => {
     const year = new Date(r.timestamp * 1000).getFullYear();
     if (!acc[year]) acc[year] = [];
     acc[year].push(r);
     return acc;
-  }, {} as Record<number, SmartVaultRecord[]>);
+  }, {} as Record<number, InfrastructureRecord[]>);
 }
 
-
-function getDefaultYear(grouped: Record<number, SmartVaultRecord[]>) {
+function getDefaultYear(grouped: Record<number, InfrastructureRecord[]>) {
   const currentYear = new Date().getFullYear();
 
   if (grouped[currentYear]) return currentYear;
@@ -83,7 +79,7 @@ function paginate<T>(list: T[], page: number, pageSize: number) {
   return list.slice(start, start + pageSize);
 }
 
-export const VaultTable = ({
+export const InfraTable = ({
   deposits,
   withdrawals,
   selectedYear,
@@ -91,7 +87,7 @@ export const VaultTable = ({
   page,
   setPage,
   pageSize = 10
-}: VaultTableProps) => {
+}: InfraTableProps) => {
 
   // Combine timestamps for year selector
   //const grouped = groupByYear(withdrawals);
@@ -123,25 +119,26 @@ export const VaultTable = ({
       {/* Year Selector */}
       <div className="flex justify-end">
         <select
-          value={activeYear}
-          onChange={e => {
-            onYearChange(Number(e.target.value));
-            setPage(1);
-          }}
-          className="select select-sm bg-base-200 text-white"
-        >
-          {years.length > 0 ? (
-            years.map(y => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))
-          ) : (
-            <option value={fallbackYear} disabled>
-              No data available
+            value={activeYear}
+            onChange={e => {
+                onYearChange(Number(e.target.value));
+                setPage(1);
+            }}
+            className="select select-sm bg-base-200 text-white"
+            >
+            {/* Always show fallback year */}
+            <option value={fallbackYear}>
+                {fallbackYear}
             </option>
-          )}
+
+            {/* Show real years if available */}
+            {years.map(y => (
+                <option key={y} value={y}>
+                {y}
+                </option>
+            ))}
         </select>
+
       </div>
 
       {/* -------------------- */}
@@ -234,4 +231,3 @@ export const VaultTable = ({
     </div>
   );
 };
-

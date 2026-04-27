@@ -1,21 +1,34 @@
 "use client";
 
+import { ethers } from "ethers";
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import type { Transaction } from "~~/components/dashboard/transactions/transactions";
 import { PurchaseTable } from "./tabs/purchaseTable";
 import { GBDoTable } from "./tabs/GBDoTable";
-import { XchangeTable } from "./tabs/xchangeTable";
-import { XchangeDepositTable } from "./tabs/xchangeDepositTable";
-import { XchangeRefundTable } from "./tabs/xchangeRefundTable";
-import { VaultTable } from "./tabs/vaultTable";
+import { XchangeCardList } from "./tabs/xchangeTable";
+import { mergeXchange, XchangeEvent, XchangeCard } from "./utils/mergeXchange";
+import { VaultTable, SmartVaultRecord } from "./tabs/vaultTable";
+import { InfraTable, InfrastructureRecord } from "./tabs/infraTable";
 import { TransferTable } from "./tabs/transfersTable"
-import { DividendTable } from "./tabs/dividendTable"
 import { PartnerTable } from "./tabs/partnerTable"
+import deployments from "~~/lib/contracts/deployments.json";
 
-const tabs = ["PRODUCT PURCHASES", "GBDo PURCHASES", "XCHANGE CONTRACTS",  "XCHANGE DEPOSITS", "XCHANGE REFUNDS", "TRANSFERS", "VAULT DEPOSITS", "DIVIDEND PAYOUTS", "PARTNERS"];
+const tabs = ["PRODUCT PURCHASES", "GBDo PURCHASES", "TRANSFERS", "XCHANGE CONTRACTS", "VAULT WITHDRAWALS", "INFRASTRUCTURE WITHDRAWALS", "PARTNERS"];
 
-type TabKey = "PRODUCT PURCHASES" | "GBDo PURCHASES" | "XCHANGE CONTRACTS" | "XCHANGE DEPOSITS" | "XCHANGE REFUNDS" | "TRANSFERS" | "VAULT DEPOSITS" | "DIVIDEND PAYOUTS" | "PARTNERS";
+type TabKey = keyof DataState;
+
+
+type DataState = {
+  "PRODUCT PURCHASES": Transaction[];
+  "GBDo PURCHASES": Transaction[];
+  "TRANSFERS": Transaction[];
+  "XCHANGE CONTRACTS": XchangeCard[];
+  "PARTNERS": Transaction[];
+  "VAULT WITHDRAWALS": SmartVaultRecord[];
+  "INFRASTRUCTURE WITHDRAWALS": InfrastructureRecord[];
+};
+
 
 export const TransactionTabs = () => {
   const [userAddress, setUserAddress] = useState<string | null>(null);
@@ -23,23 +36,72 @@ export const TransactionTabs = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
+  const withdrawalAbi = [
+    "function getUserWithdrawals(address user) view returns (tuple(/*NEED CORRECT VALUES*/)"
+  ];
+
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+
   const [activeTab, setActiveTab] = useState<TabKey>("PRODUCT PURCHASES");
-  const [data, setData] = useState<Record<TabKey, Transaction[]>>({
-    "GBDo PURCHASES": [],
+  const [data, setData] = useState<DataState>({
     "PRODUCT PURCHASES": [],
+    "GBDo PURCHASES": [],
     "XCHANGE CONTRACTS": [],
-    "XCHANGE DEPOSITS": [],
-    "XCHANGE REFUNDS": [],
     "TRANSFERS": [],
-    "VAULT DEPOSITS": [],
-    "DIVIDEND PAYOUTS": [],
     "PARTNERS": [],
+    "VAULT WITHDRAWALS": [],
+    "INFRASTRUCTURE WITHDRAWALS": [],
   });
 
-  const paginatedData = data[activeTab].slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  const isTransactionTab = (
+    tab: TabKey
+  ): tab is
+    | "PRODUCT PURCHASES"
+    | "GBDo PURCHASES"
+    | "XCHANGE CONTRACTS"
+    | "TRANSFERS"
+    | "PARTNERS" => {
+    return (
+      tab === "PRODUCT PURCHASES" ||
+      tab === "GBDo PURCHASES" ||
+      tab === "XCHANGE CONTRACTS" ||
+      tab === "TRANSFERS" ||
+      tab === "PARTNERS"
+    );
+  };
+
+  const isDbTransactionTab = (
+    tab: TabKey
+  ): tab is
+    | "PRODUCT PURCHASES"
+    | "GBDo PURCHASES"
+    | "XCHANGE CONTRACTS"
+    | "TRANSFERS"
+    | "PARTNERS" => {
+    return (
+      tab === "PRODUCT PURCHASES" ||
+      tab === "GBDo PURCHASES" ||
+      tab === "XCHANGE CONTRACTS" ||
+      tab === "TRANSFERS" ||
+      tab === "PARTNERS"
+    );
+  };
+
+  let paginatedXchange: XchangeCard[] | null = null;
+  let paginatedTx: Transaction[] | null = null;
+
+  if (activeTab === "XCHANGE CONTRACTS") {
+    paginatedXchange = data["XCHANGE CONTRACTS"].slice(
+      (currentPage - 1) * pageSize,
+      currentPage * pageSize
+    );
+  } else if (isTransactionTab(activeTab)) {
+    paginatedTx = data[activeTab].slice(
+      (currentPage - 1) * pageSize,
+      currentPage * pageSize
+    );
+  }
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,28 +140,139 @@ export const TransactionTabs = () => {
     getAddress();
   }, []);
 
+  useEffect(() => {
+    if (activeTab === "XCHANGE CONTRACTS") {
+      const now = new Date();
+      const currentYear = Number(now.getFullYear());
+      const currentMonth = Number(now.getMonth() + 1);
+
+      if (!selectedYear) setSelectedYear(currentYear);
+      if (!selectedMonth) setSelectedMonth(currentMonth);
+    }
+    if (activeTab === "VAULT WITHDRAWALS") {
+      const now = new Date();
+      const currentYear = Number(now.getFullYear());
+
+      if (!selectedYear) setSelectedYear(currentYear);
+    }
+    if (activeTab === "INFRASTRUCTURE WITHDRAWALS") {
+      const now = new Date();
+      const currentYear = Number(now.getFullYear());
+
+      if (!selectedYear) setSelectedYear(currentYear);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== "XCHANGE CONTRACTS") {
+      setSelectedYear(null);
+      setSelectedMonth(null);
+    }
+    if (activeTab !== "VAULT WITHDRAWALS") {
+      setSelectedYear(null);
+    }
+
+    if (activeTab !== "INFRASTRUCTURE WITHDRAWALS") {
+      setSelectedYear(null);
+    }
+  }, [activeTab]);
+
+  const fetchVaultWithdrawals = async () => {
+    const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_DEX_RPC_URL);
+
+    const contract = new ethers.Contract(
+      deployments.SmartVault, // <-- replace with correct address
+      withdrawalAbi,
+      provider
+    );
+
+    const raw = await contract.getUserWithdrawals(userAddress);
+
+    const formatted: SmartVaultRecord[] = raw.map((w: any) => ({
+      quarters: Number(w.quartersCommitted),
+      startquarter: Number(w.startQuarter),
+      unlockquarter: Number(w.unlockQuarter),
+      completed: w.finalized,
+      autopay: w.autoPay,
+      timestamp: Number(w.timestamp),
+      dividendamount: Number(w.userDividendAmount) / 1e18,
+      payoutamount: w.amountout.map((v: string) => Number(v) / 1e18)
+    }));
+
+    setData(prev => ({
+      ...prev,
+      "VAULT WITHDRAWALS": formatted
+    }));
+
+  };
+
+  const fetchInfraWithdrawals = async () => {
+    const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_DEX_RPC_URL);
+
+    const contract = new ethers.Contract(
+      deployments.RegionInfrastructure, // <-- replace with correct address
+      withdrawalAbi,
+      provider
+    );
+
+    const raw = await contract.getUserWithdrawals(userAddress);
+
+    const formatted: InfrastructureRecord[] = raw.map((w: any) => ({
+      quarters: Number(w.quartersCommitted),
+      startquarter: Number(w.startQuarter),
+      unlockquarter: Number(w.unlockQuarter),
+      completed: w.finalized,
+      autopay: w.autoPay,
+      timestamp: Number(w.timestamp),
+      dividendamount: Number(w.userDividendAmount) / 1e18,
+      payoutamount: w.amountout.map((v: string) => Number(v) / 1e18)
+    }));
+
+    setData(prev => ({
+      ...prev,
+      "INFRASTRUCTURE WITHDRAWALS": formatted
+    }));
+
+  };
+
   const fetchData = async (tab: TabKey) => {
     setLoading(true);
     setError(null);
 
+    if (tab === "VAULT WITHDRAWALS") {
+      await fetchVaultWithdrawals();
+      return;
+    }
+
+    if (tab === "INFRASTRUCTURE WITHDRAWALS") {
+      await fetchInfraWithdrawals();
+      return;
+    }
+
+    if (!isTransactionTab(tab)) {
+      return; // prevents TypeScript from thinking tab could be a withdrawal tab
+    }
+
+    if (!isDbTransactionTab(tab)) {
+      // This prevents TypeScript from thinking tab could be a withdrawal tab
+      return;
+    }
+
     try {
+
       const endpointMap = {
         "PRODUCT PURCHASES": "getPurchase",
         "GBDo PURCHASES": "getAcquisition",
         "XCHANGE CONTRACTS": "getSwap",
-        "XCHANGE DEPOSITS": "getSwap",
-        "XCHANGE REFUNDS": "getSwap",
         "TRANSFERS": "getTransfer",
-        "VAULT DEPOSITS": "getVault",
-        "DIVIDEND PAYOUTS": "getRedemption",
-        "PARTNERS": "getPurchase"
+        "PARTNERS": "getPurchase",
+        "VAULT WITHDRAWALS": "getVault",
+        "INFRASTRUCTURE WITHDRAWALS": "getRegion",
       } as const;
 
       // Optional subtype mapping if the backend expects it for getSwap
       const subtypeMap: Partial<Record<TabKey, string>> = {
         "XCHANGE CONTRACTS": "contract",
-        "XCHANGE DEPOSITS": "deposit",
-        "XCHANGE REFUNDS": "refund",
         "PARTNERS": "affiliates"
       };
 
@@ -107,12 +280,10 @@ export const TransactionTabs = () => {
         "PRODUCT PURCHASES": "purchases",
         "GBDo PURCHASES": "acquisitions",
         "XCHANGE CONTRACTS": "swaps",
-        "XCHANGE DEPOSITS": "swaps",
-        "XCHANGE REFUNDS": "swaps",
         "TRANSFERS": "transfers",
-        "VAULT DEPOSITS": "vault",
-        "DIVIDEND PAYOUTS": "redemptions",
-        "PARTNERS": "purchases"
+        "PARTNERS": "purchases",
+        "VAULT WITHDRAWALS": "vault",
+        "INFRASTRUCTURE WITHDRAWALS": "infra",
       };
 
       const method = endpointMap[tab];
@@ -121,8 +292,9 @@ export const TransactionTabs = () => {
 
       const pageSize = 10; // increase so you don’t get just one
       let page = 1;
-      const all: Transaction[] = [];
+      let all: any[] = [];
       const maxPages = 20; // safety cap
+
 
       // Paginate until no more results
       // If your API returns total/pages, switch to that; this “empty page stops” pattern works broadly
@@ -183,6 +355,12 @@ export const TransactionTabs = () => {
         page += 1;
       }
 
+      if (tab === "XCHANGE CONTRACTS") {
+        const merged = mergeXchange(all as XchangeEvent[]);
+        setData(prev => ({ ...prev, [tab]: merged }));
+        return;
+      }
+
       setData(prev => ({ ...prev, [tab]: all }));
     } catch (err) {
       console.error("Transaction fetch failed:", err);
@@ -203,17 +381,77 @@ export const TransactionTabs = () => {
     );
 
     switch (activeTab) {
-      case "PRODUCT PURCHASES": return <PurchaseTable transactions={paginatedData} />;
-      case "GBDo PURCHASES": return <GBDoTable transactions={paginatedData} />;
-      case "XCHANGE CONTRACTS": return <XchangeTable transactions={paginatedData} />;
-      case "XCHANGE DEPOSITS": return <XchangeDepositTable transactions={paginatedData} />;
-      case "XCHANGE REFUNDS": return <XchangeRefundTable transactions={paginatedData} />;
-      case "TRANSFERS": return <TransferTable transactions={paginatedData} />;
-      case "VAULT DEPOSITS": return <VaultTable transactions={paginatedData} />;
-      case "DIVIDEND PAYOUTS": return <DividendTable transactions={paginatedData} />;
-      case "PARTNERS": return <PartnerTable transactions={paginatedData} />;
-      default: return null;
+      case "PRODUCT PURCHASES":
+      case "GBDo PURCHASES":
+      case "TRANSFERS":
+      case "PARTNERS":
+      case "XCHANGE CONTRACTS": {
+        
+        const txData = data[activeTab] as Transaction[];
+
+        const paginated = txData.slice(
+          (currentPage - 1) * pageSize,
+          currentPage * pageSize
+        );
+
+        if (activeTab === "PRODUCT PURCHASES")
+          return <PurchaseTable transactions={paginated} />;
+
+        if (activeTab === "GBDo PURCHASES")
+          return <GBDoTable transactions={paginated} />;
+
+        if (activeTab === "TRANSFERS")
+          return <TransferTable transactions={paginated} />;
+
+        if (activeTab === "PARTNERS")
+          return <PartnerTable transactions={paginated} />;
+
+        if (activeTab === "XCHANGE CONTRACTS" && paginatedXchange) {
+
+          return (
+            <XchangeCardList
+              cards={paginatedXchange}
+              selectedYear={selectedYear}
+              selectedMonth={selectedMonth}
+              onYearChange={setSelectedYear}
+              onMonthChange={setSelectedMonth}
+              page={currentPage}
+              setPage={setCurrentPage}
+            />
+          );
+        }
+
+        break;
+      }
+
+      case "VAULT WITHDRAWALS":
+        return (
+          <VaultTable
+            deposits={[]}
+            withdrawals={data["VAULT WITHDRAWALS"]}
+            selectedYear={selectedYear ?? new Date().getFullYear()}
+            onYearChange={setSelectedYear}
+            page={currentPage}
+            setPage={setCurrentPage}
+          />
+        );
+
+      case "INFRASTRUCTURE WITHDRAWALS":
+        return (
+          <InfraTable
+            deposits={[]}
+            withdrawals={data["INFRASTRUCTURE WITHDRAWALS"]}
+            selectedYear={selectedYear ?? new Date().getFullYear()}
+            onYearChange={setSelectedYear}
+            page={currentPage}
+            setPage={setCurrentPage}
+          />
+        );
+
+      default:
+        return null;
     }
+
   };
 
   useEffect(() => {

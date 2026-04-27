@@ -19,6 +19,11 @@ database_name = "vault-db"
 database_id = "fb8be6f1-9c24-4e74-a152-3cc572712605"
 
 [[d1_databases]]
+binding = "DB_INFRA"
+database_name = "infra-db"
+database_id = "39abcc91-9953-4878-a8e0-5189f00be168"
+
+[[d1_databases]]
 binding = "DB_PURCHASE"
 database_name = "purchase-db"
 database_id = "6df2645d-9969-4ab9-aabc-33c1828cb838"
@@ -32,6 +37,11 @@ database_id = "2bbf90cb-668a-4c56-84ff-85a7d1766a35"
 binding = "DB_REDEMPTIONS"
 database_name = "redemption-db"
 database_id = "32863e7a-84d5-4901-bfea-2b1899364bff"
+
+[[d1_databases]]
+binding = "DB_ACQUISITION"
+database_name = "acquisition-db"
+database_id = "8c0b8be6-546e-4ed1-8a01-0cbd80f9a898"
 
 
 [env.production]
@@ -51,6 +61,11 @@ database_name = "vault__pgroll_new_xata_id_key-db"
 database_id = "fb8be6f1-9c24-4e74-a152-3cc572712605"
 
 [[env.production.d1_databases]]
+binding = "DB_INFRA"
+database_name = "infra-db"
+database_id = "39abcc91-9953-4878-a8e0-5189f00be168"
+
+[[env.production.d1_databases]]
 binding = "DB_PURCHASE"
 database_name = "purchase-db"
 database_id = "6df2645d-9969-4ab9-aabc-33c1828cb838"
@@ -64,6 +79,11 @@ database_id = "2bbf90cb-668a-4c56-84ff-85a7d1766a35"
 binding = "DB_REDEMPTIONS"
 database_name = "redemption-db"
 database_id = "32863e7a-84d5-4901-bfea-2b1899364bff"
+
+[[env.production.d1_databases]]
+binding = "DB_ACQUISITION"
+database_name = "acquisition-db"
+database_id = "8c0b8be6-546e-4ed1-8a01-0cbd80f9a898"
 
 
 [env.production.vars]

@@ -1120,6 +1120,97 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "getUserWithdrawals",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "user",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "internalType": "uint8",
+              "name": "quartersCommitted",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint16",
+              "name": "startQuarter",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint16",
+              "name": "unlockQuarter",
+              "type": "uint16"
+            },
+            {
+              "internalType": "bool",
+              "name": "finalize",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "autoPay",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "userDividendAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "convertedDividendAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "termTotalSupply",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address[39]",
+              "name": "payoutSetter",
+              "type": "address[39]"
+            },
+            {
+              "internalType": "uint256[39]",
+              "name": "amountout",
+              "type": "uint256[39]"
+            },
+            {
+              "internalType": "bytes32[39]",
+              "name": "payoutTxHash",
+              "type": "bytes32[39]"
+            }
+          ],
+          "internalType": "struct RegionInfrastructure.User[]",
+          "name": "",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "uint256",
           "name": "startTs",
           "type": "uint256"
