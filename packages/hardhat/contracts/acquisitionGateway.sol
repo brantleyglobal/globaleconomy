@@ -197,6 +197,14 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         return purchasesByUser[user][index];
     }
 
+    function getUserPurchases(address user)
+        external
+        view
+        returns (Purchase[] memory)
+    {
+        return purchasesByUser[user];
+    }
+
     function viewSupply() internal view returns (uint256) {
         return _supply;
     }

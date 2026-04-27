@@ -369,6 +369,14 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         return purchasesByUser[user][index];
     }
 
+    function getUserPurchases(address user)
+        external
+        view
+        returns (Purchase[] memory)
+    {
+        return purchasesByUser[user];
+    }
+
     function correctPayoutTxHash(
         address user,
         uint32 termIndex,

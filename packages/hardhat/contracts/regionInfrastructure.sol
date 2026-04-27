@@ -408,7 +408,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         withdrawalsByUser[msg.sender].push();
 
         // Now get the index of the new struct
-        uint32 termIndex = uint16(withdrawalsByUser[msg.sender].length - 1);
+        uint32 termIndex = uint32(withdrawalsByUser[msg.sender].length - 1);
 
         User storage u = withdrawalsByUser[msg.sender][termIndex];
 
@@ -709,6 +709,14 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         returns (User memory)
     {
         return withdrawalsByUser[user][index];
+    }
+
+    function getUserWithdrawals(address user)
+        external
+        view
+        returns (User[] memory)
+    {
+        return withdrawalsByUser[user];
     }
 
     function getUserDepositCount(address user) external view returns (uint256) {

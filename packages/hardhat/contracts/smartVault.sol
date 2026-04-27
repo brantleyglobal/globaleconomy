@@ -865,11 +865,20 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         return withdrawalsByUser[user].length;
     }
 
-    function getUserTerm(address user, uint32 index)
+    function getUserWithdrawals(address user)
+        external
+        view
+        returns (User[] memory)
+    {
+        return withdrawalsByUser[user];
+    }
+
+    function getUserCurrentTerm(address user)
         external
         view
         returns (User memory)
     {
+        uint32 index = uint32(withdrawalsByUser[msg.sender].length - 1);
         return withdrawalsByUser[user][index];
     }
 
