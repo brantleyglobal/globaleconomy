@@ -1,4 +1,5 @@
 {
+
   "abi": [
     {
       "anonymous": false,
@@ -310,9 +311,9 @@
           "type": "address"
         },
         {
-          "internalType": "uint16",
+          "internalType": "uint32",
           "name": "termIndex",
-          "type": "uint16"
+          "type": "uint32"
         },
         {
           "internalType": "bytes32",

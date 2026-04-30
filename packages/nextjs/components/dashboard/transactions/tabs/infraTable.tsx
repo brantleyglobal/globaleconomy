@@ -1,8 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { Transaction } from "~~/components/dashboard/transactions/transactions";
-import { SharedColumns } from "./sharedColumns";
-import { useAccount } from "wagmi";
 
 export type InfrastructureRecord = {
   quarters: number;
@@ -119,6 +118,47 @@ function paginate<T>(list: T[], page: number, pageSize: number) {
   return list.slice(start, start + pageSize);
 }
 
+function Pager({
+  page,
+  setPage,
+  total,
+  pageSize,
+  ariaPrefix = ""
+}: {
+  page: number;
+  setPage: (p: number) => void;
+  total: number;
+  pageSize: number;
+  ariaPrefix?: string;
+}) {
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  return (
+    <div className="flex items-center justify-center gap-3 mt-3">
+      <button
+        aria-label={`${ariaPrefix} previous page`}
+        disabled={page === 1}
+        onClick={() => setPage(Math.max(1, page - 1))}
+        className="px-2 py-1 text-xs bg-base-200 rounded disabled:opacity-50"
+      >
+        Prev
+      </button>
+
+      <span className="text-xs text-gray-400">
+        Page {page} of {pageCount}
+      </span>
+
+      <button
+        aria-label={`${ariaPrefix} next page`}
+        disabled={page >= pageCount}
+        onClick={() => setPage(Math.min(pageCount, page + 1))}
+        className="px-2 py-1 text-xs bg-base-200 rounded disabled:opacity-50"
+      >
+        Next
+      </button>
+    </div>
+  );
+}
+
 export const InfraTable = ({
   deposits,
   withdrawals,
@@ -126,7 +166,7 @@ export const InfraTable = ({
   onYearChange,
   page,
   setPage,
-  pageSize = 10
+  pageSize = 5
 }: InfraTableProps) => {
 
   const mappedWithdrawals = withdrawals.map(w => {
@@ -157,6 +197,25 @@ export const InfraTable = ({
         activeYear >= w.startYear && activeYear <= w.endYear
       );
 
+  // LOCAL pager state for each card
+  const [pageDeposits, setPageDeposits] = useState(1);
+  const [pageWithdrawals, setPageWithdrawals] = useState(1);
+
+  // Reset child pages when year or underlying data changes
+  useEffect(() => setPageDeposits(1), [activeYear, deposits]);
+  useEffect(() => setPageWithdrawals(1), [activeYear, withdrawals]);
+
+  // Defensive clamping if data shrinks
+  useEffect(() => {
+    const depositsPageCount = Math.max(1, Math.ceil(yearDeposits.length / pageSize));
+    if (pageDeposits > depositsPageCount) setPageDeposits(1);
+  }, [yearDeposits, pageSize, pageDeposits]);
+
+  useEffect(() => {
+    const withdrawalsPageCount = Math.max(1, Math.ceil(yearWithdrawals.length / 1));
+    if (pageWithdrawals > withdrawalsPageCount) setPageWithdrawals(1);
+  }, [yearWithdrawals, pageWithdrawals]);
+
   const now = new Date();
   const year = now.getFullYear();
   const quarter = Math.floor(now.getMonth() / 3) + 1;
@@ -175,8 +234,9 @@ export const InfraTable = ({
   }
 
   // paginate
-  const paginatedDeposits = paginate(yearDeposits, page, pageSize);
-  const paginatedWithdrawals = paginate(yearWithdrawals, page, 1);
+  const paginatedDeposits = paginate(yearDeposits, pageDeposits, pageSize);
+  const paginatedWithdrawals = paginate(yearWithdrawals, pageWithdrawals, 1);
+
 
   const noDepositData =
     deposits.length === 0;
@@ -223,6 +283,7 @@ export const InfraTable = ({
             {noDepositData ? (
               <div className="text-gray-400 text-center py-6">No Venture Deposits found.</div>
             ) : (
+              <>
               <div className="space-y-3">
                 {paginatedDeposits.map((tx, idx) => {
                   const amount = (tx as any).depositamount ?? (tx as any).amount ?? 0;
@@ -252,6 +313,15 @@ export const InfraTable = ({
                   );
                 })}
               </div>
+              {/* Deposits pager (local) */}
+              <Pager
+                page={pageDeposits}
+                setPage={setPageDeposits}
+                total={yearDeposits.length}
+                pageSize={pageSize}
+                ariaPrefix="Deposits"
+              />
+              </>
             )}
           </div>
         </section>
@@ -269,6 +339,7 @@ export const InfraTable = ({
             {noWithdrawalData ? (
               <div className="text-gray-400 text-center py-6">No Venture Withdrawals found.</div>
             ) : (
+              <>
               <div className="space-y-3">
                 {paginatedWithdrawals.map((tx, idx) => (
                   <article key={`${tx.startquarter}-${idx}`} className="p-3 bg-base-200 rounded-md">
@@ -331,6 +402,15 @@ export const InfraTable = ({
                   </article>
                 ))}
               </div>
+              {/* Withdrawals pager */}
+              <Pager
+                page={pageWithdrawals}
+                setPage={setPageWithdrawals}
+                total={yearWithdrawals.length}
+                pageSize={1}
+                ariaPrefix="Withdrawals"
+              />
+              </>
             )}
           </div>
         </section>

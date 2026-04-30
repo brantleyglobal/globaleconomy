@@ -277,7 +277,7 @@ export const XchangeCardList = ({
                 <section aria-labelledby={`party-a-${card.id}`} className="p-3 bg-white/3 rounded">
                   <div className="flex items-center justify-between mb-2">
                     <h4 id={`party-a-${card.id}`} className="font-semibold">Party A</h4>
-                    <div className="text-sm text-gray-300">{card.partyA}</div>
+                    <div className="text-sm text-gray-300">Wallet Address: {card.partyA}</div>
                   </div>
 
                   {/* Net balances */}
@@ -358,7 +358,7 @@ export const XchangeCardList = ({
                 <section aria-labelledby={`party-b-${card.id}`} className="p-3 bg-white/3 rounded">
                   <div className="flex items-center justify-between mb-2">
                     <h4 id={`party-b-${card.id}`} className="font-semibold">Party B</h4>
-                    <div className="text-sm text-gray-300">{card.partyB}</div>
+                    <div className="text-sm text-gray-300">Wallet Address: {card.partyB}</div>
                   </div>
 
                   {/* Net balances */}

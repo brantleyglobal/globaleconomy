@@ -19,8 +19,8 @@ const tabs = [
   "GBDo PURCHASES",
   "TRANSFERS",
   "XCHANGE CONTRACTS",
-  "VAULT WITHDRAWALS",
-  "INFRASTRUCTURE WITHDRAWALS",
+  "DIVIDEND VAULT",
+  "VENTURE VAULT",
   "PARTNERS"
 ] as const;
 
@@ -34,12 +34,12 @@ type DataState = {
   "PARTNERS": Transaction[];
 
   // These tabs show BOTH deposits + withdrawals
-  "VAULT WITHDRAWALS": {
+  "DIVIDEND VAULT": {
     deposits: Transaction[];
     withdrawals: SmartVaultRecord[];
   };
 
-  "INFRASTRUCTURE WITHDRAWALS": {
+  "VENTURE VAULT": {
     deposits: Transaction[];
     withdrawals: InfrastructureRecord[];
   };
@@ -71,12 +71,12 @@ export const TransactionTabs = () => {
     "XCHANGE CONTRACTS": [],
     "PARTNERS": [],
 
-    "VAULT WITHDRAWALS": {
+    "DIVIDEND VAULT": {
       deposits: [],
       withdrawals: []
     },
 
-    "INFRASTRUCTURE WITHDRAWALS": {
+    "VENTURE VAULT": {
       deposits: [],
       withdrawals: []
     }
@@ -108,14 +108,14 @@ export const TransactionTabs = () => {
       currentPage * pageSize
     );
   } 
-  else if (activeTab === "VAULT WITHDRAWALS") {
-    paginatedTx  = data["VAULT WITHDRAWALS"].deposits.slice(
+  else if (activeTab === "DIVIDEND VAULT") {
+    paginatedTx  = data["DIVIDEND VAULT"].deposits.slice(
       (currentPage - 1) * pageSize,
       currentPage * pageSize
     );
   }
-  else if (activeTab === "INFRASTRUCTURE WITHDRAWALS") {
-    paginatedTx  = data["INFRASTRUCTURE WITHDRAWALS"].deposits.slice(
+  else if (activeTab === "VENTURE VAULT") {
+    paginatedTx  = data["VENTURE VAULT"].deposits.slice(
       (currentPage - 1) * pageSize,
       currentPage * pageSize
     );
@@ -131,8 +131,8 @@ export const TransactionTabs = () => {
   const [error, setError] = useState<string | null>(null);
 
   const withdrawalTabs = [
-    "VAULT WITHDRAWALS",
-    "INFRASTRUCTURE WITHDRAWALS"
+    "DIVIDEND VAULT",
+    "VENTURE VAULT"
   ];
 
   const depositTabs = [
@@ -155,8 +155,8 @@ export const TransactionTabs = () => {
     "XCHANGE CONTRACTS": "getSwap",
     "TRANSFERS": "getTransfer",
     "PARTNERS": "getPurchase",
-    "VAULT WITHDRAWALS": "getVault",
-    "INFRASTRUCTURE WITHDRAWALS": "getRegion",
+    "DIVIDEND VAULT": "getVault",
+    "VENTURE VAULT": "getRegion",
   } as const;
 
   const responseKeyMap = {
@@ -165,8 +165,8 @@ export const TransactionTabs = () => {
     "XCHANGE CONTRACTS": "swaps",
     "TRANSFERS": "transfers",
     "PARTNERS": "purchases",
-    "VAULT WITHDRAWALS": "vault",
-    "INFRASTRUCTURE WITHDRAWALS": "infra",
+    "DIVIDEND VAULT": "vault",
+    "VENTURE VAULT": "infra",
   } as const;
 
   const subtypeMap: Partial<Record<TabKey, string>> = {
@@ -286,8 +286,8 @@ export const TransactionTabs = () => {
 
     setData(prev => ({
       ...prev,
-      "VAULT WITHDRAWALS": {
-        ...prev["VAULT WITHDRAWALS"],
+      "DIVIDEND VAULT": {
+        ...prev["DIVIDEND VAULT"],
         withdrawals: formatted
       }
     }));
@@ -331,8 +331,8 @@ export const TransactionTabs = () => {
 
     setData(prev => ({
       ...prev,
-      "INFRASTRUCTURE WITHDRAWALS": {
-        ...prev["INFRASTRUCTURE WITHDRAWALS"],
+      "VENTURE VAULT": {
+        ...prev["VENTURE VAULT"],
         withdrawals: formatted
       }
     }));
@@ -398,12 +398,12 @@ export const TransactionTabs = () => {
       // ---------------------------------------------
       //
 
-      // VAULT WITHDRAWALS
-      if (tab === "VAULT WITHDRAWALS") {
+      // DIVIDEND VAULT
+      if (tab === "DIVIDEND VAULT") {
         const withdrawals = await fetchVaultWithdrawals();
         setData(prev => ({
           ...prev,
-          "VAULT WITHDRAWALS": {
+          "DIVIDEND VAULT": {
             deposits: dbData as Transaction[],
             withdrawals,
           },
@@ -411,12 +411,12 @@ export const TransactionTabs = () => {
         return;
       }
 
-      // INFRASTRUCTURE WITHDRAWALS
-      if (tab === "INFRASTRUCTURE WITHDRAWALS") {
+      // VENTURE VAULT
+      if (tab === "VENTURE VAULT") {
         const withdrawals = await fetchInfraWithdrawals();
         setData(prev => ({
           ...prev,
-          "INFRASTRUCTURE WITHDRAWALS": {
+          "VENTURE VAULT": {
             deposits: dbData as Transaction[],
             withdrawals,
           },
@@ -491,11 +491,11 @@ export const TransactionTabs = () => {
         break;
       }
 
-      case "VAULT WITHDRAWALS":
+      case "DIVIDEND VAULT":
         return (
           <VaultTable
-            deposits={data["VAULT WITHDRAWALS"].deposits}
-            withdrawals={data["VAULT WITHDRAWALS"].withdrawals}
+            deposits={data["DIVIDEND VAULT"].deposits}
+            withdrawals={data["DIVIDEND VAULT"].withdrawals}
             selectedYear={selectedYear ?? new Date().getFullYear()}
             onYearChange={setSelectedYear}
             page={currentPage}
@@ -504,11 +504,11 @@ export const TransactionTabs = () => {
 
         );
 
-      case "INFRASTRUCTURE WITHDRAWALS":
+      case "VENTURE VAULT":
         return (
           <InfraTable
-            deposits={data["INFRASTRUCTURE WITHDRAWALS"].deposits}
-            withdrawals={data["INFRASTRUCTURE WITHDRAWALS"].withdrawals}
+            deposits={data["VENTURE VAULT"].deposits}
+            withdrawals={data["VENTURE VAULT"].withdrawals}
             selectedYear={selectedYear ?? new Date().getFullYear()}
             onYearChange={setSelectedYear}
             page={currentPage}
@@ -527,7 +527,7 @@ export const TransactionTabs = () => {
   }, [activeTab]);
 
   const rawData = data[activeTab];
-  const needsPagination = !["VAULT WITHDRAWALS", "INFRASTRUCTURE WITHDRAWALS"].includes(activeTab);
+  const needsPagination = !["DIVIDEND VAULT", "VENTURE VAULT"].includes(activeTab);
 
   const paginatedData =
     needsPagination && Array.isArray(rawData)
@@ -572,31 +572,33 @@ export const TransactionTabs = () => {
       <div className="flex-1 overflow-y-auto">
         {renderTable()}
       </div>
-      <div className="flex justify-center space-x-2 mt-2">
-        <button
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage(p => p - 1)}
-          className="px-2 py-1 text-xs bg-base-200 rounded disabled:opacity-50"
-        >
-          Prev
-        </button>
+      {!(activeTab === "DIVIDEND VAULT" || activeTab === "VENTURE VAULT") && (
+        <div className="flex justify-center space-x-2 mt-2">
+          <button
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(p => p - 1)}
+            className="px-2 py-1 text-xs bg-base-200 rounded disabled:opacity-50"
+          >
+            Prev
+          </button>
 
-        <span className="text-xs text-gray-400">
-          Page {currentPage} of {needsPagination
-            ? Math.max(1, Math.ceil((Array.isArray(rawData) ? rawData.length : 0) / pageSize))
-            : 1}
-        </span>
+          <span className="text-xs text-gray-400">
+            Page {currentPage} of {needsPagination
+              ? Math.max(1, Math.ceil((Array.isArray(rawData) ? rawData.length : 0) / pageSize))
+              : 1}
+          </span>
 
-        <button
-          disabled={needsPagination
-            ? currentPage >= Math.ceil((Array.isArray(rawData) ? rawData.length : 0) / pageSize)
-            : true}
-          onClick={() => setCurrentPage(p => p + 1)}
-          className="px-2 py-1 text-xs bg-base-200 rounded disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
+          <button
+            disabled={needsPagination
+              ? currentPage >= Math.ceil((Array.isArray(rawData) ? rawData.length : 0) / pageSize)
+              : true}
+            onClick={() => setCurrentPage(p => p + 1)}
+            className="px-2 py-1 text-xs bg-base-200 rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };
