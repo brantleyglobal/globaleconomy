@@ -152,7 +152,7 @@ export async function sendTransferOnTargetChain(
     if (!btcWallet) throw new Error("Bitcoin wallet not connected");
     const sats = tamount * 100_000_000n; // BTC → satoshis
     const txid = await btcWallet.sendTransaction(recipient, Number(sats));
-    return { txHash: txid, receipt: null };
+    return { dTxHash: txid, receipt2: null };
   }
 
   const hexChainId = "0x" + chainInfo.chainId.toString(16);

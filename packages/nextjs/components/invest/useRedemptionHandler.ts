@@ -209,7 +209,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
 
         // Prepare payload for redemption logging
         const redemptionPayload = {
-          txhash: tokenTx.hash,
+          txhash: receipt,
           contractaddress: contractAddress,
           useraddress: sender,
           amount: amountToSend?.toString(),
@@ -250,7 +250,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         setLoading(false);
         return {
           success: true,
-          txHash: tokenTx.hash,
+          txHash: receipt,
           receiptHash: receipt.blockHash,
           amount: amountToSend?.toString(),
           token: selectedToken.symbol ?? "unknown",
@@ -258,45 +258,18 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         };
       }
     } catch (err: any) {
-      console.error("Transfer error:", err);
+      console.error("Redemption error:", err);
 
-      const errorPayload = {
-        txhash: "",
-        contractaddress: "",
-        useraddress: sender,
-        asset: selectedToken.symbol ?? "unknown",
-        amount: "",
-        status: "failed",
-        chainstatus: false,
-        queuedat: processedAt,
-        processedat: null,
-        priority: 0,
-        retrycount: 0,
-        receipthash: "",
-        notes: err.message ?? "Unknown error",
-        timestamp: new Date().toISOString(),
-      };
+        const revertReason =
+          err?.error?.data?.message ||
+          err?.data?.message ||
+          err?.reason ||
+          err?.message ||
+          "Unknown error";
 
-      try {
-        const res = await fetch("https://gateway.brantley-global.com", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
-          },
-          body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: "redemptions",
-            method: "redeemToken",
-            params: errorPayload,
-          }),
-        });
-        if (res.ok) {
-          await res.json();
-        }
-      } catch (nestedErr: any) {
-        console.error("Error reporting failed redemption:", nestedErr);
-      }
+        console.error("Acqusition failed:", revertReason);
+
+        throw new Error(revertReason);
 
       setLoading(false);
       return { success: false, error: err.message ?? "Unknown error" };

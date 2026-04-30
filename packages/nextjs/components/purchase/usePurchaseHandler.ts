@@ -465,13 +465,13 @@ async function handleCryptoPurchase(params: InitiateParams) {
     const exchangeRateStr = exchangeRateFloat.toFixed(precision);
     const exchangeRate = parseUnits(exchangeRateStr, precision);
 
-    //console.log(exchangeRate);
-
     // Format totalTokenAmountF back to float for display
     const totalTokenAmountNumber = parseFloat(formatUnits(totalTokenAmountF, 18));
 
     const totalTokenAmountDisplay = totalTokenAmountNumber.toFixed(2);
 
+    let dTxHash;
+    let receipt2;
     let callAddress;
     if (selectedToken.symbol === "ETH") {
       callAddress = 0x00000000000000000000000000000000000000E0
@@ -539,7 +539,6 @@ async function handleCryptoPurchase(params: InitiateParams) {
     }
 
     /*************** CROSS CHAIN TRANSFER CALL ***************/
-    //console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address);
     
     if (!provider) {
       throw new Error("No provider available");
@@ -552,12 +551,9 @@ async function handleCryptoPurchase(params: InitiateParams) {
     const rate = parseUnits(exchangeRateFloat.toFixed(18), selectedToken.decimals);
 
     const purchaseContract = new Contract(deployments.AssetPurchase, assetPurchaseAbi.abi, signer);
-
-    let txHash;
-    let receipt;
     
     if (selectedToken.symbol == "GBDo") {
-      txHash = await purchaseContract.purchase!(
+      dTxHash = await purchaseContract.purchase!(
         holdingWalletAddress,
         selectedToken,
         checkoutAsset.id,
@@ -571,9 +567,9 @@ async function handleCryptoPurchase(params: InitiateParams) {
           gasLimit: 1_500_000
         }
       );
-      receipt = await txHash.wait();
+      receipt2 = await dTxHash.wait();
     } else {
-      ({ txHash, receipt } = await sendTransferOnTargetChain(
+      ({ dTxHash, receipt2 } = await sendTransferOnTargetChain(
         holdingWalletAddress,
         totalTokenAmount,
         {
@@ -610,10 +606,10 @@ async function handleCryptoPurchase(params: InitiateParams) {
     // Step 5: Log purchase to backend
     const purchasePayload = {
       contractaddress: deployments.AssetPurchase.toString(),
-      txhash: txHash || "",
-      receipthash: receipt?.blockHash || "",
+      txhash:receipt2 || "",
+      receipthash: receipt2?.blockHash || "",
       useraddress: userAddress,
-      affiliate: affiliateAddress,
+      affiliate: affiliateAddress || "",
       asset: checkoutAsset.id,
       amount: totalTokenAmount,
       exchangerate: tokenRate,
@@ -621,7 +617,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
       configs: serializedConfig,
       paymentmethod: tokenSymbol,
       region, 
-      commission: commissionAmount,
+      commission: commissionAmount || "",
       payout,
       status: "accepted",
       chainstatus: true,
@@ -692,7 +688,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
         firstname,
         lastname,
         email,
-        tx: txHash,
+        tx: dTxHash,
         checkoutAsset,
         quantity,
         totalTokenAmount: formattedAmount,
@@ -703,7 +699,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
         phone,
         country,
         postalCode,
-        receipt: receipt?.blockHash || "",
+        receipt: receipt2?.blockHash || "",
         promo: promo || "",
         purchaseMadeEvents: [purchaseMade],
       });
@@ -713,6 +709,8 @@ async function handleCryptoPurchase(params: InitiateParams) {
 
     toast.success("Transaction successful.");
   } catch (err: any) {
+    console.error("Purchase error:", err);
+
     const revertReason =
       err?.error?.data?.message ||
       err?.data?.message ||

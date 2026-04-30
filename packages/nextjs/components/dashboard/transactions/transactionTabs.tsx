@@ -7,8 +7,8 @@ import type { Transaction } from "~~/components/dashboard/transactions/transacti
 import { PurchaseTable } from "./tabs/purchaseTable";
 import { GBDoTable } from "./tabs/GBDoTable";
 import { XchangeCardList } from "./tabs/xchangeTable";
-import { mergeXchange, XchangeEvent, XchangeCard } from "./utils/mergeXchange";
-import { VaultTable, SmartVaultRecord, DepositRecord } from "./tabs/vaultTable";
+import { mergeXchange, XchangeCard } from "./utils/mergeXchange";
+import { VaultTable, SmartVaultRecord } from "./tabs/vaultTable";
 import { InfraTable, InfrastructureRecord } from "./tabs/infraTable";
 import { TransferTable } from "./tabs/transfersTable"
 import { PartnerTable } from "./tabs/partnerTable"
@@ -35,19 +35,20 @@ type DataState = {
 
   // These tabs show BOTH deposits + withdrawals
   "VAULT WITHDRAWALS": {
-    deposits: DepositRecord[];
+    deposits: Transaction[];
     withdrawals: SmartVaultRecord[];
   };
 
   "INFRASTRUCTURE WITHDRAWALS": {
-    deposits: DepositRecord[];
+    deposits: Transaction[];
     withdrawals: InfrastructureRecord[];
   };
 };
 
 export const TransactionTabs = () => {
   const [userAddress, setUserAddress] = useState<string | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const { address: connectedAddress, isConnected } = useAccount();
+  const [isConnectedState, setIsConnectedState] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
@@ -98,23 +99,6 @@ export const TransactionTabs = () => {
     );
   };
 
-  const isDbTransactionTab = (
-    tab: TabKey
-  ): tab is
-    | "PRODUCT PURCHASES"
-    | "GBDo PURCHASES"
-    | "XCHANGE CONTRACTS"
-    | "TRANSFERS"
-    | "PARTNERS" => {
-    return (
-      tab === "PRODUCT PURCHASES" ||
-      tab === "GBDo PURCHASES" ||
-      tab === "XCHANGE CONTRACTS" ||
-      tab === "TRANSFERS" ||
-      tab === "PARTNERS"
-    );
-  };
-
   let paginatedXchange: XchangeCard[] | null = null;
   let paginatedTx: Transaction[] | null = null;
 
@@ -123,7 +107,20 @@ export const TransactionTabs = () => {
       (currentPage - 1) * pageSize,
       currentPage * pageSize
     );
-  } else if (isTransactionTab(activeTab)) {
+  } 
+  else if (activeTab === "VAULT WITHDRAWALS") {
+    paginatedTx  = data["VAULT WITHDRAWALS"].deposits.slice(
+      (currentPage - 1) * pageSize,
+      currentPage * pageSize
+    );
+  }
+  else if (activeTab === "INFRASTRUCTURE WITHDRAWALS") {
+    paginatedTx  = data["INFRASTRUCTURE WITHDRAWALS"].deposits.slice(
+      (currentPage - 1) * pageSize,
+      currentPage * pageSize
+    );
+  }
+  else if (isTransactionTab(activeTab)) {
     paginatedTx = data[activeTab].slice(
       (currentPage - 1) * pageSize,
       currentPage * pageSize
@@ -178,10 +175,10 @@ export const TransactionTabs = () => {
   };
 
   useEffect(() => {
-    if (isConnected && userAddress) {
+    if (isConnectedState && userAddress) {
       fetchData(activeTab);
     }
-  }, [activeTab, userAddress, isConnected]);
+  }, [activeTab, userAddress, isConnectedState]);
 
   useEffect(() => {
     const getAddress = async () => {
@@ -190,17 +187,17 @@ export const TransactionTabs = () => {
           const accounts = await window.ethereum.request({ method: "eth_accounts" });
           if (accounts.length > 0) {
             setUserAddress(accounts[0]);
-            setIsConnected(true);
+            setIsConnectedState(true);
           } else {
             setUserAddress(null);
-            setIsConnected(false);
+            setIsConnectedState(false);
           }
 
           // Listen for account changes
           window.ethereum.on?.("accountsChanged", (accounts: string[]) => {
             const newAccount = accounts.length > 0 ? accounts[0] : null;
             setUserAddress(newAccount);
-            setIsConnected(!!newAccount);
+            setIsConnectedState(!!newAccount);
           });
         } catch (err) {
           console.error("Failed to get wallet address:", err);
@@ -281,7 +278,6 @@ export const TransactionTabs = () => {
       unlockquarter: Number(w.unlockQuarter ?? 0),
       completed: Boolean(w.finalize),
       autopay: Boolean(w.autoPay),
-      timestamp: Number(w.timestamp ?? 0),
       dividendamount: Number(w.userDividendAmount ?? 0) / 1e18,
       payoutamount: Array.isArray(w.amountout)
         ? w.amountout.map((v: any) => Number(v ?? 0) / 1e18)
@@ -327,7 +323,6 @@ export const TransactionTabs = () => {
       unlockquarter: Number(w.unlockQuarter ?? 0),
       completed: Boolean(w.finalize),
       autopay: Boolean(w.autoPay),
-      timestamp: Number(w.timestamp ?? 0),
       dividendamount: Number(w.userDividendAmount ?? 0) / 1e18,
       payoutamount: Array.isArray(w.amountout)
         ? w.amountout.map((v: any) => Number(v ?? 0) / 1e18)
@@ -345,184 +340,100 @@ export const TransactionTabs = () => {
 
   };
 
-  async function fetchDeposits(tab: "VAULT WITHDRAWALS" | "INFRASTRUCTURE WITHDRAWALS") {
-    const method = endpointMap[tab];
-    const responseKey = responseKeyMap[tab];
-
-    let page = 1;
-    let all: DepositRecord[] = [];
-
-    while (true) {
-      const res = await fetch("https://gateway.brantley-global.com", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
-        },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          method,
-          params: { useraddress: userAddress, page, pageSize: 10 },
-          id: `dep-${tab}-${page}`,
-        }),
-      });
-
-      const json = await res.json();
-      const items = json.result?.[responseKey] ?? [];
-
-      if (!items.length) break;
-
-      all.push(...items);
-      page++;
-    }
-
-    return all;
-  }
-
   const fetchData = async (tab: TabKey) => {
     setLoading(true);
     setError(null);
 
-    try{
-
-      if (tab === "VAULT WITHDRAWALS") {
-        const deposits = await fetchDeposits("VAULT WITHDRAWALS");
-        const withdrawals = await fetchVaultWithdrawals();
-
-        setData(prev => ({
-          ...prev,
-          "VAULT WITHDRAWALS": { deposits, withdrawals }
-        }));
-
-        return;
-      }
-
-      if (tab === "INFRASTRUCTURE WITHDRAWALS") {
-        const deposits = await fetchDeposits("INFRASTRUCTURE WITHDRAWALS");
-        const withdrawals = await fetchInfraWithdrawals();
-
-        setData(prev => ({
-          ...prev,
-          "INFRASTRUCTURE WITHDRAWALS": { deposits, withdrawals }
-        }));
-
-        return;
-      }
-
-      if (!isTransactionTab(tab)) {
-        return; // prevents TypeScript from thinking tab could be a withdrawal tab
-      }
-
-      if (!isDbTransactionTab(tab)) {
-        // This prevents TypeScript from thinking tab could be a withdrawal tab
-        return;
-      }
-
-
-      /*const endpointMap = {
-        "PRODUCT PURCHASES": "getPurchase",
-        "GBDo PURCHASES": "getAcquisition",
-        "XCHANGE CONTRACTS": "getSwap",
-        "TRANSFERS": "getTransfer",
-        "PARTNERS": "getPurchase",
-        "VAULT WITHDRAWALS": "getVault",
-        "INFRASTRUCTURE WITHDRAWALS": "getRegion",
-      } as const;
-
-      // Optional subtype mapping if the backend expects it for getSwap
-      const subtypeMap: Partial<Record<TabKey, string>> = {
-        "XCHANGE CONTRACTS": "contract",
-        "PARTNERS": "affiliates"
-      };
-
-      const responseKeyMap: Record<TabKey, string> = {
-        "PRODUCT PURCHASES": "purchases",
-        "GBDo PURCHASES": "acquisitions",
-        "XCHANGE CONTRACTS": "swaps",
-        "TRANSFERS": "transfers",
-        "PARTNERS": "purchases",
-
-        // These now correctly map to deposit arrays returned by the DB
-        "VAULT WITHDRAWALS": "vault",
-        "INFRASTRUCTURE WITHDRAWALS": "infra",
-      };*/
-
+    try {
+      //
+      // ---------------------------------------------
+      // 1. MAKE ONE DB CALL FOR THIS TAB
+      // ---------------------------------------------
+      //
       const method = endpointMap[tab];
       const responseKey = responseKeyMap[tab];
-      const subtype = subtypeMap[tab]; // may be undefined
+      const subtype = subtypeMap[tab];
 
-      const pageSize = 10; // increase so you don’t get just one
+      const pageSize = 10;
       let page = 1;
-      let all: any[] = [];
-      const maxPages = 20; // safety cap
+      const maxPages = 20;
+      let dbData: any[] = [];
 
-
-      // Paginate until no more results
-      // If your API returns total/pages, switch to that; this “empty page stops” pattern works broadly
       while (page <= maxPages) {
-        
-        const normalizedAddr = userAddress?.toLowerCase();
-
-        const body = {
-          jsonrpc: "2.0",
-          method,
-          params: {
-            // send both versions so backend can bind them
-            useraddress: userAddress,
-            useraddressNormalized: normalizedAddr,
-            page,
-            pageSize,
-            ...(subtype ? { type: subtype } : {}),
-          },
-          id: `tx-${tab}-${page}`,
-        };
-
         const res = await fetch("https://gateway.brantley-global.com", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
           },
-          body: JSON.stringify(body),
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            method,
+            params: {
+              useraddress: userAddress,
+              useraddressNormalized: userAddress?.toLowerCase(),
+              page,
+              pageSize,
+              ...(subtype ? { type: subtype } : {}),
+            },
+            id: `tx-${tab}-${page}`,
+          }),
         });
 
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-
         const json = await res.json();
-
-        if (json.error) {
-          throw new Error(json.error.message || "RPC error");
-        }
-
         const raw = json.result?.[responseKey];
+        const pageItems = Array.isArray(raw) ? raw : raw ? [raw] : [];
 
-        // Normalize to array in case backend returns a single object
-        const pageItems: Transaction[] = Array.isArray(raw)
-          ? raw
-          : raw
-          ? [raw]
-          : [];
-
-        // Stop if this page returned nothing
         if (pageItems.length === 0) break;
 
-        all.push(...pageItems);
+        dbData.push(...pageItems);
 
-        // If fewer than pageSize, we reached the end
         if (pageItems.length < pageSize) break;
-
-        page += 1;
+        page++;
       }
 
+      //
+      // ---------------------------------------------
+      // 2. ROUTE DB DATA INTO THE CORRECT TAB HANDLER
+      // ---------------------------------------------
+      //
+
+      // VAULT WITHDRAWALS
+      if (tab === "VAULT WITHDRAWALS") {
+        const withdrawals = await fetchVaultWithdrawals();
+        setData(prev => ({
+          ...prev,
+          "VAULT WITHDRAWALS": {
+            deposits: dbData as Transaction[],
+            withdrawals,
+          },
+        }));
+        return;
+      }
+
+      // INFRASTRUCTURE WITHDRAWALS
+      if (tab === "INFRASTRUCTURE WITHDRAWALS") {
+        const withdrawals = await fetchInfraWithdrawals();
+        setData(prev => ({
+          ...prev,
+          "INFRASTRUCTURE WITHDRAWALS": {
+            deposits: dbData as Transaction[],
+            withdrawals,
+          },
+        }));
+        return;
+      }
+
+      // XCHANGE CONTRACTS
       if (tab === "XCHANGE CONTRACTS") {
-        const merged = mergeXchange(all as XchangeEvent[]);
+        const merged = mergeXchange(dbData as Transaction[]);
         setData(prev => ({ ...prev, [tab]: merged }));
         return;
       }
 
-      setData(prev => ({ ...prev, [tab]: all }));
+      // ALL OTHER DB TABS
+      setData(prev => ({ ...prev, [tab]: dbData as Transaction[] }));
+
     } catch (err) {
       console.error("Transaction fetch failed:", err);
       setError("Failed to load transactions.");
@@ -672,8 +583,7 @@ export const TransactionTabs = () => {
 
         <span className="text-xs text-gray-400">
           Page {currentPage} of {needsPagination
-            ? Math.max(1, Math.ceil((Array.isArray(rawData) ? rawData.length : 0) / pageSize)
-)
+            ? Math.max(1, Math.ceil((Array.isArray(rawData) ? rawData.length : 0) / pageSize))
             : 1}
         </span>
 

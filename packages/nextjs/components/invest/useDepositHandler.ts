@@ -133,11 +133,11 @@ export function useDeposit(): UseDepositResult {
 
         const vaultContract = new Contract(deployments.SmartVault, smartVaultAbi.abi, signer);
 
-        let txHash;
-        let receipt;
+        let dTxHash;
+        let receipt2;
 
         if (token.symbol == "GBDo") {
-          txHash = await vaultContract.deposit!(
+          dTxHash = await vaultContract.deposit!(
             holdingWalletAddress,
             token, 
             parsedValue,
@@ -150,9 +150,9 @@ export function useDeposit(): UseDepositResult {
               gasLimit: 600_000
             }
           );
-          receipt = await txHash.wait();
+          receipt2 = await dTxHash.wait();
         } else {
-          ({ txHash, receipt } = await sendTransferOnTargetChain(
+          ({ dTxHash, receipt2 } = await sendTransferOnTargetChain(
             holdingWalletAddress,
             parsedValue,
             {
@@ -169,13 +169,13 @@ export function useDeposit(): UseDepositResult {
         const now = new Date().toISOString();
 
         const successPayload: VaultPayload = {
-          txhash: txHash.hash ?? "",
+          txhash: receipt2 ?? "",
           contractaddress: deployments.SmartVault,
           useraddress: userAddress,
           depositamount: parsedValue.toString(),
           committedquarters: committedQuarters,
           paymentmethod: token.symbol,
-          depositstarttime: now,
+          depositstarttime: startQuarterIndex.toString(),
           ispending: 0,
           isclosed: 0,
           status: "accepted",
@@ -184,43 +184,29 @@ export function useDeposit(): UseDepositResult {
           processedat: now,
           priority: 0,
           retrycount: 0,
-          receipthash: receipt?.blockHash.toString() ?? "",
+          receipthash: receipt2?.blockHash.toString() ?? "",
           notes: "success",
           timestamp: now,
         };
 
         await logVaultCommit(successPayload);
 
-        return txHash.toString() ?? "";
-      } catch (e: any) {
-        setError(e);
+        return receipt2 ?? "";
+      } catch (err: any) {
+        setError(err);
+        console.error("Vault Deposit error:", err);
 
-        const now = new Date().toISOString();
+        const revertReason =
+          err?.error?.data?.message ||
+          err?.data?.message ||
+          err?.reason ||
+          err?.message ||
+          "Unknown error";
 
-        const errorPayload: VaultPayload = {
-          txhash: "",
-          contractaddress: deployments.SmartVault,
-          useraddress: userAddress,
-          depositamount: parsedValue?.toString() || "",
-          committedquarters: committedQuarters,
-          paymentmethod: token.symbol ?? "unknown",
-          depositstarttime: now,
-          ispending: 1,
-          isclosed: 0,
-          status: "failed",
-          chainstatus: false,
-          queuedat: now,
-          processedat: null,
-          priority: 0,
-          retrycount: 0,
-          receipthash: "",
-          notes: e.message ?? "Signing failed",
-          timestamp: now,
-        };
+        console.error("Vault Deposit failed:", revertReason);
 
-        await logVaultCommit(errorPayload);
-
-        throw e;
+        throw new Error(revertReason);
+        throw err;
       } finally {
         setIsProcessing(false);
       }

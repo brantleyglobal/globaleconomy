@@ -1,15 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ethers, Contract, parseUnits, formatUnits, BrowserProvider, isAddress, TransactionResponse, TransactionReceipt } from "ethers";
+import { parseUnits, formatUnits } from "ethers";
 import deployments from "~~/lib/contracts/deployments.json";
-import transferTrackABI from "~~/lib/contracts/abi/TransferTracker.json";
-import erc20Abi from "@openzeppelin/contracts/build/contracts/ERC20.json";
-import { Interface } from "@ethersproject/abi";
 import { useBalance } from "wagmi";
-import type { Address } from "viem";
-import { resolve } from "dns";
-import { dividendTokens } from "~~/components/constants/tokens";
 import { sendTransferOnTargetChain } from "~~/utils/targetChain";
 
 interface TokenType {
@@ -135,14 +129,12 @@ export function useTransferHandler(config: TransferHandlerProps) {
           
       const holdingWalletAddress = sender;
 
-      //console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address, parsedValue, holdingWalletAddress);
-
       if (!provider) {
         await window.ethereum?.request({ method: "eth_requestAccounts" });
         // then setProvider again
       }
 
-      const { txHash, receipt } = await sendTransferOnTargetChain(
+      const { dTxHash, receipt2 } = await sendTransferOnTargetChain(
         holdingWalletAddress,
         parsedValue,
         {
@@ -160,8 +152,8 @@ export function useTransferHandler(config: TransferHandlerProps) {
       
       // Log transfer success
       const transferPayload = {
-        txhash: txHash ?? "",
-        contractaddress: deployments.TransferTracker,
+        txhash: receipt2 ?? "",
+        contractaddress: selectedToken.address,
         sender,
         recipient,
         token: selectedToken.symbol ?? "unknown",
@@ -172,7 +164,7 @@ export function useTransferHandler(config: TransferHandlerProps) {
         processedat: processedAt,
         priority: 0,
         retrycount: 0,
-        receipthash: receipt?.blockHash ?? "",
+        receipthash: receipt2 || "",
         notes: "Transfer successful",
         timestamp: new Date().toISOString(),
       };
@@ -202,51 +194,25 @@ export function useTransferHandler(config: TransferHandlerProps) {
 
       return {
         success: true,
-        txHash,
+        receipt2,
         recipient,
         amount: amountNum,
         token: selectedToken.symbol ?? "unknown",
         status: "queued",
       };
     } catch (err: any) {
-      console.error("Cross-chain transfer failed:", err);
+      console.error("Transfer error:", err);
 
-      const errorPayload = {
-        txhash: "",
-        contractaddress: "",
-        sender,
-        recipient: recipient ?? "",
-        token: selectedToken.symbol ?? "unknown",
-        amount: parseFloat(value ?? "0"),
-        status: "failed",
-        chainstatus: false,
-        queuedat: processedAt,
-        processedat: null,
-        priority: 0,
-        retrycount: 0,
-        receipthash: "",
-        notes: err.message ?? "Unknown error",
-        timestamp: new Date().toISOString(),
-      };
+        const revertReason =
+          err?.error?.data?.message ||
+          err?.data?.message ||
+          err?.reason ||
+          err?.message ||
+          "Unknown error";
 
-      try {
-        const res = await fetch("https://gateway.brantley-global.com", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
-          },
-          body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: "transfers",
-            method: "createTransfer",
-            params: errorPayload,
-          }),
-        });
-        if (res.ok) await res.json();
-      } catch (nestedErr) {
-        console.error("Error reporting failure:", nestedErr);
-      }
+        console.error("Acqusition failed:", revertReason);
+
+        throw new Error(revertReason);
 
       setLoading(false);
       return { success: false, error: err.message ?? "Unknown error" };

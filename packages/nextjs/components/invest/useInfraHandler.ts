@@ -6,9 +6,6 @@ import infraAbi from "~~/lib/contracts/abi/RegionInfrastructure.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import type { Token } from "~~/components/constants/tokens";
 import { logInfraCommit } from "./logInfraCommit";
-import { useWalletClient } from "wagmi";
-import { Address } from "viem";
-import { useSelectedTokenBalance } from "~~/lib/chainHelper";
 import { sendTransferOnTargetChain } from "~~/utils/targetChain";
 
 // Helper to generate term code (YYQDD)
@@ -115,7 +112,6 @@ export function useInfra(): UseDepositResult {
         }
 
         /*************** CROSS CHAIN TRANSFER CALL ***************/
-        //console.log("Selected token:", token.symbol, token.chain, token.address);
 
         if (!provider) {
           throw new Error("No provider available");
@@ -132,11 +128,11 @@ export function useInfra(): UseDepositResult {
 
         const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
 
-        let txHash;
-        let receipt;
+        let dTxHash;
+        let receipt2;
 
         if (token.symbol == "GBDo") {
-          txHash = await infraContract.deposit!(
+          dTxHash = await infraContract.deposit!(
             holdingWalletAddress,
             token,
             token2,
@@ -150,9 +146,9 @@ export function useInfra(): UseDepositResult {
               gasLimit: 600_000
             }
           );
-          receipt = await txHash.wait();
+          receipt2 = await dTxHash.wait();
         } else {
-          ({ txHash, receipt } = await sendTransferOnTargetChain(
+          ({ dTxHash, receipt2 } = await sendTransferOnTargetChain(
             holdingWalletAddress,
             parsedValue,
             {
@@ -169,13 +165,13 @@ export function useInfra(): UseDepositResult {
         const now = new Date().toISOString();
 
         const successPayload: VaultPayload = {
-          txhash: txHash.toString() ?? "",
+          txhash: receipt2 ?? "",
           contractaddress: deployments.RegionInfrastructure,
           useraddress: userAddress,
           depositamount: parsedValue.toString(),
           committedquarters: committedQuarters,
           paymentmethod: token.symbol,
-          depositstarttime: now,
+          depositstarttime: startQuarterIndex.toString(),
           venture: ventureAddress.address,
           ispending: 0,
           isclosed: 0,
@@ -185,44 +181,29 @@ export function useInfra(): UseDepositResult {
           processedat: now,
           priority: 0,
           retrycount: 0,
-          receipthash: receipt?.blockHash.toString()  ?? "",
+          receipthash: receipt2?.blockHash.toString()  ?? "",
           notes: "success",
           timestamp: now,
         };
 
         await logInfraCommit(successPayload);
 
-        return txHash.toString() ?? "";
-      } catch (e: any) {
-        setError(e);
+        return receipt2.toString() ?? "";
+      } catch (err: any) {
+        setError(err);
+        console.error("Venture Deposit error:", err);
+        
+        const revertReason =
+          err?.error?.data?.message ||
+          err?.data?.message ||
+          err?.reason ||
+          err?.message ||
+          "Unknown error";
 
-        const now = new Date().toISOString();
+        console.error("Venture Deposit failed:", revertReason);
 
-        const errorPayload: VaultPayload = {
-          txhash: "",
-          contractaddress: deployments.RegionInfrastructure,
-          useraddress: userAddress,
-          depositamount: parsedValue?.toString() || "",
-          committedquarters: 0,
-          paymentmethod: token.symbol ?? "unknown",
-          depositstarttime: now,
-          venture: ventureAddress.address,
-          ispending: 1,
-          isclosed: 0,
-          status: "failed",
-          chainstatus: false,
-          queuedat: now,
-          processedat: null,
-          priority: 0,
-          retrycount: 0,
-          receipthash: "",
-          notes: e.message ?? "Signing failed",
-          timestamp: now,
-        };
-
-        await logInfraCommit(errorPayload);
-
-        throw e;
+        throw new Error(revertReason);
+        throw err;
       } finally {
         setIsProcessing(false);
       }

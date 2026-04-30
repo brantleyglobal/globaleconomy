@@ -397,7 +397,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         IERC20(dividendToken).safeTransferFrom(msg.sender, address(this), holderBalance);
 
         uint8 totalPayoutStages = GlobalDollarX(dividendToken).redeemPeriod(); 
-        uint16 milestoneQuarter = 8108 - 4;
+        uint16 milestoneQuarter = startQuarter - 4;
         uint256 totalSupply = 0;
         if (currentQuarter >= milestoneQuarter) {
             totalSupply = GlobalDollarX(dividendToken).viewSupply();
@@ -467,7 +467,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     function _findEligibleTerm(address user, uint16 currentQuarter)
         internal
         view
-        returns (uint16)   // <-- return uint16 instead of uint256
+        returns (uint32)   // <-- return uint16 instead of uint256
     {
         User[] memory terms = withdrawalsByUser[user];
 
@@ -489,7 +489,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
                 uint8 payoutIndex = stage - 1; // Convert to 0-based index
 
                 if (u.amountout[payoutIndex] == 0) {
-                    return uint16(i);
+                    return uint32(i);
                 }
             }
         }

@@ -72,6 +72,8 @@ export function useDeposit(): UseDepositResult {
 
       let parsedValue;
       let parsedValue2;
+      let dTxHash;
+      let receipt2;
 
       try {
 
@@ -111,7 +113,7 @@ export function useDeposit(): UseDepositResult {
         if (!provider) {
           throw new Error("No provider available");
         }
-        const { txHash, receipt } = await sendTransferOnTargetChain(
+        ({ dTxHash, receipt2 } = await sendTransferOnTargetChain(
           holdingWalletAddress,
           parsedValue,
           {
@@ -122,12 +124,12 @@ export function useDeposit(): UseDepositResult {
           },
           btcWallet,
           provider // pass provider here
-        );
+        ));
 
         const now = new Date().toISOString();
 
         const successPayload: AcquisitionPayload = {
-          txhash: txHash.toString() || "",
+          txhash: receipt2 || "",
           contractaddress: deployments.SmartVault,
           useraddress: userAddress,
           stablein: parsedValue.toString() || "",
@@ -136,37 +138,28 @@ export function useDeposit(): UseDepositResult {
           status: "accepted",
           chainstatus: true,
           processedat: now,
-          receipthash: receipt?.blockHash.toString() || "",
-          notes: "success",
+          receipthash: receipt2 || "",
+          notes: "success:",
           timestamp: now,
         };
 
         await logAcquisitionCommit(successPayload);
 
-        return txHash.toString() || "";
-      } catch (e: any) {
-        setError(e);
+        return dTxHash!.toString() || "";
+      } catch (err: any) {
+        setError(err);
+        console.error("Acquisition error:", err);
 
-        const now = new Date().toISOString();
+        const revertReason =
+          err?.error?.data?.message ||
+          err?.data?.message ||
+          err?.reason ||
+          err?.message ||
+          "Unknown error";
 
-        const errorPayload: AcquisitionPayload = {
-          txhash: "",
-          contractaddress: deployments.SmartVault,
-          useraddress: userAddress,
-          stablein: parsedValue?.toString() || "",
-          gbdout: parsedValue2?.toString() || "",
-          paymentmethod: token.symbol ?? "unknown",
-          status: "failed",
-          chainstatus: false,
-          processedat: null,
-          receipthash: "",
-          notes: e.message ?? "Signing failed",
-          timestamp: now,
-        };
+        console.error("Acqusition failed:", revertReason);
 
-        await logAcquisitionCommit(errorPayload);
-
-        throw e;
+        throw new Error(revertReason);
       } finally {
         setIsProcessing(false);
       }

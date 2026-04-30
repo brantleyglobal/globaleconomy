@@ -37,4 +37,7 @@ export interface Transaction {
   depositstarttime?: string;
   committedquarters?: number;
   depositamount?: number;
+
+  //Infra
+  venture?: string;
 }

@@ -1,21 +1,9 @@
+import type { Transaction } from "~~/components/dashboard/transactions/transactions";
+
 type XchangeEventType = "contract" | "deposit" | "refund";
 
-export interface XchangeEvent {
-  swapId?: number;
-  contractId?: number;
-  type: XchangeEventType;
-  timestamp: number;
-
-  createdBy: string;
-  partyA: string;
-  partyB: string;
-
-  amount?: number;
-  token?: string;
-}
-
 export interface XchangeCard {
-  id: number;
+  id: string;
   createdBy: string;
   partyA: string;
   partyB: string;
@@ -40,47 +28,101 @@ export interface XchangeCard {
   }[];
 }
 
-export function mergeXchange(swaps: XchangeEvent[]): XchangeCard[] {
-  const map: Record<number, XchangeCard> = {};
+export function mergeXchange(swaps: Transaction[]): XchangeCard[] {
+  const map: Record<string, XchangeCard> = {};
+
+  const toNumber = (v: any): number => {
+    if (v == null) return 0;
+    if (typeof v === "number") return v;
+    if (typeof v === "bigint") return Number(v);
+    if (typeof v === "string") {
+      // hex or decimal string
+      if (v.startsWith("0x")) {
+        try { return Number(BigInt(v)); } catch { return 0; }
+      }
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    }
+    return 0;
+  };
 
   for (const tx of swaps) {
-    const id = tx.swapId ?? tx.contractId;
-    if (id == null) continue;
+    const id = tx.contractaddress;
+    if (!id) continue;
 
     if (!map[id]) {
       map[id] = {
         id,
-        createdBy: tx.createdBy,
-        partyA: tx.partyA,
-        partyB: tx.partyB,
-        timestamp: tx.timestamp,
+        createdBy: tx.useraddress ?? "",
+        partyA: tx.initiator ?? "",
+        partyB: tx.counterparty ?? "",
+        timestamp: new Date(tx.timestamp).getTime(),
         contract: null,
         deposits: [],
         refunds: []
       };
+      // attach a seen set to the card for dedupe across rows
+      (map[id] as any).__seen = new Set<string>();
     }
 
-    if (tx.type === "contract") {
-      map[id].contract = { timestamp: tx.timestamp };
+    const card = map[id] as XchangeCard & { __seen?: Set<string> };
+
+    const methods = (() => {
+      try { return JSON.parse(tx.paymentmethod || "[]"); } catch { return []; }
+    })();
+
+    const tokenA = methods[0] ?? "";
+    const tokenB = methods[1] ?? "";
+
+    const ts = new Date(tx.timestamp).getTime();
+
+    // contract creation marker (only set once)
+    if (tx.newcontract === 1 && !card.contract) {
+      card.contract = { timestamp: ts };
     }
 
-    if (tx.type === "deposit") {
-      map[id].deposits.push({
-        amount: tx.amount ?? 0,
-        token: tx.token ?? "",
-        timestamp: tx.timestamp,
-        party: tx.createdBy === tx.partyA ? "A" : "B"
-      });
+    // helper to create a stable dedupe key
+    const makeKey = (side: "A" | "B", amount: number, token: string, timestamp: number, kind: "deposit" | "refund") =>
+      `${kind}|${side}|${amount}|${token}|${timestamp}`;
+
+    // push deposit if positive and not seen
+    const pushDeposit = (side: "A" | "B", raw: any, token: string) => {
+      const amt = toNumber(raw);
+      if (!Number.isFinite(amt) || amt <= 0) return;
+      const key = makeKey(side, amt, token, ts, "deposit");
+      if (card.__seen!.has(key)) return;
+      card.__seen!.add(key);
+      card.deposits.push({ amount: amt, token, timestamp: ts, party: side });
+    };
+
+    // push refund if non-zero and not seen (store positive)
+    const pushRefund = (side: "A" | "B", raw: any, token: string) => {
+      const amt = Math.abs(toNumber(raw));
+      if (!Number.isFinite(amt) || amt <= 0) return;
+      const key = makeKey(side, amt, token, ts, "refund");
+      if (card.__seen!.has(key)) return;
+      card.__seen!.add(key);
+      card.refunds.push({ amount: amt, token, timestamp: ts, party: side });
+    };
+
+    // refunds rows
+    if (tx.refund === 1) {
+      pushRefund("A", tx.amounta, tokenA);
+      pushRefund("B", tx.amountb, tokenB);
+      continue;
     }
 
-    if (tx.type === "refund") {
-      map[id].refunds.push({
-        amount: tx.amount ?? 0,
-        token: tx.token ?? "",
-        timestamp: tx.timestamp,
-        party: tx.createdBy === tx.partyA ? "A" : "B"
-      });
-    }
+    // deposits
+    pushDeposit("A", tx.amounta, tokenA);
+    pushDeposit("B", tx.amountb, tokenB);
+  }
+
+  // cleanup: remove __seen and sort events
+  for (const id of Object.keys(map)) {
+    const c = map[id] as any;
+    delete c.__seen;
+    c.deposits.sort((a: any, b: any) => a.timestamp - b.timestamp);
+    c.refunds.sort((a: any, b: any) => a.timestamp - b.timestamp);
   }
 
   return Object.values(map);

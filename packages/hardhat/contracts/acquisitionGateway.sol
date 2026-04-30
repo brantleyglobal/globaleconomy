@@ -281,7 +281,7 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
 
     function correctPayoutTxHash(
         address user,
-        uint16 termIndex,
+        uint32 termIndex,
         bytes32 newTxHash
     ) external onlyOwner {
 

@@ -393,7 +393,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         withdrawalsByUser[msg.sender].push();
 
         // Now get the index of the new struct
-        uint32 termIndex = uint16(withdrawalsByUser[msg.sender].length - 1);
+        uint32 termIndex = uint32(withdrawalsByUser[msg.sender].length - 1);
         uint8 stage = 0;
         User storage u = withdrawalsByUser[msg.sender][termIndex];
 
@@ -457,7 +457,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     function _findEligibleTerm(address user, uint16 currentQuarter)
         internal
         view
-        returns (uint16)   // <-- return uint16 instead of uint256
+        returns (uint32)   // <-- return uint16 instead of uint256
     {
         User[] memory terms = withdrawalsByUser[user];
 
@@ -473,7 +473,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             (,,, uint8 stage) = computeTermData(u.token, currentQuarter);
 
             if (stage <= u.quartersCommitted && u.amountout[stage - 1] == 0) {
-                return uint16(i - 1);   // <-- safe cast
+                return uint32(i - 1);   // <-- safe cast
             }
         }
 

@@ -15,7 +15,17 @@ contract GlobalSwapFactory is Initializable, AccessControl {
     address public feeRecipient;
     mapping(address => bool) private stablecoinWhitelistMap;
 
-    event SwapCreated(address swapAddress, address partyA, address partyB, address tokenA, uint256 amountA, address tokenB, uint256 amountB);
+    event SwapCreated(
+        address swapAddress, 
+        address partyA, 
+        address partyB, 
+        address tokenA, 
+        uint256 amountA, 
+        bytes32 partyADepositHash, 
+        address tokenB, 
+        uint256 amountB,
+        bytes32 partyBDepositHash
+        );
 
     bytes32 public constant CREATOR_ROLE = keccak256("CREATOR_ROLE");
     
@@ -43,14 +53,16 @@ contract GlobalSwapFactory is Initializable, AccessControl {
         address partyB,
         address tokenA,
         uint256 amountA,
+        bytes32 partyADepositHash,
         address tokenB,
-        uint256 amountB
+        uint256 amountB,
+        bytes32 partyBDepositHash
     ) external onlyRole(CREATOR_ROLE) {
         //require(_isWhitelisted(stable), "Token not whitelisted");
         address payable clone = payable(Clones.clone(implementation));
         GlobalSwap swap = GlobalSwap(clone);
-        swap.initialize(partyA, partyB, tokenA, amountA, tokenB, amountB, feeRecipient);
+        swap.initialize(partyA, partyB, tokenA, amountA, partyADepositHash, tokenB, amountB, partyBDepositHash, feeRecipient);
         
-        emit SwapCreated(address(swap), msg.sender, partyB, tokenA, amountA, tokenB, amountB);
+        emit SwapCreated(address(swap), msg.sender, partyB, tokenA, amountA, partyADepositHash, tokenB, amountB, partyBDepositHash);
     }
 }

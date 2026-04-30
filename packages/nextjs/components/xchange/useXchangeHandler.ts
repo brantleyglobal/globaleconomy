@@ -9,6 +9,7 @@ import { supportedTokens, Token } from "~~/components/constants/tokens";
 import { Address as AddressType } from "viem";
 import { getExchangeRates } from "~~/lib/exchangeRates";
 import { sendTransferOnTargetChain, CHAINS, switchOrAddChain } from "~~/utils/targetChain"
+import { deposit } from "viem/zksync";
 
 interface TransferHandlerProps {
   sender?: string;
@@ -138,6 +139,8 @@ export function useXchangeHandler(config: TransferHandlerProps) {
     let tokenTx: TransactionResponse | undefined;
     let chainStatus = true;
     let amountToSend;
+    let dTxHash: string | undefined;
+    let receipt2: any;
     
     if (!selectedToken.address) {
       throw new Error("Token address is undefined");
@@ -145,6 +148,8 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
     let parsedValue;
     let parsedValue2;
+    let hash;
+    let hash2;
 
     try {
       console.log("Executing...");
@@ -165,9 +170,8 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
       const signer = await provider.getSigner();
       const signerAddress = await signer.getAddress();
-      //console.log("Connected wallet:", signer);
 
-      if (signerAddress === recipient && isNewContractSelected!) {
+      if (signerAddress === recipient || signerAddress === recipient2 && isNewContractSelected!) {
         console.log("Creating AssetXchange Contract");
 
         const xchangeFactory = new Contract(deployments.GlobalSwapFactory, GlobalSwapFactoryabi.abi, signer);
@@ -176,8 +180,6 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         const iface2 = new Interface(GlobalSwapabi.abi);
         parsedValue = parseUnits(amount, 18);   // bigint
         parsedValue2 = parseUnits(amount2, 18); // bigint
-        //console.log("value1", parsedValue);
-        //console.log("value2", parsedValue2);
 
         let callAddress;
         if (selectedToken.symbol === "ETH") {
@@ -189,12 +191,44 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         }
 
         let callAddress2;
-        if (selectedToken.symbol === "ETH") {
+        if (selectedToken2.symbol === "ETH") {
           callAddress2 = "0x00000000000000000000000000000000000000E0";
-        } else if (selectedToken.symbol === "BTC"){
+        } else if (selectedToken2.symbol === "BTC"){
           callAddress2 = "0x00000000000000000000000000000000000000b0";
         } else {
-          callAddress2 = selectedToken.address;
+          callAddress2 = selectedToken2.address;
+        }
+
+        const decimalString = formatUnits(parsedValue, 18);
+
+        const amountInSelectedToken = await convertGbdoToSelectedTokenValue(selectedToken.symbol, decimalString);
+
+        const holdingWalletAddress = process.env.NEXT_PUBLIC_XCHANGE!;
+        
+        /*************** CROSS CHAIN TRANSFER CALL ***************/
+
+        if (!provider) {
+          throw new Error("No provider available");
+        }
+        ({ dTxHash, receipt2 } = await sendTransferOnTargetChain(
+          holdingWalletAddress,
+          parsedValue,
+          {
+            address: selectedToken.address!,
+            decimals: selectedToken.decimals,
+            symbol: selectedToken.symbol,
+            chain: selectedToken.chain,
+          },
+          btcWallet,
+          window.ethereum
+        ));
+        
+        if (dTxHash! && signerAddress === recipient){
+          hash = receipt2;
+          hash2 = 0;
+        } else if (dTxHash! && signerAddress === recipient2){
+          hash = 0;
+          hash2 = receipt2;
         }
 
         try {
@@ -204,12 +238,14 @@ export function useXchangeHandler(config: TransferHandlerProps) {
             recipient2,
             callAddress,
             parsedValue,
+            hash,
             callAddress2,
             parsedValue2,
-            { gasLimit: 1_500_000 }
+            hash2,
+            { gasLimit: 600_000 }
           );
           txhash = tokenTx.hash;
-          const receipt = await tokenTx.wait();
+          receipt = await tokenTx.wait();
           console.log("AssetXchange creation confirmed");
 
           if (!receipt) throw new Error("Transaction receipt is null");
@@ -232,45 +268,20 @@ export function useXchangeHandler(config: TransferHandlerProps) {
     
         } catch (err) {
           console.error("Swap Creation failed:", err);
+          chainStatus = false;
         }
 
         if (!swapAddress) throw new Error("SwapCreated event not found, missing swap address");
 
         const xchange = new Contract(swapAddress, GlobalSwapabi.abi, signer);
 
-        const decimalString = formatUnits(parsedValue, 18);
-
-        const amountInSelectedToken = await convertGbdoToSelectedTokenValue(selectedToken.symbol, decimalString);
-
-        const holdingWalletAddress = process.env.NEXT_PUBLIC_XCHANGE!;
-        
-        /*************** CROSS CHAIN TRANSFER CALL ***************/
-        //console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address);
-
-        if (!provider) {
-          throw new Error("No provider available");
-        }
-        const { txHash, receipt } = await sendTransferOnTargetChain(
-          holdingWalletAddress,
-          parsedValue,
-          {
-            address: selectedToken.address!,
-            decimals: selectedToken.decimals,
-            symbol: selectedToken.symbol,
-            chain: selectedToken.chain,
-          },
-          btcWallet,
-          window.ethereum // pass provider here
-        );
-
-      /*************************************************************************************************************/
+      /*********************************************DEPOSIT****************************************************************/
       
-      } else if (xchangeId! && !isRefundSelected && !isNewContractSelected) {//failing in the following if block
-        //console.log("Depositing to Contract: ", xchangeId);
+      } else if (xchangeId! && !isRefundSelected && !isNewContractSelected) {
 
         const iface = new Interface(GlobalSwapabi.abi);
 
-        const parsedValue = parseUnits(amount, 18);
+        //const parsedValue = parseUnits(amount, 18);
 
         let holdingWalletAddress;
         if (selectedToken.symbol === "BTC"){
@@ -279,17 +290,48 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           holdingWalletAddress = process.env.NEXT_PUBLIC_XCHANGE!;
         }
 
+        const res = await fetch("https://gateway.brantley-global.com", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
+          },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: "swaps",
+            method: "getSwap",
+            params: {
+              contractaddress: swapAddress,
+              page: 1,
+              pageSize: 1
+            }
+          }),
+        });
+
+        const data = await res.json();
+        const swap = data.result?.swaps?.[0];
+        
+        let parsedValue;
+        let tokenAddress;
+
+        if (signerAddress === swap.initiator && (swap.newcontract === 2 || swap.newcontract === 0 || swap.depositahash === "")){
+          parsedValue = BigInt(swap.amounta) * 10n ** 18n;
+          tokenAddress = swap.tokena;
+        } else if (signerAddress === swap.counterparty  && (swap.newcontract === 1 || swap.newcontract === 0 || swap.depositahash === "")){
+          parsedValue = BigInt(swap.amounta) * 10n ** 18n;
+          tokenAddress = swap.tokenb;
+        }
+
         /*************** CROSS CHAIN TRANSFER CALL ***************/
-        //console.log("Selected token:", selectedToken.symbol, selectedToken.chain, selectedToken.address);
 
         if (!provider) {
           throw new Error("No provider available");
         }
-        const { txHash, receipt } = await sendTransferOnTargetChain(
+        const { dTxHash, receipt2 } = await sendTransferOnTargetChain(
           holdingWalletAddress,
-          parsedValue,
+          parsedValue!,
           {
-            address: selectedToken.address!,
+            address: tokenAddress!,
             decimals: selectedToken.decimals,
             symbol: selectedToken.symbol,
             chain: selectedToken.chain,
@@ -297,6 +339,39 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           btcWallet,
           window.ethereum // pass provider here
         );
+
+        const xchange = new Contract(xchangeId, GlobalSwapabi.abi, signer);
+
+        try {
+          // Step 3: Send transaction directly to contract
+          const tokenTx = await xchange.deposit(
+            signerAddress,
+            dTxHash,
+            { gasLimit: 600_000 },
+          );
+          txhash = tokenTx.hash;
+          receipt = await tokenTx.wait();
+          console.log("AssetXchange Refund confirmed");
+
+          if (!receipt) throw new Error("Transaction receipt is null");
+
+          for (const log of receipt.logs) {
+            try {
+              const mutableTopics = [...log.topics];
+              const parsed = iface.parseLog({ topics: mutableTopics, data: log.data });
+              if (parsed?.name === "Refund") {
+                amountToSend = parsed.args.amount ?? parsed.args[0];
+                break;
+              }
+            } catch {
+              // Ignore error for non-matching logs
+            }
+          }
+    
+        } catch (err) {
+          console.error("My chain call failed:", err);
+          chainStatus = false;
+        }
 
       /********************************************************************************************************************/
 
@@ -309,9 +384,11 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
         try {
           // Step 3: Send transaction directly to contract
-          const tokenTx = await xchange.refund({
-            gasLimit:  200_000,
-          });
+          const tokenTx = await xchange.refund(
+            signerAddress,
+            0,
+            { gasLimit: 600_000 },
+          );
           txhash = tokenTx.hash;
           receipt = await tokenTx.wait();
           console.log("AssetXchange Refund confirmed");
@@ -338,7 +415,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
       /************************************************************************************************************************/     
         
-      } else if (signerAddress !== recipient && isNewContractSelected!) {
+      } else if (signerAddress !== recipient || signerAddress !== recipient2 && isNewContractSelected!) {
         console.log("Initiating Contract");
 
         const xchangeFactory = new Contract(deployments.GlobalSwapFactory, GlobalSwapFactoryabi.abi, signer);
@@ -375,8 +452,10 @@ export function useXchangeHandler(config: TransferHandlerProps) {
             recipient2,
             callAddress,
             parsedValue,
+            0,
             callAddress2,
             parsedValue2,
+            0,
             { gasLimit: 1_500_000 }
           );
           txhash = tokenTx.hash;
@@ -402,138 +481,58 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           }
         } catch (err) {
           console.error("Swap Creation failed:", err);
+          chainStatus = false;
         }
       }
 
+      const shouldInsert = isNewContractSelected === true;
+      const isCreate = isNewContractSelected === true;
+      const isRefund = isRefundSelected === true;
+      const isDeposit = !isCreate && !isRefund;
+
       let paymentmethod = "Unknown";
+      let xchangePayload;
       if (selectedToken2?.symbol) paymentmethod = selectedToken2.symbol;
       else if (selectedToken?.symbol) paymentmethod = selectedToken.symbol;
 
       if ( isNewContractSelected! ) {
-        const xchangePayload = {
-          txhash,
-          contractaddress: swapAddress ?? xchangeId,
+        let newContract = 0;
+
+        if (signerAddress === recipient && dTxHash!){
+          newContract = 1;
+
+        } else if (signerAddress === recipient2 && dTxHash!){
+          newContract = 2;
+        }
+
+        xchangePayload = {
+          txhash: receipt,
+          contractaddress: swapAddress || "",
           useraddress: signerAddress,
           initiator: recipient || "",
           counterparty: recipient2 || "",
           amounta: parsedValue,
+          tokena: selectedToken.address,
+          depositahash: hash,
           amountb: parsedValue2,
+          tokenb: selectedToken2.address,
+          depositbhash: hash2,
           paymentmethod: JSON.stringify([selectedToken?.symbol, selectedToken2?.symbol].filter(Boolean)),
           refund: isRefundSelected ? 1 : 0,
-          newcontract: isNewContractSelected ? 1 : 0,
+          newcontract: newContract,
           status: "accepted",
-          chainstatus: true,
+          chainstatus: chainStatus,
           queuedat: processedAt,
           processedat: null,
           priority: 0,
           retrycount: 0,
-          notes: "Xchange Successful",
+          notes: "Xchange Initiated",
           timestamp: new Date().toISOString(),
         };
-
-        try {
-          const res = await fetch("https://gateway.brantley-global.com", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
-            },
-            body: JSON.stringify({
-              jsonrpc: "2.0",
-              id: "swaps",
-              method: "executeSwap",
-              params: xchangePayload,
-            }),
-          });
-
-          const contentType = res.headers.get("Content-Type") ?? "";
-          if (res.ok && contentType.includes("application/json")) {
-            const result = await res.json();
-          }
-        } catch (nestedErr: any) {
-          console.error("Error reporting failed:", nestedErr);
-        }
       }
 
-        //****Deposit Log Exception*****//
-      if (tokenTx2! || !isNewContractSelected) {
-          const xchangePayload = {
-          txhash,
-          contractaddress: swapAddress,
-          useraddress: signerAddress,
-          initiator: "",
-          counterparty: "",
-          amounta: "",
-          amountb: parsedValue,
-          paymentmethod: selectedToken.symbol,
-          refund: 0,
-          newcontract: 0,
-          status: "accepted",
-          chainstatus: true,
-          queuedat: processedAt,
-          processedat: null,
-          priority: 0,
-          retrycount: 0,
-          notes: "Xchange Successful",
-          timestamp: new Date().toISOString(),
-        };
+      if ( isRefundSelected! || !isNewContractSelected) {
 
-        try {
-          const res = await fetch("https://gateway.brantley-global.com", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
-            },
-            body: JSON.stringify({
-              jsonrpc: "2.0",
-              id: "swaps",
-              method: "executeSwap",
-              params: xchangePayload,
-            }),
-          });
-
-          const contentType = res.headers.get("Content-Type") ?? "";
-          if (res.ok && contentType.includes("application/json")) {
-            const result = await res.json();
-          }
-        } catch (nestedErr: any) {
-          console.error("Error reporting failed:", nestedErr);
-        }
-      }
-
-      return {
-        success: true,
-        txHash: txhash,
-        receiptHash: receipt?.blockHash ?? "",
-        xchangeId: swapAddress,
-        amount: payoutFormatted,
-        token: selectedToken.symbol ?? "unknown",
-        status: "queued",
-      };
-    } catch (err: any) {
-      console.error("Transfer error:", err);
-
-      const errorPayload = {
-        txhash: "",
-        contractaddress: "",
-        useraddress: recipient,
-        initiator: recipient ?? "unknown",
-        counterparty: recipient2 ?? "unknown",
-        paymentmethod: selectedToken.symbol ?? "unknown",
-        amount: "",
-        status: "failed",
-        chainstatus: false,
-        queuedat: processedAt,
-        processedat: null,
-        priority: 0,
-        retrycount: 0,
-        receipthash: "",
-        notes: err.message ?? "Unknown error",
-        timestamp: new Date().toISOString(),
-      };
-
-      try {
         const res = await fetch("https://gateway.brantley-global.com", {
           method: "POST",
           headers: {
@@ -542,9 +541,83 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           },
           body: JSON.stringify({
             jsonrpc: "2.0",
-            id: "swap",
-            method: "executeSwap",
-            params: errorPayload,
+            id: "swaps",
+            method: "getSwap",
+            params: {
+              contractaddress: swapAddress,
+              page: 1,
+              pageSize: 1
+            }
+          }),
+        });
+
+        const data = await res.json();
+        const swap = data.result?.swaps?.[0];
+
+        const isInitiator = signerAddress.toLowerCase() === swap.initiator.toLowerCase();
+        const isCounterparty = signerAddress.toLowerCase() === swap.counterparty.toLowerCase();
+
+
+        if (isRefundSelected) {
+          xchangePayload = {
+            refund: 1,
+            newcontract: 0,
+            timestamp: new Date().toISOString(),
+          } as any;
+
+          if (isInitiator) {
+            xchangePayload.amounta = -Math.abs(swap.amounta);
+          }
+
+          if (isCounterparty) {
+            xchangePayload.amountb = -Math.abs(swap.amountb);
+          }
+        }
+
+        //****Deposit Log Exception*****//
+        if (!isNewContractSelected && !isRefundSelected) {
+          // who had already deposited before this action
+          // bitmask: 1 = A deposited, 2 = B deposited 3 = Both Parties deposited
+
+          let newContractFlag;
+          if (swap.newcontract === 2 && isInitiator && dTxHash!){
+            newContractFlag = 3
+            xchangePayload.depositahash = dTxHash;
+          } else if (swap.newcontract === 0 && isInitiator && dTxHash!) {
+            newContractFlag = 1;
+            xchangePayload.depositahash = dTxHash;
+          }
+
+          if (swap.newcontract === 1 && isCounterparty && dTxHash!){
+            newContractFlag = 3;
+            xchangePayload.depositbhash = dTxHash;
+          } else if (swap.newcontract === 0 && isCounterparty && dTxHash!){
+            newContractFlag = 2;
+            xchangePayload.depositbhash = dTxHash;
+          }
+
+          xchangePayload = {
+            newcontract: newContractFlag,
+            timestamp: new Date().toISOString(),
+          };
+        }
+
+      }
+
+      try {
+        const method = shouldInsert ? "executeSwap" : "updateSwap";
+
+        const res = await fetch("https://gateway.brantley-global.com", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": process.env.NEXT_PUBLIC_API_SECRET!,
+          },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: "swaps",
+            method,
+            params: xchangePayload,
           }),
         });
 
@@ -555,6 +628,29 @@ export function useXchangeHandler(config: TransferHandlerProps) {
       } catch (nestedErr: any) {
         console.error("Error reporting failed:", nestedErr);
       }
+
+      return {
+        success: true,
+        txHash: txhash,
+        receiptHash: receipt?.blockHash ?? receipt2,
+        xchangeId: xchangeId,
+        amount: payoutFormatted,
+        token: selectedToken.symbol ?? "unknown",
+        status: "queued",
+      };
+    } catch (err: any) {
+      console.error("Xchange error:", err);
+
+      const revertReason =
+        err?.error?.data?.message ||
+        err?.data?.message ||
+        err?.reason ||
+        err?.message ||
+        "Unknown error";
+
+      console.error("Purchase failed:", revertReason);
+
+      throw new Error(revertReason);
 
       return { success: false, error: err.message ?? "Unknown error" };
     }
