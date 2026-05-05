@@ -6,7 +6,6 @@ export interface ProjectData {
   projectedValue: number;
   userShare: number;
   nextDistribution?: string;
-  projectedGrowthRate: number; // make this consistently required OR optional
   termLength?: number;
   userBalance: number;
 }

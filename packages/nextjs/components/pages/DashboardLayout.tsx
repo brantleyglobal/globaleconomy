@@ -5,9 +5,6 @@ import React, { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { TokenBalancesPanel } from "~~/components/dashboard/balances/tokenBalancesPanel";
 import { TransactionTabs } from "~~/components/dashboard/transactions/transactionTabs";
-import { PoolCompositionChart } from "~~/components/dashboard/charts/compositionChart";
-import { ProjectDetails } from "~~/components/dashboard/charts/depositDetails";
-import { InvestmentEvaluator } from "~~/components/dashboard/charts/investmentEvaluator";
 import deployments from "~~/lib/contracts/deployments.json";
 import { generateDividendTokens } from "~~/components/constants/tokens";
 import type { ProjectData } from "~~/types/charts";
@@ -42,12 +39,12 @@ async function fetchProjectData(userAddress: string): Promise<ProjectData[]> {
   ];
 
   const projectsConfig = [
-    { name: "THE GLOBE", symbol: "GLB", termLength: 12, address: deployments.Globe, projectedValue: 100000000, projectedGrowthRate: 0.6 },
-    { name: "BG CLEAN REAL ESTATE (SELL)", symbol: "CREs", termLength: 4, address: deployments.BGFFS, projectedValue: 5000000, projectedGrowthRate: 1.00 },
-    { name: "BG CLEAN REAL ESTATE (HOLD)", symbol: "CREh", termLength: 4, address: deployments.BGFRS, projectedValue: 5000000, projectedGrowthRate: 0.05 },
-    { name: "CLEAN GRID", symbol: "CGRi", termLength: 12, address: deployments.BGGRID, projectedValue: 10000000, projectedGrowthRate: 0.05 },
-    { name: "TRANS-GREENTECH REFINERY & DEPOT US", symbol: "TGUSA", termLength: 12, address: deployments.TGUSA, projectedValue: 500000000, projectedGrowthRate: 0.7 },
-    { name: "TRANS-GREENTECH REFINERY & DEPOT MX", symbol: "TGMX", termLength: 12, address: deployments.TGMX, projectedValue: 500000000, projectedGrowthRate: 0.7 },
+    { name: "THE GLOBE", symbol: "GLB", termLength: 12, address: deployments.Globe, projectedValue: 100000000 },
+    { name: "BG CLEAN REAL ESTATE (SELL)", symbol: "CREs", termLength: 4, address: deployments.BGFFS, projectedValue: 5000000 },
+    { name: "BG CLEAN REAL ESTATE (HOLD)", symbol: "CREh", termLength: 4, address: deployments.BGFRS, projectedValue: 5000000 },
+    { name: "CLEAN GRID", symbol: "CGRi", termLength: 12, address: deployments.BGGRID, projectedValue: 10000000 },
+    { name: "TRANS-GREENTECH REFINERY & DEPOT US", symbol: "TGUSA", termLength: 12, address: deployments.TGUSA, projectedValue: 500000000 },
+    { name: "TRANS-GREENTECH REFINERY & DEPOT MX", symbol: "TGMX", termLength: 12, address: deployments.TGMX, projectedValue: 500000000 },
   ];
 
   const projects: ProjectData[] = [];
@@ -78,7 +75,6 @@ async function fetchProjectData(userAddress: string): Promise<ProjectData[]> {
       termLength: proj.termLength ?? 0,
       userShare: userShare ?? 0,
       nextDistribution: nextQuarterStr, // ensure string
-      projectedGrowthRate: proj.projectedGrowthRate ?? 0,
       userBalance: Number(balance) || 0, 
     });
 
@@ -149,7 +145,6 @@ async function fetchSmartVaultProject(userAddress: string): Promise<ProjectData 
       projectedValue: 10000000,
       userShare,
       nextDistribution: nextQuarterStr,
-      projectedGrowthRate: 0.05,
       termLength: committedQuarters,
       userBalance: Number(balance),
     };
@@ -163,7 +158,6 @@ async function fetchSmartVaultProject(userAddress: string): Promise<ProjectData 
     projectedValue: 10000000,
     userShare: 0,
     nextDistribution: "Unavailable",
-    projectedGrowthRate: 0.05,
     termLength: undefined,
     userBalance: 0,
   };
@@ -211,19 +205,6 @@ export default function DashboardPage() {
         </div>
         <div className="lg:col-span-1 bg-white/5 rounded-lg p-4">
           <TokenBalancesPanel />
-        </div>
-
-        {/* Row 2: Charts + Evaluator */}
-        <div className="lg:col-span-5 grid grid-cols-1 lg:grid-cols-3 gap-2">
-          <div className="bg-white/5 rounded-lg p-4">
-            <PoolCompositionChart pools={projects} />
-          </div>
-          <div className="bg-white/5 rounded-lg p-4">
-            <ProjectDetails projects={projects} />
-          </div>
-          <div className="bg-white/5 rounded-lg p-4">
-            <InvestmentEvaluator projects={projects} />
-          </div>
         </div>
       </div>
     </div>

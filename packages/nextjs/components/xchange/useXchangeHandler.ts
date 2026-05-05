@@ -137,7 +137,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
     let swapAddress: string | undefined;
     let tokenTx2;
     let tokenTx: TransactionResponse | undefined;
-    let chainStatus = true;
+    let chainStatus = false;
     let amountToSend;
     let dTxHash: string | undefined;
     let receipt2: any;
@@ -249,6 +249,9 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           console.log("AssetXchange creation confirmed");
 
           if (!receipt) throw new Error("Transaction receipt is null");
+          if (receipt!) {
+            chainStatus = true;
+          }
           
           let feeAmount;
           // Parse logs to extract swapAddress
@@ -268,7 +271,6 @@ export function useXchangeHandler(config: TransferHandlerProps) {
     
         } catch (err) {
           console.error("Swap Creation failed:", err);
-          chainStatus = false;
         }
 
         if (!swapAddress) throw new Error("SwapCreated event not found, missing swap address");
@@ -370,7 +372,6 @@ export function useXchangeHandler(config: TransferHandlerProps) {
     
         } catch (err) {
           console.error("My chain call failed:", err);
-          chainStatus = false;
         }
 
       /********************************************************************************************************************/
@@ -410,7 +411,6 @@ export function useXchangeHandler(config: TransferHandlerProps) {
     
         } catch (err) {
           console.error("My chain call failed:", err);
-          chainStatus = false;
         }
 
       /************************************************************************************************************************/     
@@ -463,6 +463,9 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           console.log("AssetXchange creation confirmed");
 
           if (!receipt) throw new Error("Transaction receipt is null");
+          if (receipt!) {
+            chainStatus = true;
+          }
 
           // Parse logs
           let amountToSend;
@@ -481,7 +484,6 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           }
         } catch (err) {
           console.error("Swap Creation failed:", err);
-          chainStatus = false;
         }
       }
 

@@ -40,6 +40,7 @@ export type CheckoutState = {
   voltage: string | null;
   frequency?: "50Hz" | "60Hz" | null;
   phase?: "Single-Phase" | "Split-Phase" | "3-Phase" | null;
+  reactor?: "Default (None)" | "Line Reactor(s)" | null;
   stripeSessionId: string | null;
   stripeConfirmation: any | null;
   txhash: string | undefined;
@@ -69,6 +70,7 @@ export const useCheckoutStore = create<CheckoutState>((set) => ({
   voltage: null,
   frequency: null,
   phase: null,
+  reactor: null,
   stripeSessionId: null,
   stripeConfirmation: null,
   userAddress: "",
@@ -105,6 +107,7 @@ export const useCheckoutStore = create<CheckoutState>((set) => ({
       voltage: null,
       frequency: null,
       phase: null,
+      reactor: null,
       stripeSessionId: null,
       stripeConfirmation: null,
       userAddress: null,

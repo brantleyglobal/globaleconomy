@@ -1,6 +1,7 @@
 "use client";
 
 import type { Transaction } from "~~/components/dashboard/transactions/transactions";
+import { formatAmount } from "~~/components/dashboard/transactions/transactions";
 import { SharedColumns } from "./sharedColumns";
 import { useAccount } from "wagmi";
 
@@ -40,7 +41,7 @@ export const TransferTable = ({ transactions }: { transactions: Transaction[] })
                 {tx.recipient}
                 {connectedAddress?.toLowerCase() === tx.recipient?.toLowerCase() && " (You)"}
               </td>
-              <td>{tx.amount}</td>
+              <td>{formatAmount(tx.amount)}</td>
               <SharedColumns tx={tx} />
             </tr>
           ))}

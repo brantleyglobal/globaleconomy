@@ -13,8 +13,9 @@ interface AcquisitionPayload {
   txhash: string;
   contractaddress: string;
   useraddress: string;
-  stablein: string;
-  gbdout: string;
+  exchangerate: bigint;
+  stablein: bigint;
+  gbdout: bigint;
   paymentmethod: string;
   status: string;
   chainstatus: boolean;
@@ -126,17 +127,18 @@ export function useDeposit(): UseDepositResult {
           provider // pass provider here
         ));
 
-        const now = new Date().toISOString();
+        const now = new Date(Date.now()).toISOString();
 
         const successPayload: AcquisitionPayload = {
           txhash: receipt2 || "",
           contractaddress: deployments.SmartVault,
           useraddress: userAddress,
-          stablein: parsedValue.toString() || "",
-          gbdout: parsedValue.toString() || "",
+          exchangerate: exchangeRate,
+          stablein: parsedValue,
+          gbdout: parsedValue,
           paymentmethod: token.symbol,
           status: "accepted",
-          chainstatus: true,
+          chainstatus: false,
           processedat: now,
           receipthash: receipt2 || "",
           notes: "success:",

@@ -44,7 +44,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
 
   const send = async () => {
     setLoading(true);
-    const processedAt = new Date().toISOString();
+    const processedAt = new Date(Date.now()).toISOString();
 
     if (!sender || !chainId || !selectedToken.decimals) {
       openWalletModal?.();
@@ -151,7 +151,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           }
 
           // Withdraw
-          tokenTx = await vaultContract.withdraw(selectedToken.address, {gasLimit: 1_700_000});
+          tokenTx = await vaultContract.withdraw(selectedToken.address, {gasLimit: 2_500_000});
           receipt = await tokenTx.wait();
 
           if (autoPay && receipt.status === 1) {
@@ -207,6 +207,11 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           } catch { /* ignore non-matching logs */ }
         }
 
+        let chainStatus = false;
+        if (receipt!) {
+          chainStatus = true;
+        }
+
         // Prepare payload for redemption logging
         const redemptionPayload = {
           txhash: receipt,
@@ -215,14 +220,14 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           amount: amountToSend?.toString(),
           asset: selectedToken.symbol,
           status: "accepted",
-          chainstatus: true,
+          chainstatus: chainStatus,
           queuedat: processedAt,
           processedat: null,
           priority: 0,
           retrycount: 0,
           receipthash: receipt.blockHash,
           notes: "Transfer Successful",
-          timestamp: new Date().toISOString(),
+          timestamp: new Date(Date.now()).toISOString(),
         };
 
         // Log redemption to backend

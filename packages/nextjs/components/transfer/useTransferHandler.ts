@@ -103,7 +103,7 @@ export function useTransferHandler(config: TransferHandlerProps) {
   // Combined send flow
   const send = async (recipient?: string, value?: string) => {
     setLoading(true);
-    const processedAt = new Date().toISOString();
+    const processedAt = new Date(Date.now()).toISOString();
 
     if (!sender || !chainId || !selectedToken.address) {
       //openWalletModal?.();
@@ -149,6 +149,14 @@ export function useTransferHandler(config: TransferHandlerProps) {
 
       if (!selectedToken.address) throw new Error("Token address not specified for source chain transfer");
       console.log("checking");
+
+      let noteStatus;
+
+      if (receipt2!) {
+        noteStatus = "Tranfser Successful";
+      } else {
+        noteStatus = "Transfer Pending";
+      }
       
       // Log transfer success
       const transferPayload = {
@@ -157,16 +165,16 @@ export function useTransferHandler(config: TransferHandlerProps) {
         sender,
         recipient,
         token: selectedToken.symbol ?? "unknown",
-        amount: amountNum.toFixed(2),
+        amount: parsedValue,
         status: "accepted",
-        chainstatus: true,
+        chainstatus: false,
         queuedat: "",
         processedat: processedAt,
         priority: 0,
         retrycount: 0,
         receipthash: receipt2 || "",
-        notes: "Transfer successful",
-        timestamp: new Date().toISOString(),
+        notes: noteStatus,
+        timestamp: new Date(Date.now()).toISOString(),
       };
 
       try {

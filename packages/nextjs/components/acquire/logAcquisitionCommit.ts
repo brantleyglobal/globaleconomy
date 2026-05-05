@@ -2,8 +2,9 @@ interface AcquisitionPayload {
   txhash: string;
   contractaddress: string;
   useraddress: string;
-  stablein: string;
-  gbdout: string;
+  exchangerate: bigint;
+  stablein: bigint;
+  gbdout: bigint;
   paymentmethod: string;
   status: string;
   chainstatus: boolean;

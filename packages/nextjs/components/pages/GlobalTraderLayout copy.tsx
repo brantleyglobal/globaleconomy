@@ -66,14 +66,14 @@ export default function GlobalTraderLayout() {
       label: "Overview",
       content: `
         <p>Global Dollar (GBDo) operates an asset-backed ecosystem in which investments are directly tied to products and services within the platform. By investing in Global Dollar, participants are supporting the underlying economy of the ecosystem.</p>
-        <p>The system offers dividend payouts based on the chosen investment cycle, with a minimum term of two quarters (6 months). If an investor initiates their deposit after the 15th day of a quarter, the investor's term will not begin until the following quarter. At the end of each term, investors receive any earned dividends and their original investment amount.</p>
+        <p>The system offers dividend payouts based on the chosen investment cycle, with a minimum term of eight quarters (2 years). If an investor initiates their deposit after the 15th day of a quarter, the investor's term will not begin until the following quarter. At the end of each term, investors receive any earned dividends and their original investment amount.</p>
       `,
     },
     {
       id: "redemption",
       label: "Redemptions",
       content: `
-        <p>If funds are not redeemed within the redemption period of 6 months immediately following the close of their selected term, dividends will be forfeited and added to the pool of the following term cycle.</p>
+        <p>If funds are not redeemed within the redemption period of 2 years immediately following the close of their selected term, dividends will be forfeited and added to the pool of the following term cycle.</p>
         <p>While all investor’s tokens are redeemable, if an investor fails to redeem their tokens by the associated redemption period, the investor's tokens will automatically lock into the sequential cycle, and the original selected term will apply.</p>
       `,
     },

@@ -8,8 +8,8 @@ interface XchangeCard {
   createdBy: string;
   partyA: string;
   partyB: string;
-  deposits: { amount: number; token: string; timestamp: number }[];
-  refunds: { amount: number; token: string; timestamp: number }[];
+  deposits: { amount: string; token: string; timestamp: number }[];
+  refunds: { amount: string; token: string; timestamp: number }[];
 }
 
 interface XchangeCardListProps {
@@ -140,8 +140,8 @@ export const XchangeCardList = ({
     // so we infer party by timestamp proximity: assume deposits array contains both parties.
     // Better: if your data includes party on events, use that. For now we split by token index heuristic:
     // We'll group events by token string to show per-party lists if tokens differ; otherwise show by amounts.
-    const byToken = (events: { amount: number; token: string; timestamp: number }[]) =>
-      events.reduce<Record<string, { amount: number; token: string; timestamp: number }[]>>((acc, ev) => {
+    const byToken = (events: { amount: string; token: string; timestamp: number }[])=>
+      events.reduce<Record<string, { amount: string; token: string; timestamp: number }[]>>((acc, ev) => {
         acc[ev.token] ??= [];
         acc[ev.token].push(ev);
         return acc;
@@ -152,17 +152,17 @@ export const XchangeCardList = ({
 
     // compute totals per token
     const depositTotals = Object.fromEntries(
-      Object.entries(depositGroups).map(([token, evs]) => [token, evs.reduce((s, e) => s + e.amount, 0)])
+      Object.entries(depositGroups).map(([token, evs]) => [token, evs.reduce((s, e): any => s + e.amount, 0)])
     );
     const refundTotals = Object.fromEntries(
-      Object.entries(refundGroups).map(([token, evs]) => [token, evs.reduce((s, e) => s + e.amount, 0)])
+      Object.entries(refundGroups).map(([token, evs]) => [token, evs.reduce((s, e): any => s + e.amount, 0)])
     );
 
     // net per token
     const tokens = Array.from(new Set([...Object.keys(depositTotals), ...Object.keys(refundTotals)]));
     const netPerToken = tokens.map(token => ({
       token,
-      net: (depositTotals[token] ?? 0) - (refundTotals[token] ?? 0),
+      net: (depositTotals[token] ?? "") - (refundTotals[token] ?? ""),
       deposits: depositGroups[token] ?? [],
       refunds: refundGroups[token] ?? [],
     }));
@@ -176,7 +176,7 @@ export const XchangeCardList = ({
   );
 
 
-  function hasParty(ev: any): ev is { amount: number; token: string; timestamp: number; party: "A" | "B" } {
+  function hasParty(ev: any): ev is { amount: string; token: string; timestamp: number; party: "A" | "B" } {
     return ev && (ev.party === "A" || ev.party === "B");
   }
 
@@ -303,7 +303,7 @@ export const XchangeCardList = ({
                         <div className="text-sm text-gray-400">None</div>
                       ) : (
                         depositsA.map(d => (
-                          <div key={`A-dep-${d.timestamp}-${d.amount}-${d.token}`} className="text-sm text-gray-300">
+                          <div key={`A-dep-${d.timestamp}-${d.amount}-${d.token}`} className="text-sm text-gray-300"> //// NEEDS SCALING
                             <span className="font-medium">{d.amount}</span> {d.token}
                             <span className="text-xs text-gray-400 ml-2">— {new Date(d.timestamp).toLocaleString()}</span>
                           </div>

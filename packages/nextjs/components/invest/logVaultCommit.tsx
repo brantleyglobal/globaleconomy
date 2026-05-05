@@ -2,7 +2,8 @@ interface VaultPayload {
   txhash: string;
   contractaddress: string;
   useraddress: string;
-  depositamount: string;
+  exchangerate: bigint;
+  depositamount: bigint;
   committedquarters: number;
   paymentmethod: string;
   depositstarttime: string;

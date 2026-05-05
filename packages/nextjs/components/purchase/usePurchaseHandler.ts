@@ -13,10 +13,8 @@ import { shippingRates, Region, ShippingCategory } from "~~/components/shipping/
 import { supportedCountries } from "~~/components/shipping/supportedCountries";
 import { sendPurchaseEmail } from "~~/components/email/sendPurchaseEmail"
 import { getExchangeRates } from "~~/lib/exchangeRates";
-import { Address } from "viem";
-import { useSelectedTokenBalance } from "~~/lib/chainHelper";
 import { sendTransferOnTargetChain } from "~~/utils/targetChain";
-import { parse } from "next/dist/build/swc/generated-native";
+import { zeroAddress } from "viem";
 
 type Hex = `0x${string}`;
 
@@ -26,6 +24,7 @@ interface InitiateParams {
   checkoutAsset: { id: number; name: string; variant: string;};
   estimatedTotal: string;
   tokenSymbol: string;
+  customizations: string;
   quantity: number;
   tokenRate: number;
   configuration: string;
@@ -202,7 +201,7 @@ async function initiateStripeCheckout(params: InitiateParams) {
   let affiliateAddress;
   let commissionAmount;
   let payout = "";
-  if (promo != ""){
+  if (promo != "") {
     if (promo === "something") { 
       affiliateAddress = "kbjdfsiib"; //affiliates Wallet Address
     } else if ( promo === "somethingelse") {
@@ -213,6 +212,8 @@ async function initiateStripeCheckout(params: InitiateParams) {
       commissionAmount = productAmount * .03;
     } else if (params.checkoutAsset.variant === "xseries"){
       commissionAmount = productAmount * .01;
+    } else {
+      commissionAmount = 0;
     }
 
     payout = "pending";
@@ -266,6 +267,12 @@ async function initiateStripeCheckout(params: InitiateParams) {
     },
   });
 
+  const totalAmount = parseUnits(totalAmountCents.toFixed(2), 18);
+  const customizationTotal = parseUnits(params.customizations, 18);
+  const shippingTotal = parseUnits(shippingAmountCents.toFixed(2), 18);
+  const commmissionTotal = parseUnits(commissionAmount!.toFixed(2), 18);
+
+
   // Step 5: Log purchase to backend
   const purchasePayload = {
     contractaddress: deployments.AssetPurchase.toString(),
@@ -274,13 +281,15 @@ async function initiateStripeCheckout(params: InitiateParams) {
     useraddress: "",
     affiliate: affiliateAddress,
     asset: params.checkoutAsset.id,
-    amount: totalAmountCents,
+    amount: totalAmount,
     exchangerate: "",
+    shipping: shippingTotal,
+    customizations: customizationTotal || "",
     quantity: params.quantity,
     configs: serializedConfig,
     paymentmethod: "stripe",
     region, 
-    commission: commissionAmount,
+    commission: commmissionTotal,
     payout,
     status: "pending",
     chainstatus: true,
@@ -368,6 +377,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
     toast,
     userAddress,
     selectedToken,
+    customizations,
     value,
     paymentMethod,
     tokenSymbol,
@@ -389,7 +399,6 @@ async function handleCryptoPurchase(params: InitiateParams) {
     };
     const iface = new Interface(assetPurchaseAbi.abi);
     const isERC20 = selectedToken.symbol !== "GBDo" && !!selectedToken.address;
-    const parsedValue = parseUnits(value, 18);
     const dbval = new Intl.NumberFormat('en-US', {
       style: 'decimal',
       minimumFractionDigits: 2,
@@ -423,7 +432,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
     // Convert estimated total string to number (fiat dollars)
     let productAmount = parseFloat(estimatedTotal);
     if (promo){
-      productAmount = parseFloat(estimatedTotal) - 100;
+      productAmount = parseFloat(estimatedTotal) - 500;
     }
 
     // Convert total cost in fiat to token units (scaled BigNumber)
@@ -433,6 +442,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
 
     // Find selected token's rate from rates array
     let exchangeRateFloat: number;
+    
     if (selectedToken.symbol === "GBDo") {
       exchangeRateFloat = 1;
     } else if (selectedToken.symbol === "WBNB") {
@@ -457,6 +467,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
 
     // Convert to ethers.BigNumber assuming 18 decimals (full precision)
     const totalTokenAmount = parseUnits(totalTokenAmountFloat.toString(), 18);
+    const shipping = parseUnits(shippingCostFloat.toString(), 18);
 
     // Also parse with limited 2 decimals (for display rounding / testing)
     const totalTokenAmountF = parseUnits(totalTokenAmountFloat.toFixed(2), selectedToken.decimals);
@@ -466,9 +477,10 @@ async function handleCryptoPurchase(params: InitiateParams) {
     const exchangeRate = parseUnits(exchangeRateStr, precision);
 
     // Format totalTokenAmountF back to float for display
-    const totalTokenAmountNumber = parseFloat(formatUnits(totalTokenAmountF, 18));
+    const totalTokenAmountNumber = parseFloat(formatUnits(totalTokenAmountF, precision));
 
     const totalTokenAmountDisplay = totalTokenAmountNumber.toFixed(2);
+    const timeStamp = new Date(Date.now());
 
     let dTxHash;
     let receipt2;
@@ -486,9 +498,11 @@ async function handleCryptoPurchase(params: InitiateParams) {
       callAddress,
       checkoutAsset.id,
       totalTokenAmount,
+      shipping,
       BigInt(quantity),
       exchangeRate,
       region,
+      timeStamp,
     ]);
 
     const purchaseMade = {
@@ -551,23 +565,62 @@ async function handleCryptoPurchase(params: InitiateParams) {
     const rate = parseUnits(exchangeRateFloat.toFixed(18), selectedToken.decimals);
 
     const purchaseContract = new Contract(deployments.AssetPurchase, assetPurchaseAbi.abi, signer);
+    const customizationTotal = parseUnits(customizations, 18);
+    /* Affiliate Logic */
+    let affiliateAddress = zeroAddress;
+    let commissionAmount;
+    let payout = "";
+    if (promo != ""){
+      if (promo === "something") { 
+        affiliateAddress = zeroAddress; //Affiliate Wallet Address When There
+      } else if ( promo === "somethingelse") {
+        affiliateAddress = zeroAddress; //Another //Affiliate Wallet Address When There
+      }
+
+      if (checkoutAsset.variant === "eseries"){
+        commissionAmount = productAmount * .03;
+      } else if (checkoutAsset.variant === "xseries"){
+        commissionAmount = productAmount * .01;
+      } else {
+        commissionAmount = 0;
+      }
+
+      payout = "pending";
+    }
+
+    const commmissionTotal = parseUnits(commissionAmount!.toFixed(2), 18);
+
+    let chainStatus = false;
     
     if (selectedToken.symbol == "GBDo") {
-      dTxHash = await purchaseContract.purchase!(
-        holdingWalletAddress,
-        selectedToken,
-        checkoutAsset.id,
-        parsedValue,
-        quantity,
-        rate,
-        region,
-        0,
-        {
-          value: parsedValue,
-          gasLimit: 1_500_000
-        }
-      );
-      receipt2 = await dTxHash.wait();
+      try {
+        dTxHash = await purchaseContract.purchase!(
+          holdingWalletAddress,
+          selectedToken,
+          checkoutAsset.id,
+          totalTokenAmount,
+          shipping,
+          customizationTotal,
+          quantity,
+          exchangeRate,
+          affiliateAddress,
+          commmissionTotal,
+          region,
+          0,
+          timeStamp,
+          {
+            value: totalTokenAmount,
+            gasLimit: 1_500_000
+          }
+        );
+        receipt2 = await dTxHash.wait();
+        chainStatus = true;
+      } catch (err) {
+        console.error("Xchange Creation failed")
+      }
+
+      console.log("after try/catch")
+      
     } else {
       ({ dTxHash, receipt2 } = await sendTransferOnTargetChain(
         holdingWalletAddress,
@@ -582,26 +635,6 @@ async function handleCryptoPurchase(params: InitiateParams) {
         provider // pass provider here
       ));
     }
-    
-    /* Affiliate Logic */
-    let affiliateAddress;
-    let commissionAmount;
-    let payout = "";
-    if (promo != ""){
-      if (promo === "something") { 
-        affiliateAddress = "kbjdfsiib"; //affiliates Wallet Address
-      } else if ( promo === "somethingelse") {
-        affiliateAddress = "hhvdfihihbbd"; //another affiliate Walllet Address
-      }
-
-      if (checkoutAsset.variant === "eseries"){
-        commissionAmount = productAmount * .03;
-      } else if (checkoutAsset.variant === "xseries"){
-        commissionAmount = productAmount * .01;
-      }
-
-      payout = "pending";
-    }
 
     // Step 5: Log purchase to backend
     const purchasePayload = {
@@ -612,18 +645,20 @@ async function handleCryptoPurchase(params: InitiateParams) {
       affiliate: affiliateAddress || "",
       asset: checkoutAsset.id,
       amount: totalTokenAmount,
-      exchangerate: tokenRate,
+      shipping: shipping,
+      customizations: customizationTotal,
+      exchangerate: exchangeRate,
       quantity,
       configs: serializedConfig,
       paymentmethod: tokenSymbol,
       region, 
-      commission: commissionAmount || "",
+      commission: commmissionTotal || "",
       payout,
       status: "accepted",
-      chainstatus: true,
-      queuedat: new Date().toISOString(),
-      processedat: new Date().toISOString(),
-      timestamp: new Date().toISOString(),
+      chainstatus: chainStatus,
+      queuedat: new Date(Date.now()).toISOString(),
+      processedat: new Date(Date.now()).toISOString(),
+      timestamp: timeStamp.toISOString(),
       priority: 0,
       retrycount: 0,
       notes: "Purchase Submitted",

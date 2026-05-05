@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Transaction } from "~~/components/dashboard/transactions/transactions";
+import { formatAmount } from "~~/components/dashboard/transactions/transactions";
 
 export type InfrastructureRecord = {
   quarters: number;
@@ -286,7 +287,7 @@ export const InfraTable = ({
               <>
               <div className="space-y-3">
                 {paginatedDeposits.map((tx, idx) => {
-                  const amount = (tx as any).depositamount ?? (tx as any).amount ?? 0;
+                  const amount = formatAmount(tx.depositamount) ?? "";
                   const method = (tx as any).paymentmethod ?? "";
                   const venture = (tx as any).venture ?? "";
                   const ts = new Date(tx.timestamp).toLocaleString();

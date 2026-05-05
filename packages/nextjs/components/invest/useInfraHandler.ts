@@ -21,7 +21,8 @@ interface VaultPayload {
   txhash: string;
   contractaddress: string;
   useraddress: string;
-  depositamount: string;
+  exchangerate: bigint;
+  depositamount: bigint;
   committedquarters: number;
   paymentmethod: string;
   depositstarttime: string;
@@ -122,7 +123,7 @@ export function useInfra(): UseDepositResult {
           
         // Find selected token's rate from rates array
         const exchangeRateFloat = 1;
-        const rate = parseUnits(exchangeRateFloat.toFixed(18), token.decimals);
+        const rate = parseUnits(exchangeRateFloat.toFixed(18), 18);
 
         const startQuarterIndex = generateTermCode();
 
@@ -130,23 +131,31 @@ export function useInfra(): UseDepositResult {
 
         let dTxHash;
         let receipt2;
+        let chainStatus = false;
 
         if (token.symbol == "GBDo") {
-          dTxHash = await infraContract.deposit!(
-            holdingWalletAddress,
-            token,
-            token2,
-            parsedValue,
-            committedQuarters,
-            startQuarterIndex,
-            rate,
-            0,
-            {
-              value: parsedValue,
-              gasLimit: 600_000
-            }
-          );
-          receipt2 = await dTxHash.wait();
+          try {
+            dTxHash = await infraContract.deposit!(
+              holdingWalletAddress,
+              token,
+              token2,
+              parsedValue,
+              committedQuarters,
+              startQuarterIndex,
+              rate,
+              0,
+              {
+                value: parsedValue,
+                gasLimit: 1_000_000
+              }
+            );
+            receipt2 = await dTxHash.wait();
+            chainStatus = true;
+          } catch (err) {
+            console.error("Xchange Creation failed")
+          }
+
+          console.log("after try/catch")
         } else {
           ({ dTxHash, receipt2 } = await sendTransferOnTargetChain(
             holdingWalletAddress,
@@ -162,13 +171,16 @@ export function useInfra(): UseDepositResult {
           ));
         }
 
-        const now = new Date().toISOString();
+
+
+        const now = new Date(Date.now()).toISOString();
 
         const successPayload: VaultPayload = {
           txhash: receipt2 ?? "",
           contractaddress: deployments.RegionInfrastructure,
           useraddress: userAddress,
-          depositamount: parsedValue.toString(),
+          exchangerate: rate,
+          depositamount: parsedValue,
           committedquarters: committedQuarters,
           paymentmethod: token.symbol,
           depositstarttime: startQuarterIndex.toString(),
@@ -176,7 +188,7 @@ export function useInfra(): UseDepositResult {
           ispending: 0,
           isclosed: 0,
           status: "accepted",
-          chainstatus: true,
+          chainstatus: chainStatus,
           queuedat: now,
           processedat: now,
           priority: 0,

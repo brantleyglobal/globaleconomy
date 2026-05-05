@@ -1,6 +1,7 @@
 "use client";
 
 import type { Transaction } from "~~/components/dashboard/transactions/transactions";
+import { formatAmount } from "~~/components/dashboard/transactions/transactions";
 import { SharedColumns } from "./sharedColumns";
 
 export const GBDoTable = ({ transactions }: { transactions: Transaction[] }) => {
@@ -30,8 +31,8 @@ export const GBDoTable = ({ transactions }: { transactions: Transaction[] }) => 
             <tr key={tx.timestamp} className="hover:bg-base-300 h-6">
               <td>{tx.paymentmethod}</td>
               <td className="truncate max-w-[120px]">{tx.useraddress}</td>
-              <td>{tx.stablein}</td>
-              <td>{tx.gbdout}</td>
+              <td>{formatAmount(tx.stablein)}</td>
+              <td>{formatAmount(tx.gbdout)}</td>
               <td className="font-light">{tx.asset}</td>
               <SharedColumns tx={tx} />
             </tr>

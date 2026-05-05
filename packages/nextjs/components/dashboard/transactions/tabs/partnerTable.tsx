@@ -1,6 +1,7 @@
 "use client";
 
 import type { Transaction } from "~~/components/dashboard/transactions/transactions";
+import { formatAmount } from "~~/components/dashboard/transactions/transactions";
 import { SharedColumns } from "./sharedColumns";
 
 export const PartnerTable = ({ transactions }: { transactions: Transaction[] }) => {
@@ -39,10 +40,10 @@ export const PartnerTable = ({ transactions }: { transactions: Transaction[] }) 
             <tr key={tx.timestamp} className="hover:bg-base-300 h-4">
               <td>{tx.paymentmethod}</td>
               <td className="truncate max-w-[120px]">{tx.affiliate}</td>
-              <td>{tx.amount}</td>
+              <td>{formatAmount(tx.amount)}</td>
               <td className="font-light">{tx.asset}</td>
               <td>{tx.quantity}</td>
-              <td>{tx.commission}</td>
+              <td>{formatAmount(tx.commission)}</td>
               <td>{tx.payout}</td>
               <SharedColumns tx={tx} />
             </tr>

@@ -25,7 +25,7 @@ export default function HelpStep({ id, onClose }: Props) {
         The second transfer is to log the transfer to brantley-global's ledger. The second transfer does "not" move assets,
         it is simply there for record keeping purposes. The user has the option to track transfers "only" on the chain of 
         the asset transferred at their sole discretion by declining the second transction. While brantley-global's database 
-        will maintain a record of all transactions for a period not less than 1 year, recording your tansaction to brantley-global's 
+        will maintain a record of all transactions for a period not less than 3 year, recording your tansaction to brantley-global's 
         ledger will maintain an immutable record indefinately. You can always access this help feature by clicking the help "Icon' button.
       </p>
       <div className="mb-4">

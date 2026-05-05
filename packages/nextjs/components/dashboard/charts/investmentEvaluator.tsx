@@ -1,3 +1,4 @@
+import { ethers } from "ethers";
 import React, { useState, useEffect } from "react";
 import { Doughnut } from "react-chartjs-2";
 import {
@@ -7,6 +8,8 @@ import {
   Legend,
 } from "chart.js";
 import type { ProjectData } from "~~/types/charts";
+import { dividendTokens } from "~~/components/constants/tokens";
+import Dominionabi from "~~/lib/contracts/abi/Dividend.json";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -23,39 +26,121 @@ function getMultiplierForTerm(term: number): number {
   }
 }
 
+async function getEffectiveSupply(provider) { //NEED HELP HERE
+  const tokens = dividendTokens.filter(t => !["GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh"].includes(t.symbol));
+
+  if (!provider) {
+    throw new Error("No provider available");
+  }
+
+  const signer = await provider.getSigner();
+  const now = new Date();
+  const year = now.getFullYear();
+  const quarter = Math.floor(now.getMonth() / 3) + 1;
+  const day = now.getDate();
+  const currentQuarter = year * 4 + quarter;
+
+  let globalSupply = 0;
+  for (const token in tokens) {
+    
+    const contract = new ethers.Contract(token, Dominionabi.abi, signer);
+    const unlockQuarter = await contract.unlockQuarter!();
+    const committedQuarters = await contract.committedQuarters!();
+    const startQuarter = unlockQuarter - committedQuarters;
+
+    if (unlockQuarter >= currentQuarter && currentQuarter > startQuarter) {
+      const supply = await contract.viewSupply!();
+      const multiplier = getMultiplierForTerm(committedQuarters);
+      const effectiveSupply = ((supply / 1e18) * multiplier) / 100
+      globalSupply += effectiveSupply;
+    }
+  }
+
+  return globalSupply;
+}
+
+async function getVentureData (provider, token, investment) { //NEED HELP HERE
+  const tokens = dividendTokens.filter(t => !["GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh"].includes(t.symbol));
+
+  if (!provider) {
+    throw new Error("No provider available");
+  }
+
+  const signer = await provider.getSigner();    
+  const contract = new ethers.Contract(token, Dominionabi.abi, signer);
+  const redeemPeriod = await contract.redeemPeriod!();
+  const supply = await contract.viewSupply!();
+  const rate = await contract.annualRate!();
+  const quarterlyRate = rate / 4;
+
+  const principal = investment / redeemPeriod;
+  const interestSlice  = ((principal * quarterlyRate) / 10000);
+
+  const projected = (principal + interestSlice);
+
+
+  return projected;
+}
+
 export function InvestmentEvaluator({ projects }: { projects: ProjectData[] }) {
   const [selected, setSelected] = useState<ProjectData | null>(null);
   const [selectedQuarter, setSelectedQuarter] = useState(0);
   const [amount, setAmount] = useState(0);
 
-  /*useEffect(() => {
-    if (projects.length > 0 && !selected) {
-      setSelected(projects[0]);
-    }
-  }, [projects]);*/
-
   // Safe defaults
   const investment = amount ?? 0;
   const term = selectedQuarter ?? 0;
-  const poolValue = selected?.currentValue ?? 0;
-  const projectedPoolValue = selected?.projectedValue ?? 0;
-  const remaining = Math.max(poolValue - investment, 0);
-  const projectedRemaining = Math.max(projectedPoolValue - investment, 0);
+  const minPoolValue = investment;
+  const maxPoolValue = selected?.projectedValue ?? 0;
+  //const remaining = Math.max(maxPoolValue - investment, 0);
+  const projectedRemaining = Math.max(maxPoolValue - investment, 0);
+  const [provider, setProvider] = useState<EthereumProvider | null>(null);
+  const [walletName, setWalletName] = useState<string>("");
 
-  let projectedEarnings = 0;
+  useEffect(() => {
+  if (typeof window === "undefined") return;
+  const ethereum = (window as any).ethereum;
+  const xdefi = (window as any).xfi;
+
+  if (ethereum?.isMetaMask) {
+      setWalletName("MetaMask");
+      setProvider(ethereum);
+    } else if (ethereum?.isBraveWallet) {
+      setWalletName("Brave Wallet");
+      setProvider(ethereum);
+    } else if (ethereum) {
+      setWalletName("Injected Wallet");
+      setProvider(ethereum);
+    }
+
+    if (xdefi) {
+      setWalletName("XDEFI Wallet");
+      setProvider(xdefi.ethereum);
+    }
+  }, []);
+
+  let minProjectedEarnings = 0;
+  let maxProjectedEarnings = 0;
+  let projectedEarnings;
 
   if (selected?.symbol === "SVT") {
     // SmartVault: apply multiplier based on chosen term
     const multiplier = getMultiplierForTerm(term);
-    projectedEarnings =
-      investment * (multiplier / 100) * (1 + (selected?.projectedGrowthRate ?? 0) * term);
+    const effectiveSupply = getEffectiveSupply(provider);
+    const effectiveStake = investment * (multiplier / 100);
+
+    minProjectedEarnings =
+      (minPoolValue * effectiveStake) / effectiveSupply / 100;
+
+    maxProjectedEarnings =
+      (maxPoolValue * effectiveStake) / effectiveSupply / 100;
+
   } else {
-    // Other projects: simple growth
-    projectedEarnings =
-      investment * (1 + (selected?.projectedGrowthRate ?? 0));
+    // Other projects: simple amortized interest
+    projectedEarnings = getVentureData(provider, token, investment);
   }
 
-  const hasData = investment > 0 || poolValue > 0;
+  const hasData = investment > 0 || minPoolValue > 0;
 
   const chartData = {
     labels: hasData
@@ -157,10 +242,10 @@ export function InvestmentEvaluator({ projects }: { projects: ProjectData[] }) {
         </p>
 
         <p className="flex justify-between text-green-400">
-          <span className="text-xs">PROJECTED EARNINGS</span>
+          <span className="text-xs">PROJECTED EARNINGS</span> //Venture Vault Only
           {selected?.projectedValue ? (
             <span className="inline-flex items-center text-xs">
-              {projectedEarnings.toLocaleString()} GBDo
+              {projectedEarnings!.toLocaleString()} GBDo
             </span>
           ) : (
             <span className="inline-flex items-center text-xs">
@@ -170,10 +255,10 @@ export function InvestmentEvaluator({ projects }: { projects: ProjectData[] }) {
         </p>
 
         <p className="flex justify-between">
-          <span className="text-xs">ESTIMATED YIELD</span>
-          {selected?.projectedGrowthRate ? (
+          <span className="text-xs">PROJECTED POOL MIN</span> //Smart Vault Only
+          {selected?.projectedValue ? (
             <span>
-              {((selected?.projectedGrowthRate ?? 0) * 100).toFixed(1)}%
+              {minPoolValue.toLocaleString()} GBDo
             </span>
           ) : (
             <span className="inline-flex items-center text-xs">
@@ -182,10 +267,10 @@ export function InvestmentEvaluator({ projects }: { projects: ProjectData[] }) {
           )}
         </p>
         <p className="flex justify-between">
-          <span className="text-xs">PROJECTED POOL</span>
+          <span className="text-xs">PROJECTED POOL MAX</span> //Smart Vault Only
           {selected?.projectedValue ? (
             <span className="inline-flex items-center text-xs">
-              {projectedPoolValue.toLocaleString()} GBDo
+              {maxPoolValue.toLocaleString()} GBDo
             </span>
           ) : (
             <span className="inline-flex items-center text-xs">

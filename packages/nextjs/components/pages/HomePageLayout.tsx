@@ -66,14 +66,14 @@ export default function HomePageLayout() {
       label: "OVERVIEW",
       content: `
         <p>Global Dollar (GBDo) operates an asset-backed ecosystem in which investments are directly tied to products and services within the platform. By investing in Global Dollar, participants are supporting the underlying economy of the ecosystem.</p>
-        <p>The system offers dividend payouts based on the chosen investment cycle, with a minimum term of two quarters (6 months). If an investor initiates their deposit after the 15th day of a quarter, the investor's term will not begin until the following quarter. Investors begin recieving dividend payouts at the close of the first quarter of their investment. At the end of each investment term, investors receive any earned dividends and their original investment amount.</p>
+        <p>The system offers dividend payouts based on the chosen investment cycle, with a minimum term of eight quarters (2 years). If an investor initiates their deposit after the 15th day of a quarter, the investor's term will not begin until the following quarter. Investors begin recieving dividend payouts at the close of the first quarter of their investment. At the end of each investment term, investors receive any earned dividends and their original investment amount.</p>
       `,
     },
     {
       id: "redemption",
       label: "TERM DIVIDEND REDEMPTIONS",
       content: `
-        <p>If the redemption process is not started within the redemption period of 6 months redmption period immediately following the close of their selected term, dividends will be forfeited.</p>
+        <p>If the redemption process is not started within the redemption period of 2 years redmption period immediately following the close of their selected term, dividends will be forfeited.</p>
         <p>While all investor’s tokens (associated invested amount) are redeemable, if an investor fails to initiate the redemption process by the associated redemption period, the investor's tokens will automatically lock into the sequential cycle, and the original selected term will apply.</p>
       `,
     },

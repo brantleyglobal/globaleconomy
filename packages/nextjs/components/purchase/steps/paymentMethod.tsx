@@ -1,11 +1,10 @@
 "use client";
 
-import React, { ReactNode } from "react";
+import React, { useEffect, useState } from "react";
 import { useCheckoutStore } from "~~/components/purchase/useCheckoutStore";
 import { supportedTokens } from "~~/components/constants/tokens";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { WalletIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
-import { useState } from "react";
 import { useAccount } from "wagmi";
 import { useRpcStatus } from "~~/hooks/globalEco/statusRpc";
 
@@ -30,8 +29,6 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
   const [selectedTokenSymbol, setSelectedTokenSymbol] = useState<string>("");
   const [showStablecoinInfo, setShowStablecoinInfo] = useState(false);
   const rpcUp = useRpcStatus();
-
-  console.log("RPC status:", rpcUp);
 
   const getNetwork = (symbol: string, address: string): string => {
     if (symbol === "BTC") return "Bitcoin";

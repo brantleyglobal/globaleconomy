@@ -14,14 +14,14 @@ export interface XchangeCard {
   } | null;
 
   deposits: {
-    amount: number;
+    amount: string;
     token: string;
     timestamp: number;
     party: "A" | "B";
   }[];
 
   refunds: {
-    amount: number;
+    amount: string;
     token: string;
     timestamp: number;
     party: "A" | "B";
@@ -31,19 +31,15 @@ export interface XchangeCard {
 export function mergeXchange(swaps: Transaction[]): XchangeCard[] {
   const map: Record<string, XchangeCard> = {};
 
-  const toNumber = (v: any): number => {
-    if (v == null) return 0;
-    if (typeof v === "number") return v;
-    if (typeof v === "bigint") return Number(v);
-    if (typeof v === "string") {
-      // hex or decimal string
-      if (v.startsWith("0x")) {
-        try { return Number(BigInt(v)); } catch { return 0; }
-      }
-      const n = Number(v);
-      return Number.isFinite(n) ? n : 0;
+  const toBig = (v: string): bigint => {
+    if (v == null) return 0n;
+    if (typeof v === "bigint") return v;
+    const trimmed = v.trim();
+    try {
+      return BigInt(trimmed);
+    } catch {
+      return 0n;
     }
-    return 0;
   };
 
   for (const tx of swaps) {
@@ -82,27 +78,27 @@ export function mergeXchange(swaps: Transaction[]): XchangeCard[] {
     }
 
     // helper to create a stable dedupe key
-    const makeKey = (side: "A" | "B", amount: number, token: string, timestamp: number, kind: "deposit" | "refund") =>
+    const makeKey = (side: "A" | "B", amount: bigint, token: string, timestamp: number, kind: "deposit" | "refund") =>
       `${kind}|${side}|${amount}|${token}|${timestamp}`;
 
     // push deposit if positive and not seen
     const pushDeposit = (side: "A" | "B", raw: any, token: string) => {
-      const amt = toNumber(raw);
-      if (!Number.isFinite(amt) || amt <= 0) return;
+      const amt = toBig(raw);
+      if (!amt || amt <= 0) return;
       const key = makeKey(side, amt, token, ts, "deposit");
       if (card.__seen!.has(key)) return;
       card.__seen!.add(key);
-      card.deposits.push({ amount: amt, token, timestamp: ts, party: side });
+      card.deposits.push({ amount: String(amt), token, timestamp: ts, party: side });
     };
 
     // push refund if non-zero and not seen (store positive)
     const pushRefund = (side: "A" | "B", raw: any, token: string) => {
-      const amt = Math.abs(toNumber(raw));
-      if (!Number.isFinite(amt) || amt <= 0) return;
+      const amt = toBig(raw);
+      if (!amt || amt <= 0) return;
       const key = makeKey(side, amt, token, ts, "refund");
       if (card.__seen!.has(key)) return;
       card.__seen!.add(key);
-      card.refunds.push({ amount: amt, token, timestamp: ts, party: side });
+      card.refunds.push({ amount: String(amt), token, timestamp: ts, party: side });
     };
 
     // refunds rows

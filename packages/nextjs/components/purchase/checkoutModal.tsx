@@ -134,8 +134,9 @@ const CheckoutModalBase = (
   const chainId = chain?.id;
   
   // System configuration selections
-  const [selectedVoltage, setSelectedVoltage] = useState<number>(360);
+  const [selectedVoltage, setSelectedVoltage] = useState<number>(480);
   const [selectedPhase, setSelectedPhase] = useState<"Single-Phase" | "Split-Phase" | "3-Phase" | null>(null);
+  const [selectedReactor, setSelectedReactor] = useState<"Default (None)" | "Line Reactor(s)" | null>(null);
   const [selectedFrequency, setSelectedFrequency] = useState<"50Hz" | "60Hz" | null>(null);
 
   const epanelSelected = selectedVariations["epanel"];
@@ -146,11 +147,20 @@ const CheckoutModalBase = (
 
   const isXpanelRestricted =
     xpanelSelected?.label === "Restricted" &&
-    selectedVoltage === 360 &&
+    selectedVoltage === 480 &&
     selectedPhase === "3-Phase" &&
     selectedFrequency === "60Hz";
 
   const isRestrictedCombo = isEpanelRestricted || isXpanelRestricted;
+
+  useEffect(() => {
+    if (epanelSelected && selectedVoltage !== 120) {
+      setSelectedVoltage(120);
+      setField("voltage", "120V");
+    }
+    
+  }, [epanelSelected]);
+
   const basePriceInGBDo = useCheckoutStore(state => state.asset?.basePriceInGBDo ?? BigInt(0));
 
  // External data and contract hooks
@@ -225,17 +235,17 @@ const CheckoutModalBase = (
       lastUpdated: number;
     },
     basePriceInGBDo: BigInt
-  ): Promise<number> {
+  ): Promise<{finalPrice: number, variationTotal: number}> {
     // Convert microGBDo to GBDo
     const basePrice = Number(basePriceInGBDo) / 1e6;
     //console.log("[Pricing] Base GBDo:", basePrice);
 
     // Sum variations
-    const variationTotal = Object.values(variations)
+    const vTotal = Object.values(variations)
       .reduce((sum, v) => sum + Number(v.apriceInGBDo), 0) / 1e6;
     //console.log("[Pricing] Variation Total GBDo:", variationTotal);
 
-    let subtotalGBDo = basePrice + variationTotal;
+    let subtotalGBDo = (basePrice + vTotal) * quantity;
     //console.log("[Pricing] Subtotal before Fees:", subtotalGBDo);
 
     // Apply fee based on method
@@ -305,10 +315,11 @@ const CheckoutModalBase = (
     }
 
     // Final calculation
-    const finalPrice = (subtotalGBDo * gbdoRate) / tokenRate!;
+    const finalPrice = (Math.round((subtotalGBDo * gbdoRate) / tokenRate!) * 100 / 100);
+    const variationTotal = (Math.round((vTotal * gbdoRate) / tokenRate!) * 100 / 100);
     //console.log(`[Pricing] Final Price in ${effectiveSymbol}:`, finalPrice);
 
-    return Math.round(finalPrice * 100) / 100;
+    return {finalPrice, variationTotal};
   }
 
   const [finalizing, setFinalizing] = useState(true);
@@ -316,7 +327,7 @@ const CheckoutModalBase = (
   async function handleNext() {
     const exchangeData = await getExchangeRates();
 
-    const total = await calculateTotalPrice(
+    const {finalPrice, variationTotal} = await calculateTotalPrice(
       selectedVariations,
       paymentMethod,
       cardType,
@@ -325,7 +336,10 @@ const CheckoutModalBase = (
       basePriceInGBDo
     );
 
-    setField("estimatedTotal", total.toFixed(2));
+    console.log("Total: ", finalPrice);
+    console.log("Variation Total: ", variationTotal);
+
+    setField("estimatedTotal", finalPrice.toFixed(2));
     setCurrentStep(5);
   }
 
@@ -361,7 +375,7 @@ const CheckoutModalBase = (
     try {
       const exchangeData = await getExchangeRates();
 
-      const total = await calculateTotalPrice(
+      const {finalPrice, variationTotal} = await calculateTotalPrice(
         selectedVariations,
         paymentMethod,
         cardType,
@@ -405,7 +419,7 @@ const CheckoutModalBase = (
 
       const tokenRate = exchangeData.rates.find(r => r.symbol === "GBDo")?.rate ?? 1;
 
-      setField("estimatedTotal", total.toFixed(2));
+      setField("estimatedTotal", finalPrice.toFixed(2));
       setField("asset", checkoutAsset);
 
       if (!checkoutAsset) throw new Error("checkoutAsset must be defined before initiating purchase");
@@ -426,8 +440,9 @@ const CheckoutModalBase = (
         currentStep: 6,
         paymentMethod,
         checkoutAsset,
-        estimatedTotal: total.toFixed(2),
+        estimatedTotal: finalPrice.toFixed(2),
         tokenSymbol,
+        customizations: variationTotal.toString(),
         quantity,
         tokenRate,
         configuration: serializedConfig,
@@ -441,7 +456,7 @@ const CheckoutModalBase = (
           decimals: selectedTokenMeta?.decimals,
           chain: selectedTokenMeta?.chain,
         },
-        value: total.toFixed(2),
+        value: finalPrice.toFixed(2),
         shippingInfo,
         provider,
       });
@@ -492,12 +507,16 @@ const CheckoutModalBase = (
           <OutputCustomizationStep
             currentStep={currentStep}
             setCurrentStep={setCurrentStep}
+            selectedVariations={selectedVariations}
+            setSelectedVariations={setSelectedVariations}
             selectedVoltage={selectedVoltage}
             setSelectedVoltage={setSelectedVoltage}
             selectedFrequency={selectedFrequency}
             setSelectedFrequency={setSelectedFrequency}
             selectedPhase={selectedPhase}
             setSelectedPhase={setSelectedPhase}
+            selectedReactor={selectedReactor}
+            setSelectedReactor={setSelectedReactor}
             isRestrictedCombo={isRestrictedCombo}
           />
         )}
