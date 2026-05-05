@@ -43,11 +43,11 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
 
   return (
     <>
-      <div className="flex flex-col flex-full h-full">
+      <div className="flex flex-col flex-full">
         <div className="px-0">
           <h3 className="text-lg font-light mb-4 text-primary">PAYMENT METHOD</h3>
         </div>
-        <div className="flex flex-col justify-between h-full rounded-xl"> 
+        <div className="flex flex-col justify-between rounded-xl"> 
           {/* Native Token */}
           <div className={`max-h-[300px] sm:max-h-[300px] max-h-[200px] overflow-y-auto rounded-lg border border-secondary/30 transition-all`}>
             {paymentMethod === "native" && rpcUp === false && (
@@ -73,57 +73,69 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
           </div>
 
           {/* Stablecoin */}
-          <div className={`max-h-[300px] sm:max-h-[300px] max-h-[200px] mt-4 overflow-y-auto rounded-lg border border-secondary/30 transition-all`}>
-            <button
+          <div className="max-h-[300px] sm:max-h-[300px] max-h-[200px] mt-4 overflow-y-auto rounded-lg border border-secondary/30 transition-all">
+
+            {/* Card container (NOT a button) */}
+            <div
+              role="button"
               onClick={() => setField("paymentMethod", "stable")}
-              className={`w-full block rounded-lg p-4 bg-black/40 hover:bg-secondary/10 transition-colors text-left ${
+              className={`w-full block rounded-lg p-4 bg-black/40 hover:bg-secondary/10 transition-colors text-left cursor-pointer ${
                 paymentMethod === "stable" ? "bg-secondary/20" : ""
               }`}
             >
-              <div className="w-full">
-                <div className="w-full flex justify-between items-center mt-2">
+              <div className="w-full flex justify-between items-center mt-2">
                 <h4 className="text-md font-light mt-2 text-white">STABLECOIN</h4>
-                </div>
-                <p className="text-xs text-justify text-white mt-">
-                  Includes routing fee of 0.25%. Non-Stablecoin purchases are not based live conversion rates in an effort to protect products on this platform from volatility. Users are encouraged to convert to Stablecoin for investment and energy related product purchases on this platform.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowStablecoinInfo(true)}
-                  className="bg-white/10 animate-pulse backdrop-blur-md px-6 py-2 mb-2 rounded-md w-full text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
-                >
-                  Supported Stablecoin
-                </button>
-                {/* Token Selector */}
-                <select
-                  className="select rounded-md bg-black w-full text-info-600 outline-none hover:bg-white/10 border-none focus:ring-0 focus:outline-none"
-                  value={selectedTokenSymbol}
-                  onChange={(e) => {
-                    const symbol = e.target.value;
-
-                    // If user selects a token but paymentMethod isn't "stable", set it
-                    if (paymentMethod !== "stable") {
-                      setField("paymentMethod", "stable");
-                    }
-
-                    setSelectedTokenSymbol(symbol);
-                    setField("tokenSymbol", symbol);
-                  }}
-                >
-                  <option value="" disabled>
-                    Select Stablecoin Payment Method
-                  </option>
-                  {supportedTokens
-                    .filter((t) => !["GBDo","GBDx","WETH","WBTC","WBNB","COPx","GLB","TGUSA","TGMX","CREs","CREh","CGRi"].includes(t.symbol))
-                    .map((t) => (
-                      <option key={t.symbol} value={t.symbol}>
-                        {t.symbol} • {t.name}
-                      </option>
-                    ))}
-                </select>
               </div>
-            </button>
+
+              <p className="text-xs text-justify text-white">
+                Includes routing fee of 0.25%...
+              </p>
+
+              {/* Inner button — now works */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowStablecoinInfo(true);
+                }}
+                className="bg-white/10 animate-pulse backdrop-blur-md px-6 py-2 mb-2 rounded-md w-full text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
+              >
+                Supported Stablecoin
+              </button>
+            </div>
+
+            {/* Select — now works */}
+            {paymentMethod === "stable" && (
+              <select
+                className="select rounded-md bg-black w-full text-info-600 outline-none hover:bg-white/10 border-none focus:ring-0 focus:outline-none mt-2"
+                value={selectedTokenSymbol}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  e.stopPropagation(); // ← THIS is the missing piece
+
+                  const symbol = e.target.value;
+
+                  setSelectedTokenSymbol(symbol);
+                  setField("tokenSymbol", symbol);
+
+                  // Ensure paymentMethod stays stable
+                  if (paymentMethod !== "stable") {
+                    setField("paymentMethod", "stable");
+                  }
+                }}
+              >
+              <option value="" disabled>Select Stablecoin Payment Method</option>
+              {supportedTokens
+                .filter((t) => !["GBDo","GBDx","WETH","WBTC","WBNB","COPx","GLB","TGUSA","TGMX","CREs","CREh","CGRi"].includes(t.symbol))
+                .map((t) => (
+                  <option key={t.symbol} value={t.symbol}>
+                    {t.symbol} • {t.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
+
 
           {/* Cash via Stripe */}
           <div
@@ -301,7 +313,11 @@ export const PaymentMethodStep: React.FC<Props> = ({ currentStep, setCurrentStep
             </button>
             <button
               className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
-              onClick={handleNext}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNext();
+              }}
+
               disabled={isDisabled}
             >
               Next

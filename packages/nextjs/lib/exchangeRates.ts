@@ -85,22 +85,22 @@ const rateGuards: Record<string, { min: number; max: number; fallback?: number }
   FDUSD:{ min: 0.98, max: 1.02, fallback: 1.00 },
   FRAX: { min: 0.97, max: 1.03, fallback: 1.00 },
   PYUSD: { min: 0.98, max: 1.02, fallback: 1.00 },
-  GBDo: { min: 1.00, max: 1.00, fallback: 1.00 },
-  JPYC: { min: 0.0065, max: 0.0073 }, // JPY ≈ ¥1 ≈ $0.0069
-  EURC: { min: 1.08, max: 1.12 },     // EUR ≈ €1 ≈ $1.10
-  EURe: { min: 1.08, max: 1.12 },
-  GBPT: { min: 1.20, max: 1.30 },
-  AUDT: { min: 0.65, max: 0.69 },
-  AUDD: { min: 0.65, max: 0.69 },
-  QCAD: { min: 0.72, max: 0.76 },
-  XCHF: { min: 1.10, max: 1.14 },
-  ZARP: { min: 0.054, max: 0.064 },
-  BRL1: { min: 0.19, max: 0.21 },
-  MMXN: { min: 0.058, max: 0.062 },
-  NGNT: { min: 0.00063, max: 0.00068 },
-  INRX: { min: 0.0118, max: 0.0124 },
-  TRYX: { min: 0.030, max: 0.033 },
-  XSGD: { min: 0.74, max: 0.76 },
+  GBDo: { min: 1.00, max: 1.00, fallback: 1.03 },
+  JPYC: { min: 0.0065, max: 0.0073, fallback: 0.0069 },
+  EURC: { min: 1.08, max: 1.12, fallback: 1.10 },
+  EURe: { min: 1.08, max: 1.12, fallback: 1.10 },
+  GBPT: { min: 1.20, max: 1.30, fallback: 1.25 },
+  AUDT: { min: 0.65, max: 0.69, fallback: 0.67 },
+  AUDD: { min: 0.65, max: 0.69, fallback: 0.67 },
+  QCAD: { min: 0.72, max: 0.76, fallback: 0.74 },
+  XCHF: { min: 1.10, max: 1.14, fallback: 1.12 },
+  ZARP: { min: 0.054, max: 0.064, fallback: 0.059 },
+  BRL1: { min: 0.19, max: 0.21, fallback: 0.20 },
+  MMXN: { min: 0.058, max: 0.062, fallback: 0.060 },
+  NGNT: { min: 0.00063, max: 0.00068, fallback: 0.000655 },
+  INRX: { min: 0.0118, max: 0.0124, fallback: 0.0121 },
+  TRYX: { min: 0.030, max: 0.033, fallback: 0.0315 },
+  XSGD: { min: 0.74, max: 0.76, fallback: 0.75 }
 };
 
 // Constants
@@ -148,8 +148,10 @@ const rpcFallbacks: Record<string, string[]> = {
 const trustedNetworks = Object.keys(rpcFallbacks);
 
 const rateCache = new Map<string, StablecoinRate>();
+let cachedRates: StablecoinRate[] | null = null;
 let cachedGBDoRate: number | null = null;
-let lastUpdated: number | null = null;
+let lastUpdated = 0
+//let lastUpdated: number | null = null;
 
 const stablecoins: StablecoinMeta[] = supportedTokens.map(token => ({
   symbol: token.symbol,
@@ -395,58 +397,97 @@ function shouldUpdateGBDo(): boolean {
   return !lastUpdated || (Date.now() - lastUpdated > UPDATE_INTERVAL_MS);
 }
 
+function generateFallbackRates(): StablecoinRate[] {
+  return Object.keys(rateGuards).map(symbol => {
+    const guard = rateGuards[symbol];
+    const fallback = guard.fallback ?? (guard.min + guard.max) / 2;
+
+    return {
+      symbol,
+      rate: fallback,
+      currency: currencyMap[symbol] ?? "USD",
+      healthy: false,
+      network: networkMap[symbol] ?? "ethereum",
+      timestamp: Date.now(),
+      rateAgainstGBDo: symbol === "GBDo" ? 1 : fallback
+    };
+  });
+}
+
 export async function getExchangeRates(): Promise<{
   rates: StablecoinRate[];
   gbdoRate: number;
   lastUpdated: number;
 }> {
-  let stablecoinRates = await fetchStablecoinRates();
-  //console.log("[Rates] Raw fetched rates:", stablecoinRates.map(r => `${r.symbol}: ${r.rate}`));
+  const now = Date.now();
 
-  // Step 1: Guarded rate application
-  stablecoinRates = stablecoinRates.map(r => {
-    const guardedRate = applyGuard(r.symbol, r.rate);
-    if (guardedRate !== r.rate) {
-      //console.warn(`[RateGuard] ${r.symbol} adjusted: ${r.rate} → ${guardedRate}`);
-    }
-    return { ...r, rate: guardedRate };
-  });
-
-  //console.log("[Rates] After applying guards:", stablecoinRates.map(r => `${r.symbol}: ${r.rate}`));
-
-  // Step 2: GBDo rate update logic
-  if (shouldUpdateGBDo()) {
-    const rawRate = calculateGBDoRate(stablecoinRates);
-    const smoothed = cachedGBDoRate !== null
-      ? smoothRate(rawRate, cachedGBDoRate)
-      : rawRate;
-
-    //console.log(`[GBDo] Raw rate: ${rawRate}, Smoothed: ${smoothed}`);
-    cachedGBDoRate = smoothed;
-    lastUpdated = Date.now();
+  // ✅ If we've already attempted within 24h, return cached or guarded fallback
+  if (now - lastUpdated < UPDATE_INTERVAL_MS) {
+    return {
+      rates: cachedRates ?? generateFallbackRates(),
+      gbdoRate: cachedGBDoRate ?? 1,
+      lastUpdated
+    };
   }
 
-  // Step 3: Resolve fallback if needed
-  const gbdoRate = cachedGBDoRate ?? calculateGBDoRate(stablecoinRates);
-  //console.log(`[GBDo] Final gbdoRate: ${gbdoRate}`);
+  try {
+    // 🔹 Fresh attempt
+    let stablecoinRates = await fetchStablecoinRates();
 
-  // Step 4: Apply PRIME_FACTOR and derive rateAgainstGBDo
-  const ratesWithGBDo = stablecoinRates.map(r => {
-    const scaledRate = r.symbol === "GBDo" ? gbdoRate : r.rate;
-    const relativeRate = r.symbol === "GBDo" ? 1.0 : (gbdoRate > 0 ? scaledRate / gbdoRate : 0);
-    //console.log(`[RateCalc] ${r.symbol}: raw=${r.rate}, scaled=${scaledRate}, rateAgainstGBDo=${relativeRate}`);
-    return {
+    // Step 1: apply guards
+    stablecoinRates = stablecoinRates.map(r => ({
       ...r,
-      rate: Number(scaledRate.toFixed(6)),
-      rateAgainstGBDo: Number(relativeRate.toFixed(6)),
+      rate: applyGuard(r.symbol, r.rate),
+    }));
+
+    // Step 2: GBDo update logic
+    if (shouldUpdateGBDo()) {
+      const rawRate = calculateGBDoRate(stablecoinRates);
+      const smoothed = cachedGBDoRate != null
+        ? smoothRate(rawRate, cachedGBDoRate)
+        : rawRate;
+
+      cachedGBDoRate = smoothed;
+      lastUpdated = now;
+    }
+
+    const gbdoRate = cachedGBDoRate ?? calculateGBDoRate(stablecoinRates);
+
+    // Step 3: derive rateAgainstGBDo
+    const ratesWithGBDo = stablecoinRates.map(r => {
+      const scaledRate = r.symbol === "GBDo" ? gbdoRate : r.rate;
+      const relativeRate =
+        r.symbol === "GBDo" ? 1 : (gbdoRate > 0 ? scaledRate / gbdoRate : 0);
+
+      return {
+        ...r,
+        rate: Number(scaledRate.toFixed(6)),
+        rateAgainstGBDo: Number(relativeRate.toFixed(6)),
+      };
+    });
+
+    // ✅ Cache full result for the day
+    cachedRates = ratesWithGBDo;
+
+    return {
+      rates: ratesWithGBDo,
+      gbdoRate,
+      lastUpdated,
     };
-  });
+    } catch (err) {
+    // Mark the attempt as done for the day
+    lastUpdated = now;
 
-  //console.log(`[Final] GBDo = ${gbdoRate}, Updated: ${new Date(lastUpdated ?? Date.now()).toISOString()}`);
+    // Generate and store fallback rates
+    const fallbackRates = generateFallbackRates();
+    cachedRates = fallbackRates;
+    cachedGBDoRate = 1;
 
-  return {
-    rates: ratesWithGBDo,
-    gbdoRate: Number(gbdoRate.toFixed(6)),
-    lastUpdated: lastUpdated ?? Date.now()
-  };
+    return {
+      rates: fallbackRates,
+      gbdoRate: 1,
+      lastUpdated
+    };
+  }
 }
+
