@@ -153,13 +153,25 @@
         {
           "indexed": false,
           "internalType": "bytes32",
-          "name": "old",
+          "name": "oldUserHash",
           "type": "bytes32"
         },
         {
           "indexed": false,
           "internalType": "bytes32",
-          "name": "newTxHash",
+          "name": "newUserHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "oldPartnerHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "newPartnerHash",
           "type": "bytes32"
         },
         {
@@ -250,6 +262,12 @@
         },
         {
           "indexed": false,
+          "internalType": "uint32",
+          "name": "purchaseIndex",
+          "type": "uint32"
+        },
+        {
+          "indexed": false,
           "internalType": "uint256",
           "name": "amount",
           "type": "uint256"
@@ -257,8 +275,44 @@
         {
           "indexed": false,
           "internalType": "uint256",
+          "name": "shipping",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "region",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "customizations",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
           "name": "rate",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "affiliate",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "commission",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "purchaseSetter",
+          "type": "address"
         }
       ],
       "name": "PurchaseTimestamp",
@@ -339,6 +393,55 @@
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "",
+          "type": "uint32"
+        }
+      ],
+      "name": "affiliateByUserIndex",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "affiliate",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "commissionSetter",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "purchaseIndex",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "commission",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "commissionHash",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "batchWithdraw",
       "outputs": [],
@@ -360,6 +463,11 @@
         {
           "internalType": "bytes32",
           "name": "newTxHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "partnerHash",
           "type": "bytes32"
         }
       ],
@@ -418,6 +526,11 @@
           "internalType": "uint256",
           "name": "endTs",
           "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "process",
+          "type": "bool"
         }
       ],
       "name": "getPurchasesInRange",
@@ -467,11 +580,6 @@
         {
           "components": [
             {
-              "internalType": "uint256",
-              "name": "timestamp",
-              "type": "uint256"
-            },
-            {
               "internalType": "address",
               "name": "user",
               "type": "address"
@@ -487,9 +595,14 @@
               "type": "address"
             },
             {
-              "internalType": "uint64",
-              "name": "id",
-              "type": "uint64"
+              "internalType": "uint8",
+              "name": "region",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint32",
+              "name": "purchaseIndex",
+              "type": "uint32"
             },
             {
               "internalType": "uint32",
@@ -497,8 +610,28 @@
               "type": "uint32"
             },
             {
+              "internalType": "uint64",
+              "name": "id",
+              "type": "uint64"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
               "internalType": "uint256",
               "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "shipping",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "customizations",
               "type": "uint256"
             },
             {
@@ -538,11 +671,6 @@
         {
           "components": [
             {
-              "internalType": "uint256",
-              "name": "timestamp",
-              "type": "uint256"
-            },
-            {
               "internalType": "address",
               "name": "user",
               "type": "address"
@@ -558,9 +686,14 @@
               "type": "address"
             },
             {
-              "internalType": "uint64",
-              "name": "id",
-              "type": "uint64"
+              "internalType": "uint8",
+              "name": "region",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint32",
+              "name": "purchaseIndex",
+              "type": "uint32"
             },
             {
               "internalType": "uint32",
@@ -568,8 +701,28 @@
               "type": "uint32"
             },
             {
+              "internalType": "uint64",
+              "name": "id",
+              "type": "uint64"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
               "internalType": "uint256",
               "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "shipping",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "customizations",
               "type": "uint256"
             },
             {
@@ -675,6 +828,19 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "processTimestamp",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "bytes32",
@@ -683,6 +849,25 @@
         }
       ],
       "name": "processedDeposits",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "processedPurchase",
       "outputs": [
         {
           "internalType": "bool",
@@ -729,6 +914,16 @@
           "type": "uint256"
         },
         {
+          "internalType": "uint256",
+          "name": "shipping",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "customizations",
+          "type": "uint256"
+        },
+        {
           "internalType": "uint32",
           "name": "quantity",
           "type": "uint32"
@@ -736,6 +931,16 @@
         {
           "internalType": "uint256",
           "name": "rate",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "affiliate",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "commission",
           "type": "uint256"
         },
         {
@@ -747,6 +952,11 @@
           "internalType": "bytes32",
           "name": "depositHash",
           "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "purchaseTimeStamp",
+          "type": "uint256"
         }
       ],
       "name": "purchase",
@@ -784,49 +994,14 @@
       "name": "purchasesByTimestamp",
       "outputs": [
         {
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        },
-        {
           "internalType": "address",
           "name": "user",
           "type": "address"
         },
         {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "purchaseSetter",
-          "type": "address"
-        },
-        {
-          "internalType": "uint64",
-          "name": "id",
-          "type": "uint64"
-        },
-        {
           "internalType": "uint32",
-          "name": "quantity",
+          "name": "purchaseIndex",
           "type": "uint32"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "rate",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "purchaseTxHash",
-          "type": "bytes32"
         }
       ],
       "stateMutability": "view",
@@ -848,11 +1023,6 @@
       "name": "purchasesByUser",
       "outputs": [
         {
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        },
-        {
           "internalType": "address",
           "name": "user",
           "type": "address"
@@ -868,9 +1038,14 @@
           "type": "address"
         },
         {
-          "internalType": "uint64",
-          "name": "id",
-          "type": "uint64"
+          "internalType": "uint8",
+          "name": "region",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint32",
+          "name": "purchaseIndex",
+          "type": "uint32"
         },
         {
           "internalType": "uint32",
@@ -878,8 +1053,28 @@
           "type": "uint32"
         },
         {
+          "internalType": "uint64",
+          "name": "id",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
           "internalType": "uint256",
           "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "shipping",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "customizations",
           "type": "uint256"
         },
         {

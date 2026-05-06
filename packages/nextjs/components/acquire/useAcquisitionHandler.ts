@@ -47,6 +47,15 @@ type TxResult = {
   receipt: any | null;
 };
 
+function parseLocalNumber (rawNumber: string, locale: string) {
+  const amountToFormat = Intl.NumberFormat(locale).format(1.1);
+  const decimal = amountToFormat.charAt(amountToFormat.length - 2);
+
+  const normalized = rawNumber.replace(new RegExp(`[^0-9${decimal}-]`,"g"), "");
+
+  return Number(normalized);
+}
+
 export function useDeposit(): UseDepositResult {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -79,12 +88,12 @@ export function useDeposit(): UseDepositResult {
       try {
 
         const iface = new Interface(acquisitionAbi.abi);
-        parsedValue = parseUnits(String(amountStr), 18);
-        parsedValue2 = parseUnits(String(amountoutStr), 18);
+        const locale = navigator.language || "en-US";
+        const adjustedAmount = parseLocalNumber(amountStr, locale);
+        const adjustedOutAmount = parseLocalNumber(amountStr, locale);
+        parsedValue = parseUnits(String(adjustedAmount), 18);
+        parsedValue2 = parseUnits(String(adjustedOutAmount), 18);
         const exchangeRate = parseUnits(String(rate), 18);
-        //console.log(parsedValue);
-        //console.log(parsedValue2);
-        //console.log(rate);
 
         let callAddress;
         if (token.symbol === "ETH") {
@@ -130,7 +139,7 @@ export function useDeposit(): UseDepositResult {
         const now = new Date(Date.now()).toISOString();
 
         const successPayload: AcquisitionPayload = {
-          txhash: receipt2 || "",
+          txhash: receipt2?.toString() || "",
           contractaddress: deployments.SmartVault,
           useraddress: userAddress,
           exchangerate: exchangeRate,
@@ -140,7 +149,7 @@ export function useDeposit(): UseDepositResult {
           status: "accepted",
           chainstatus: false,
           processedat: now,
-          receipthash: receipt2 || "",
+          receipthash: receipt2?.toString() || "",
           notes: "success:",
           timestamp: now,
         };

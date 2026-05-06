@@ -234,7 +234,8 @@ const CheckoutModalBase = (
       gbdoRate: number;
       lastUpdated: number;
     },
-    basePriceInGBDo: BigInt
+    basePriceInGBDo: BigInt,
+    quantity: number
   ): Promise<{finalPrice: number, variationTotal: number}> {
     // Convert microGBDo to GBDo
     const basePrice = Number(basePriceInGBDo) / 1e6;
@@ -333,7 +334,8 @@ const CheckoutModalBase = (
       cardType,
       tokenSymbol,
       exchangeData,
-      basePriceInGBDo
+      basePriceInGBDo,
+      quantity
     );
 
     console.log("Total: ", finalPrice);
@@ -381,7 +383,8 @@ const CheckoutModalBase = (
         cardType,
         tokenSymbol,
         exchangeData,
-        basePriceInGBDo
+        basePriceInGBDo,
+        quantity
       );
 
       function sanitizeBigInts(obj: Record<string, any>) {

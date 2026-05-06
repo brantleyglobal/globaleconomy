@@ -207,7 +207,7 @@ export default function ReviewStep(props: Props) {
             <p className="font-semibold text-xs text-white">Email: <span className="font-semibold text-xs text-white">{userEmail || "—"}</span></p>
             <p className="text-white/80 tracking-wide text-xs font-semibold">Wallet Address: <span className="font-semibold text-white">{recipient || "—"}</span></p>
             <p className="text-white/80 tracking-wide text-xs font-semibold">Token: <span className="font-semibold text-white">{selectedTokenSymbol || "—"}</span></p>
-            <p className="text-white/80 tracking-wide text-xs font-semibold">Amount Offered: <span className="font-semibold text-white">{amount || "—"}</span></p>
+            <p className="text-white/80 tracking-wide text-xs font-semibold">Amount Offered: <span className="font-semibold text-white">{Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></p>
           </div>
         )}
 
@@ -220,7 +220,7 @@ export default function ReviewStep(props: Props) {
             <p className="font-semibold text-xs text-white">Email: <span className="font-semibold text-xs text-white">{userEmail2 || "—"}</span></p>
             <p className="text-white/80 tracking-wide text-xs font-semibold">Wallet Address: <span className="font-semibold text-white">{recipient2 || "—"}</span></p>
             <p className="text-white/80 tracking-wide text-xs font-semibold">Token: <span className="font-semibold text-white">{selectedTokenSymbol2 || "—"}</span></p>
-            <p className="text-white/80 tracking-wide text-xs font-semibold">Amount Offered: <span className="font-semibold text-white">{amount2 || "—"}</span></p>
+            <p className="text-white/80 tracking-wide text-xs font-semibold">Amount Offered: <span className="font-semibold text-white">{Number(amount2).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></p>
           </div>
         )}
 
@@ -240,7 +240,7 @@ export default function ReviewStep(props: Props) {
             <p className="font-semibold text-xs text-white">Email: <span className="font-semibold text-xs text-white">{userEmail || "—"}</span></p>
             <p className="text-white/80 tracking-wide text-xs font-semibold">Wallet Address: <span className="font-semibold text-white">{address || "—"}</span></p>
             <p className="text-white/80 tracking-wide text-xs font-semibold">Token: <span className="font-semibold text-white">{selectedTokenSymbol || "—"}</span></p>
-            <p className="text-white/80 tracking-wide text-xs font-semibold">Amount to Deposit: <span className="font-semibold text-white">{amount || "—"}</span></p>
+            <p className="text-white/80 tracking-wide text-xs font-semibold">Amount to Deposit: <span className="font-semibold text-white">{Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></p>
           </div>
         )}
 

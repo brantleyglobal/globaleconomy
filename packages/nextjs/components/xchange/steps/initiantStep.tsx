@@ -25,6 +25,25 @@ type Props = {
   onBack: () => void;
 };
 
+function formatMoneyFromDigits(raw: string) {
+  // Remove all non‑digits
+  const digits = raw.replace(/\D/g, "");
+
+  if (digits === "") return "";
+
+  // Convert to number of cents
+  const cents = Number(digits);
+
+  // Convert to dollars with 2 decimals
+  const value = (cents / 100).toFixed(2);
+
+  // Add commas
+  return Number(value).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
 export default function InitiantStep({
   recipient,
   setRecipient,
@@ -194,7 +213,10 @@ export default function InitiantStep({
                     className="input w-full mt-2 bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5 mt-2"
                     placeholder="Enter Amount Offered"
                     value={amount}
-                    onChange={e => setAmount(e.target.value)}
+                    onChange={e => {
+                        const formatted = formatMoneyFromDigits(e.target.value);
+                        setAmount(formatted);
+                    }}
                 />
             </div>
             {/* Confirmation Details */}

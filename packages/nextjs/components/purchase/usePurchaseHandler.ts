@@ -272,6 +272,10 @@ async function initiateStripeCheckout(params: InitiateParams) {
   const shippingTotal = parseUnits(shippingAmountCents.toFixed(2), 18);
   const commmissionTotal = parseUnits(commissionAmount!.toFixed(2), 18);
 
+  let commissionPaid = "";
+  if ( affiliateAddress !== zeroAddress && promo!) {
+    commissionPaid = "Commission Pending";
+  }
 
   // Step 5: Log purchase to backend
   const purchasePayload = {
@@ -290,7 +294,7 @@ async function initiateStripeCheckout(params: InitiateParams) {
     paymentmethod: "stripe",
     region, 
     commission: commmissionTotal,
-    payout,
+    payout: commissionPaid,
     status: "pending",
     chainstatus: true,
     queuedat: new Date().toISOString(),
@@ -639,8 +643,8 @@ async function handleCryptoPurchase(params: InitiateParams) {
     // Step 5: Log purchase to backend
     const purchasePayload = {
       contractaddress: deployments.AssetPurchase.toString(),
-      txhash:receipt2 || "",
-      receipthash: receipt2?.blockHash || "",
+      txhash: receipt2?.toString() || "",
+      receipthash: receipt2?.toString() || "",
       useraddress: userAddress,
       affiliate: affiliateAddress || "",
       asset: checkoutAsset.id,

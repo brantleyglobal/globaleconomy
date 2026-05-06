@@ -6,6 +6,7 @@ import { getExchangeRates } from "~~/lib/exchangeRates";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { token } from "../../../../hardhat/typechain-types/@openzeppelin/contracts-upgradeable";
 import { useRpcStatus } from "~~/hooks/globalEco/statusRpc";
+import { formatAmount } from "~~/components/dashboard/transactions/transactions";
 
 export type Props = {
   supportedTokens: Token[];
@@ -34,6 +35,35 @@ export type Props = {
 enum ModalStep {
   OnStep = 0,
   DoneStep = 1,
+}
+
+function formatMoneyFromDigits(raw: string) {
+  // Remove all non‑digits
+  const digits = raw.replace(/\D/g, "");
+
+  if (digits === "") return "";
+
+  // Convert to number of cents
+  const cents = Number(digits);
+
+  // Convert to dollars with 2 decimals
+  const value = (cents / 100).toFixed(2);
+  const locale = navigator.language || "en-US";
+
+  // Add commas
+  return Number(value).toLocaleString(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function parseLocalNumber (rawNumber: string, locale: string) {
+  const amountToFormat = Intl.NumberFormat(locale).format(1.1);
+  const decimal = amountToFormat.charAt(amountToFormat.length - 2);
+
+  const normalized = rawNumber.replace(new RegExp(`[^0-9${decimal}-]`,"g"), "");
+
+  return Number(normalized);
 }
 
 export const OnStep: React.FC<Props> = ({
@@ -151,12 +181,6 @@ export const OnStep: React.FC<Props> = ({
         // Skip if effect has been cancelled (user changed token)
         if (cancelled) return;
 
-        // Log clearly so you can verify inputs and outputs
-        console.log(`[fetchRate ${requestId}] symbol=${symbol}`);
-        console.log(`[fetchRate ${requestId}] tokenRate(USD)=`, tokenRate);
-        console.log(`[fetchRate ${requestId}] gbdoRate(USD)=`, gbdo);
-        console.log(`[fetchRate ${requestId}] 1 ${symbol} ≈ ${exchangeRateFloat} GBDo`);
-
         // Keep string handler
         setExchangeRate(exchangeRateFloat.toString());
       } catch (err) {
@@ -175,15 +199,20 @@ export const OnStep: React.FC<Props> = ({
 
   // Derive converted amount whenever depositAmount or exchangeRate changes
   useEffect(() => {
-    if (exchangeRate && depositAmount && !isNaN(Number(depositAmount))) {
-      const converted = (
-        Number(depositAmount) * parseFloat(exchangeRate)
-      ).toFixed(2);
-
-      setConvertedAmount(converted); // string
-    } else {
+    if (!exchangeRate || depositAmount === "") {
       setConvertedAmount("");
+      return;
     }
+
+    const rate = formatMoneyFromDigits(exchangeRate);
+    const locale = navigator.language || "en-US";
+    const amount = (parseLocalNumber(depositAmount, locale) * parseLocalNumber(exchangeRate, locale));
+    const converted = formatMoneyFromDigits((amount).toFixed(2)).toString();
+
+    setConvertedAmount(
+      converted
+    );
+    
   }, [depositAmount, exchangeRate]);
 
   return (
@@ -234,8 +263,12 @@ export const OnStep: React.FC<Props> = ({
             className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white/50 placeholder:text-white/50 hover:bg-secondary/5"
             placeholder="Enter Spend Amount"
             value={depositAmount}
-            onChange={e => setDepositAmount(e.target.value)}
+            onChange={e => {
+              const formatted = formatMoneyFromDigits(e.target.value);
+              setDepositAmount(formatted);
+            }}
           />
+
         </div>
         <div>
           <input
@@ -247,7 +280,7 @@ export const OnStep: React.FC<Props> = ({
           />
           {exchangeRate && (
             <p>
-              1 {selectedTokenSymbol} ≈ {exchangeRate ? parseFloat(exchangeRate).toFixed(4) : ""} GBDo
+              1 {selectedTokenSymbol} ≈ {exchangeRate ? parseFloat(exchangeRate).toFixed(2) : ""} GBDo
             </p>
           )}
         </div>

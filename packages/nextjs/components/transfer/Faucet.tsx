@@ -61,6 +61,26 @@ function getChainConfig(token: { address: AddressType }) {
   }
 }
 
+function formatMoneyFromDigits(raw: string) {
+  // Remove all non‑digits
+  const digits = raw.replace(/\D/g, "");
+
+  if (digits === "") return "";
+
+  // Convert to number of cents
+  const cents = Number(digits);
+
+  // Convert to dollars with 2 decimals
+  const value = (cents / 100).toFixed(2);
+  const locale = navigator.language || "en-US";
+
+  // Add commas
+  return Number(value).toLocaleString(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
 export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) => {
   const { address, isConnected, chain } = useAccount();
 
@@ -254,7 +274,7 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
         tokenSymbol: selectedToken?.symbol ?? "unknown",
         amount,
         recipient,
-        receipt: result.txHash?.toString() || "",
+        receipt: result.receipt2?.toString() || "",
       });
       toast.success("Investment confirmation email sent.");
       setStep(1);
@@ -429,7 +449,10 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
                   className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5"
                   placeholder="Enter Amount to Transfer"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={e => {
+                    const formatted = formatMoneyFromDigits(e.target.value);
+                    setAmount(formatted);
+                  }}
                 />
 
                 {selectedToken && (

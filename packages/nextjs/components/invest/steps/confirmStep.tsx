@@ -58,7 +58,7 @@ export function ConfirmStep({
               Investment Amount
             </p>
             <p className="font-bold text-white">
-              {parseFloat(amount).toFixed(2)} {token?.symbol ?? ""}
+              {amount}
             </p>
           </div>
 

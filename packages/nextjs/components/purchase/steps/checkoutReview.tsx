@@ -157,6 +157,10 @@ export const CheckoutReviewStep: React.FC<Props> = ({
               Protocol Fee:{" "}
               <span className="font-semibold text-white">
                 {((Number(estimatedTotal) * 25) / 10_000).toFixed(2)}
+                {((Number(estimatedTotal) * 25) / 10_000).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })} 
               </span>
             </p>
           )}
@@ -168,20 +172,29 @@ export const CheckoutReviewStep: React.FC<Props> = ({
           <p className="text-white/80 tracking-wide text-xs font-semibold">
             Product Total:{" "}
             <span className="bg-ghost text-white px-2 py-1 rounded-full font-semibold">
-              {Number(estimatedTotal).toFixed(2)} {paymentMethod === "cash" ? "USD" : tokenSymbol}
+              {Number(estimatedTotal).toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })} {paymentMethod === "cash" ? "USD" : tokenSymbol}
             </span>
           </p>
           <p className="text-white/80 tracking-wide text-xs font-semibold">
             Shipping Cost:{" "}
             <span className="bg-ghost text-white px-2 py-1 rounded-full font-semibold">
-              {shippingCost.toFixed(2)} {paymentMethod === "cash" ? "USD" : tokenSymbol}
+              {Number(shippingCost).toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })} {paymentMethod === "cash" ? "USD" : tokenSymbol}
             </span>
           </p>
           {/* New Total with Shipping block */}
           <p className="text-white/80 tracking-wide text-xs font-semibold mt-2 border-secondary pt-2">
             Order Total:{" "}
             <span className="bg-ghost text-white px-2 py-1 rounded-full font-semibold">
-              {totalIncludingShipping.toFixed(2)} {paymentMethod === "cash" ? "USD" : tokenSymbol}
+              {Number(totalIncludingShipping).toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })} {paymentMethod === "cash" ? "USD" : tokenSymbol}
             </span>
           </p>
         </div>

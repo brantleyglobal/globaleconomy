@@ -52,6 +52,15 @@ function useSelectedTokenBalance(
   };
 }
 
+function parseLocalNumber (rawNumber: string, locale: string) {
+  const amountToFormat = Intl.NumberFormat(locale).format(1.1);
+  const decimal = amountToFormat.charAt(amountToFormat.length - 2);
+
+  const normalized = rawNumber.replace(new RegExp(`[^0-9${decimal}-]`,"g"), "");
+
+  return Number(normalized);
+}
+
 export function useTransferHandler(config: TransferHandlerProps) {
   const {
     sender = "",
@@ -118,7 +127,9 @@ export function useTransferHandler(config: TransferHandlerProps) {
     }
 
     const amountNum = Number(value);
-    const parsedValue = parseUnits(value, 18);
+    const locale = navigator.language || "en-US";
+    const adjustedAmount = parseLocalNumber(value, locale);
+    const parsedValue = parseUnits(String(adjustedAmount), 18);
     const availableInDecimal = parseFloat(formatUnits(available, decimals ?? 18));
     if (amountNum > availableInDecimal) {
       setLoading(false);
@@ -160,7 +171,7 @@ export function useTransferHandler(config: TransferHandlerProps) {
       
       // Log transfer success
       const transferPayload = {
-        txhash: receipt2 ?? "",
+        txhash: receipt2?.toString() ?? "",
         contractaddress: selectedToken.address,
         sender,
         recipient,
@@ -172,7 +183,7 @@ export function useTransferHandler(config: TransferHandlerProps) {
         processedat: processedAt,
         priority: 0,
         retrycount: 0,
-        receipthash: receipt2 || "",
+        receipthash: receipt2?.toString() || "",
         notes: noteStatus,
         timestamp: new Date(Date.now()).toISOString(),
       };

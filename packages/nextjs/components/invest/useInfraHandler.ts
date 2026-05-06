@@ -63,6 +63,15 @@ type TxResult = {
   receipt: any | null;
 };
 
+function parseLocalNumber (rawNumber: string, locale: string) {
+  const amountToFormat = Intl.NumberFormat(locale).format(1.1);
+  const decimal = amountToFormat.charAt(amountToFormat.length - 2);
+
+  const normalized = rawNumber.replace(new RegExp(`[^0-9${decimal}-]`,"g"), "");
+
+  return Number(normalized);
+}
+
 export function useInfra(): UseDepositResult {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -94,7 +103,9 @@ export function useInfra(): UseDepositResult {
         if (!window.ethereum) throw new Error("Ethereum provider not found.");
 
         const iface = new Interface(infraAbi.abi);
-        parsedValue = parseUnits(amountStr, token.decimals);
+        const locale = navigator.language || "en-US";
+        const adjustedAmount = parseLocalNumber(amountStr, locale);
+        parsedValue = parseUnits(String(adjustedAmount), 18);
 
         let callAddress;
         if (token.symbol === "ETH") {
@@ -176,7 +187,7 @@ export function useInfra(): UseDepositResult {
         const now = new Date(Date.now()).toISOString();
 
         const successPayload: VaultPayload = {
-          txhash: receipt2 ?? "",
+          txhash: receipt2?.toString() ?? "",
           contractaddress: deployments.RegionInfrastructure,
           useraddress: userAddress,
           exchangerate: rate,
@@ -193,7 +204,7 @@ export function useInfra(): UseDepositResult {
           processedat: now,
           priority: 0,
           retrycount: 0,
-          receipthash: receipt2?.blockHash.toString()  ?? "",
+          receipthash: receipt2?.toString()  ?? "",
           notes: "success",
           timestamp: now,
         };

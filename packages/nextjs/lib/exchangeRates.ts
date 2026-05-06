@@ -342,19 +342,21 @@ async function fetchStablecoinRates(): Promise<StablecoinRate[]> {
   const results: StablecoinRate[] = [];
 
   for (const coin of stablecoins) {
-    if (!coin || coin.disabled || !trustedNetworks.includes(coin.network)) continue;
-
-    const rate = await fetchRate(coin);
-    if (rate) {
-      results.push(rate);
-    } else {
-      //console.warn(`[FetchRates] Skipped or failed for ${coin.symbol} on ${coin.network}`);
+    if (!coin) {
+      console.warn("SKIPPED: coin is null");
+      continue;
     }
-
-    if (rate && !rate.healthy) {
-      //console.warn(`[Health] ${coin.symbol} marked unhealthy: ${rate.rate}`);
+    if (coin.disabled) {
+      console.warn("SKIPPED DISABLED:", coin.symbol);
+      continue;
+    }
+    if (!trustedNetworks.includes(coin.network)) {
+      console.warn("SKIPPED UNTRUSTED NETWORK:", coin.symbol, coin.network);
+      continue;
     }
   }
+
+  //console.log("Stablecoins:", stablecoins);
 
   /*console.table(results.map(r => ({
     symbol: r.symbol,
@@ -414,6 +416,12 @@ function generateFallbackRates(): StablecoinRate[] {
   });
 }
 
+let inFlightFetch: Promise<any> | null = null;
+
+function isValidRate(n: number | null | undefined) {
+  return typeof n === "number" && Number.isFinite(n) && n > 0;
+}
+
 export async function getExchangeRates(): Promise<{
   rates: StablecoinRate[];
   gbdoRate: number;
@@ -421,73 +429,114 @@ export async function getExchangeRates(): Promise<{
 }> {
   const now = Date.now();
 
-  // ✅ If we've already attempted within 24h, return cached or guarded fallback
-  if (now - lastUpdated < UPDATE_INTERVAL_MS) {
+  // Early return if within interval and we have cachedRates
+  if (now - lastUpdated < UPDATE_INTERVAL_MS && cachedRates) {
     return {
-      rates: cachedRates ?? generateFallbackRates(),
-      gbdoRate: cachedGBDoRate ?? 1,
-      lastUpdated
-    };
-  }
-
-  try {
-    // 🔹 Fresh attempt
-    let stablecoinRates = await fetchStablecoinRates();
-
-    // Step 1: apply guards
-    stablecoinRates = stablecoinRates.map(r => ({
-      ...r,
-      rate: applyGuard(r.symbol, r.rate),
-    }));
-
-    // Step 2: GBDo update logic
-    if (shouldUpdateGBDo()) {
-      const rawRate = calculateGBDoRate(stablecoinRates);
-      const smoothed = cachedGBDoRate != null
-        ? smoothRate(rawRate, cachedGBDoRate)
-        : rawRate;
-
-      cachedGBDoRate = smoothed;
-      lastUpdated = now;
-    }
-
-    const gbdoRate = cachedGBDoRate ?? calculateGBDoRate(stablecoinRates);
-
-    // Step 3: derive rateAgainstGBDo
-    const ratesWithGBDo = stablecoinRates.map(r => {
-      const scaledRate = r.symbol === "GBDo" ? gbdoRate : r.rate;
-      const relativeRate =
-        r.symbol === "GBDo" ? 1 : (gbdoRate > 0 ? scaledRate / gbdoRate : 0);
-
-      return {
-        ...r,
-        rate: Number(scaledRate.toFixed(6)),
-        rateAgainstGBDo: Number(relativeRate.toFixed(6)),
-      };
-    });
-
-    // ✅ Cache full result for the day
-    cachedRates = ratesWithGBDo;
-
-    return {
-      rates: ratesWithGBDo,
-      gbdoRate,
+      rates: cachedRates,
+      gbdoRate: isValidRate(cachedGBDoRate) ? cachedGBDoRate! : 1,
       lastUpdated,
     };
-    } catch (err) {
-    // Mark the attempt as done for the day
-    lastUpdated = now;
-
-    // Generate and store fallback rates
-    const fallbackRates = generateFallbackRates();
-    cachedRates = fallbackRates;
-    cachedGBDoRate = 1;
-
-    return {
-      rates: fallbackRates,
-      gbdoRate: 1,
-      lastUpdated
-    };
   }
+
+  // Dedupe concurrent fetches
+  if (inFlightFetch) {
+    return inFlightFetch;
+  }
+
+  inFlightFetch = (async () => {
+    try {
+      const stablecoinRatesRaw = await fetchStablecoinRates();
+
+      // Validate fetched data
+      if (!stablecoinRatesRaw || stablecoinRatesRaw.length === 0) {
+        console.warn("No stablecoin rates fetched — using fallback");
+        const fallbackRates = generateFallbackRates();
+        cachedRates = fallbackRates;
+        cachedGBDoRate = 1.03; // explicit fallback
+        // Do NOT update lastUpdated so we can retry sooner if desired
+        inFlightFetch = null;
+        return {
+          rates: fallbackRates,
+          gbdoRate: cachedGBDoRate,
+          lastUpdated,
+        };
+      }
+
+      // Apply guards
+      const stablecoinRates = stablecoinRatesRaw.map(r => ({
+        ...r,
+        rate: applyGuard(r.symbol, r.rate),
+      }));
+
+      // Compute raw GBDo rate and validate
+      const rawGBDo = calculateGBDoRate(stablecoinRates);
+      const validRawGBDo = isValidRate(rawGBDo) ? rawGBDo : null;
+
+      let gbdoRateToUse: number;
+
+      if (shouldUpdateGBDo() && validRawGBDo) {
+        // If we have a previous cachedGBDoRate, smooth; otherwise use raw
+        if (isValidRate(cachedGBDoRate)) {
+          const smoothed = smoothRate(validRawGBDo, cachedGBDoRate!);
+          cachedGBDoRate = isValidRate(smoothed) ? smoothed : cachedGBDoRate;
+        } else {
+          // No previous cached value — initialize from raw (do not force 1.03)
+          cachedGBDoRate = validRawGBDo;
+        }
+        // Only mark successful update time after we have a valid cachedGBDoRate
+        lastUpdated = now;
+      }
+
+      // Final gbdoRate: prefer cached if valid, else raw if valid, else fallback
+      if (isValidRate(cachedGBDoRate)) {
+        gbdoRateToUse = cachedGBDoRate!;
+      } else if (validRawGBDo) {
+        gbdoRateToUse = validRawGBDo;
+        cachedGBDoRate = validRawGBDo;
+        lastUpdated = now;
+      } else {
+        // Last resort fallback
+        gbdoRateToUse = 1.03;
+        cachedGBDoRate = gbdoRateToUse;
+        // Do NOT update lastUpdated so we can retry later
+      }
+
+      // Derive ratesAgainstGBDo
+      const ratesWithGBDo = stablecoinRates.map(r => {
+        const scaledRate = r.symbol === "GBDo" ? gbdoRateToUse : r.rate;
+        const relativeRate = r.symbol === "GBDo" ? 1 : (gbdoRateToUse > 0 ? scaledRate / gbdoRateToUse : 0);
+        return {
+          ...r,
+          rate: Number(scaledRate.toFixed(6)),
+          rateAgainstGBDo: Number(relativeRate.toFixed(6)),
+        };
+      });
+
+      // Cache full result
+      cachedRates = ratesWithGBDo;
+
+      inFlightFetch = null;
+
+      return {
+        rates: ratesWithGBDo,
+        gbdoRate: gbdoRateToUse,
+        lastUpdated,
+      };
+    } catch (err) {
+      console.error("getExchangeRates fetch error:", err);
+      // On error, do not update lastUpdated so we can retry next call
+      const fallbackRates = generateFallbackRates();
+      cachedRates = fallbackRates;
+      cachedGBDoRate = 1.03;
+      inFlightFetch = null;
+      return {
+        rates: fallbackRates,
+        gbdoRate: 1.03,
+        lastUpdated,
+      };
+    }
+  })();
+
+  return inFlightFetch;
 }
 

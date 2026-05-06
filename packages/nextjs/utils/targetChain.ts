@@ -176,12 +176,12 @@ export async function sendTransferOnTargetChain(
   const accounts = await web3.eth.getAccounts();
   const from = accounts[0];
 
-  let receipt;
+  let receipt2;
   if (selectedToken.symbol === "GBDo") {
     // Native transfer: input is already 18 decimals, chain uses 18 → no rescale
     const value = rescaleAmount(tamount, 18, chainInfo.nativeCurrency.decimals);
     
-    receipt = await web3.eth.sendTransaction({
+    receipt2 = await web3.eth.sendTransaction({
       from,
       to: recipient,
       value,
@@ -192,7 +192,7 @@ export async function sendTransferOnTargetChain(
     const decimals = selectedToken.decimals ?? 18;
     const value = rescaleAmount(tamount, 18, decimals);
     const tokenContract = new web3.eth.Contract(erc20Abi, selectedToken.address);
-    receipt = await tokenContract.methods
+    receipt2 = await tokenContract.methods
       .transfer(recipient, value)
       .send({ from, gas: "80000" });
   }
@@ -200,5 +200,5 @@ export async function sendTransferOnTargetChain(
   // Reset back to GlobalChain if required
   await switchOrAddChain(activeProvider, CHAINS.global);
 
-  return { txHash: receipt.transactionHash, receipt };
+  return { dTxHash: receipt2.transactionHash, receipt2 };
 }

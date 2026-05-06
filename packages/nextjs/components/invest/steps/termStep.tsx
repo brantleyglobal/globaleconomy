@@ -24,6 +24,25 @@ export type Props = {
   onPrevious: () => void;
 };
 
+function formatMoneyFromDigits(raw: string) {
+  // Remove all non‑digits
+  const digits = raw.replace(/\D/g, "");
+
+  if (digits === "") return "";
+
+  // Convert to number of cents
+  const cents = Number(digits);
+
+  // Convert to dollars with 2 decimals
+  const value = (cents / 100).toFixed(2);
+
+  // Add commas
+  return Number(value).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
 export const TermStep: React.FC<Props> = ({
   supportedTokens,
   selectedTokenSymbol,
@@ -143,7 +162,10 @@ export const TermStep: React.FC<Props> = ({
             className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white/50 placeholder:text-white/50 hover:bg-secondary/5"
             placeholder="Enter Amount"
             value={depositAmount}
-            onChange={e => setDepositAmount(e.target.value)}
+            onChange={e => {
+              const formatted = formatMoneyFromDigits(e.target.value);
+              setDepositAmount(formatted);
+            }}
           />
         </div>
         {/* Email inputs */}

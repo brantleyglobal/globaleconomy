@@ -90,7 +90,7 @@ export const AcquireModal: React.FC<Props> = ({
     (token2) => token2.symbol === selectedTokenSymbol2
   ) as Token | undefined;
 
-  const balance = useTokenBalance(connectedWallet, selectedToken!);
+  //const balance = useTokenBalance(connectedWallet, selectedToken!);
 
   function toggleHelp() {
     if (!isHelpMode) {
