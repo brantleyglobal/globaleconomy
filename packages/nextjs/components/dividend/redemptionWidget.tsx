@@ -33,7 +33,8 @@ interface Summary {
 enum ModalStep {
   SelectionStep = 0,
   AddressStep = 1,
-  RedemptionStep = 2,
+  TokenStep = 2,
+  RedemptionStep = 3,
   Complete = 3,
 }
 
@@ -51,7 +52,7 @@ export const DividendRedeemModal = ({ isOpen, onClose, openWalletModal }: Faucet
 
   // Ref to remember the step from which help was opened
   const [savedStep, setSavedStep] = useState<ModalStep | null>(null);
-  const [userAction, setUserAction] = useState<"addressChange" | "redemption" | null>(null);
+  const [userAction, setUserAction] = useState<"addressChange" | "tokenChange" | "redemption" | null>(null);
   
   const [autoPay, setAutoPay] = useState(false);
 
@@ -62,6 +63,7 @@ export const DividendRedeemModal = ({ isOpen, onClose, openWalletModal }: Faucet
 
   const [walletTokens, setWalletTokens] = useState<(Token & { balance: bigint })[]>([]);
   const [selectedTokenSymbol, setSelectedTokenSymbol] = useState<string>("");
+  const [selectedTokenSymbol2, setSelectedTokenSymbol2] = useState<string>("");
   const [amount, setAmount] = useState("");
   const [recipient, setRecipient] = useState<AddressType>();
   const [available, setAvailable] = useState<bigint | undefined>(undefined);
@@ -245,7 +247,7 @@ export const DividendRedeemModal = ({ isOpen, onClose, openWalletModal }: Faucet
     }
   };*/
 
-  const stepLabels = ["Address Change", "Redemption Details", "Done"];
+  const stepLabels = ["Redemption Process", "Wallet Address Change", "Payout Token Change", "Done"];
 
   return (
       
@@ -277,9 +279,11 @@ export const DividendRedeemModal = ({ isOpen, onClose, openWalletModal }: Faucet
               onNext={() => {
                 if (!userAction) return;
                 setIsNewAddressSelected(userAction === "addressChange");
+                setIsNewAddressSelected(userAction === "tokenChange");
                 setIsRedemptionSelected(userAction === "redemption");
                 if (userAction === "addressChange") setStep(ModalStep.AddressStep);
-                else setStep(ModalStep.RedemptionStep);
+                else if (userAction === "redemption") setStep(ModalStep.RedemptionStep);
+                else if (userAction === "tokenChange") setStep(ModalStep.TokenStep);
               }}
               onHelpToggle={() => setIsHelpMode(true)}
             />
@@ -304,12 +308,35 @@ export const DividendRedeemModal = ({ isOpen, onClose, openWalletModal }: Faucet
             />
           )}
 
-          {userAction === "redemption" && step === ModalStep.RedemptionStep && (
-            <RedemptionStep
+          {userAction === "tokenChange" && step === ModalStep.TokenStep && (
+            <AddressStep
               newAddress={newAddress ?? ""}
               setNewAddress={setNewAddress}
               selectedTokenSymbol={selectedTokenSymbol}
               setSelectedTokenSymbol={setSelectedTokenSymbol}
+              userFirstName={userFirstName}
+              setUserFirstName={setUserFirstName}
+              userLastName={userLastName}
+              setUserLastName={setUserLastName}
+              userEmail={userEmail}
+              setUserEmail={setUserEmail}
+              onHelpToggle={() => setIsHelpMode(true)}
+              onNext={() => setStep(ModalStep.Complete)}
+              onBack={() => setStep(ModalStep.SelectionStep)}
+              isDisabled={isNewAddressDisabled}
+            />
+          )}
+
+          {userAction === "redemption" && step === ModalStep.RedemptionStep && (
+            <RedemptionStep
+              newAddress={newAddress ?? ""}
+              setNewAddress={setNewAddress}
+              amount={amount ?? ""}
+              setAmount={setAmount}
+              selectedTokenSymbol={selectedTokenSymbol}
+              setSelectedTokenSymbol={setSelectedTokenSymbol}
+              selectedTokenSymbol2={selectedTokenSymbol2}
+              setSelectedTokenSymbol2={setSelectedTokenSymbol2}
               userFirstName={userFirstName}
               setUserFirstName={setUserFirstName}
               userLastName={userLastName}

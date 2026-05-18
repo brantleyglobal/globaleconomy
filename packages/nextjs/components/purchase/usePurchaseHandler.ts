@@ -13,7 +13,7 @@ import { shippingRates, Region, ShippingCategory } from "~~/components/shipping/
 import { supportedCountries } from "~~/components/shipping/supportedCountries";
 import { sendPurchaseEmail } from "~~/components/email/sendPurchaseEmail"
 import { getExchangeRates } from "~~/lib/exchangeRates";
-import { sendTransferOnTargetChain } from "~~/utils/targetChain";
+import { sendTransferOnTargetChain, ensureGlobalChain } from "~~/utils/targetChain";
 import { zeroAddress } from "viem";
 
 type Hex = `0x${string}`;
@@ -393,6 +393,8 @@ async function handleCryptoPurchase(params: InitiateParams) {
   try {
     // Step 1: Encode calldata for asset purchase
 
+    await ensureGlobalChain(window.ethereum);
+
     const btcWallet: BitcoinWallet = {
       sendTransaction: async (to, amount) => {
         if (!window.xfi?.bitcoin) {
@@ -658,6 +660,8 @@ async function handleCryptoPurchase(params: InitiateParams) {
       region, 
       commission: commmissionTotal || "",
       payout,
+      refund: false,
+      refundhash: "",
       status: "accepted",
       chainstatus: chainStatus,
       queuedat: new Date(Date.now()).toISOString(),
@@ -727,7 +731,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
         firstname,
         lastname,
         email,
-        tx: dTxHash,
+        tx: receipt2,
         checkoutAsset,
         quantity,
         totalTokenAmount: formattedAmount,
@@ -738,7 +742,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
         phone,
         country,
         postalCode,
-        receipt: receipt2?.blockHash || "",
+        receipt: receipt2 || "",
         promo: promo || "",
         purchaseMadeEvents: [purchaseMade],
       });

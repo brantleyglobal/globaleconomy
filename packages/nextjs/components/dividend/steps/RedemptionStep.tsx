@@ -5,7 +5,7 @@ import { Address as AddressType, getContract, erc20Abi } from "viem";
 import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { BanknotesIcon, WalletIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
-import { Token, dividendTokens } from "~~/components/constants/tokens";
+import { Token, dividendTokens, supportedTokens } from "~~/components/constants/tokens";
 import { ethers, Contract, BrowserProvider } from "ethers";
 import smartVaultabi from "~~/lib/contracts/abi/SmartVault.json";
 import { toast } from "react-hot-toast";
@@ -27,8 +27,12 @@ interface Summary {
 type Props = {
   newAddress: string | undefined;
   setNewAddress: (val: string) => void;
+  amount: string;
+  setAmount: (val: string) => void;
   selectedTokenSymbol: string;
   setSelectedTokenSymbol: (val: string) => void;
+  selectedTokenSymbol2: string;
+  setSelectedTokenSymbol2: (val: string) => void;
   userFirstName: string;
   setUserFirstName: (val: string) => void;
   userLastName: string;
@@ -42,11 +46,35 @@ type Props = {
   isDisabled?: boolean;
 };
 
+function formatMoneyFromDigits(raw: string) {
+  // Remove all non‑digits
+  const digits = raw.replace(/\D/g, "");
+
+  if (digits === "") return "";
+
+  // Convert to number of cents
+  const cents = Number(digits);
+
+  // Convert to dollars with 2 decimals
+  const value = (cents / 100).toFixed(2);
+  const locale = navigator.language || "en-US";
+
+  // Add commas
+  return Number(value).toLocaleString(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
 export default function RedemptionStep({
   newAddress,
   setNewAddress,
+  amount,
+  setAmount,
   selectedTokenSymbol,
   setSelectedTokenSymbol,
+  selectedTokenSymbol2,
+  setSelectedTokenSymbol2,
   userFirstName,
   setUserFirstName,
   userLastName,
@@ -71,6 +99,7 @@ export default function RedemptionStep({
   const [autoPay, setAutoPay] = useState(false);
 
   const [walletTokens, setWalletTokens] = useState<(Token & { balance: bigint })[]>([]);
+  const [walletTokens2, setWalletTokens2] = useState<(Token & { balance: bigint })[]>([]);
   const [recipient, setRecipient] = useState<AddressType>();
   const [available, setAvailable] = useState<bigint | undefined>(undefined);
   const [cavailable, setCAvailable] = useState<bigint | undefined>(undefined);
@@ -93,8 +122,6 @@ export default function RedemptionStep({
   const [committedQuarters, setCommittedQuarters] = useState<number>(4); // example default, adjust as needed
   const [summary, setSummary] = useState<Summary | null>(null);
   const [emailError, setEmailError] = useState("");
-
-  const [amount, setAmount] = useState("");
 
   const safeAmount = parseFloat(amount);
   const isAmountValid = !isNaN(safeAmount) && isFinite(safeAmount) && safeAmount > 0;
@@ -122,10 +149,54 @@ export default function RedemptionStep({
     [walletTokens, selectedTokenSymbol]
   );
 
+  const selectedToken2 = supportedTokens.find(
+    (token) => token.address === selectedTokenSymbol2
+  ) as Token | undefined;
+
+  useEffect(() => {
+    if (!address || !publicClient) {
+      setWalletTokens([]);
+      setSelectedTokenSymbol("");
+      return;
+    }
+    const fetchBalances = async () => {
+        try {
+          const balances = await Promise.all(
+            dividendTokens.map(async (token) => {
+              let balance: bigint = 0n;
+              if (token.isNative) {
+                balance = await publicClient.getBalance({ address });
+              } else {
+                const contract = getContract({ address: token.address, abi: erc20Abi, client: publicClient });
+                balance = await contract.read.balanceOf([address]);
+              }
+              return { ...token,
+                chain: token.chain as "global" | "ethereum" | "polygon" | "bitcoin",
+                balance,
+              };
+            })
+          );
+          const tokensWithBalance = balances.filter((token) => token.balance > 0n);
+          setWalletTokens(tokensWithBalance);
+          if (tokensWithBalance.length > 0) {
+            setSelectedTokenSymbol(tokensWithBalance[0].symbol);
+          } else {
+            setSelectedTokenSymbol("");
+          }
+        } catch (error) {
+          console.error("Failed to fetch token balances:", error);
+          setWalletTokens([]);
+          setSelectedTokenSymbol("");
+        }
+      };
+      fetchBalances();
+    }, [address, publicClient]);
+
   const { send } = useRedemptionHandler({
     sender: address,
     chainId,
     selectedToken,
+    selectedToken2,
     available,
     signature: "",
     openWalletModal,
@@ -191,6 +262,7 @@ export default function RedemptionStep({
     !chainId ||
     !recipient || 
     !selectedToken || 
+    !selectedToken2 || 
     isProcessing
 
   return (
@@ -206,24 +278,7 @@ export default function RedemptionStep({
           
         </button>
       </div>
-      <div className="overflow-x-auto whitespace-nowrap text-xs mt-2 px-2 p-4 scrollbar-hide">
-        {/*<div className="inline-flex gap-4">
-          {stepLabels.map((label, index) => (
-            <span
-              key={label}
-              className={`min-w-[80px] text-center block ${
-                step === index ? "text-secondary/90 font-medium" : "text-gray-500"
-              }`}
-            >
-              {label}
-            </span>
-          ))}
-        </div>*/}
-      </div>
       <div className="space-y-4">
-        <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-light text-primary">INVESTMENT REDEMPTION</h3>
-        </div>
         <div className="space-y-1">
           <span className="text-xs mb-4 font-light">SELECT DIVIDEND TOKEN</span>
           <select
@@ -242,6 +297,41 @@ export default function RedemptionStep({
               </option>
             ))}
           </select>
+        </div>
+        <div className="space-y-1">
+          <span className="text-xs mb-4 font-light">SELECT PAYOUT TOKEN</span>
+          <select
+            className="select rounded-md bg-black w-full mt-2 text-info-600 mb-4 outline-none hover:bg-secondary/5 border-none focus:ring-0 focus:outline-none"
+            value={selectedTokenSymbol2}
+            onChange={(e) => {
+              setSelectedTokenSymbol2(e.target.value);
+            }}
+          >
+            <option value="" disabled>Select Payout Token</option>
+            {supportedTokens
+            .filter(t => !["GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh"].includes(t.symbol))
+            .map(t => (
+              <option key={t.symbol} value={t.symbol}>
+                {t.symbol} • {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <span className="text-xs mb-4 font-light">ENTER AMOUNT TO BE REDEEMED</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            pattern="[0-9]*"
+            className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white/50 placeholder:text-white/50 hover:bg-secondary/5"
+            placeholder="Enter Redemption Amount"
+            value={amount}
+            onChange={e => {
+              const formatted = formatMoneyFromDigits(e.target.value);
+              setAmount(formatted);
+            }}
+          />
+
         </div>
         <div className="flex justify-between px-2 mt-10 mb-12">
           <div>

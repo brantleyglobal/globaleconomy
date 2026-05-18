@@ -19,8 +19,8 @@ export const DisclosureModal: React.FC<Props> = ({ isOpen, onClose, sections }) 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center px-4">
-      <div className="bg-black text-white rounded-lg shadow-lg w-full max-w-3xl p-6 relative">
+    <div className="fixed inset-0 z-50 h-full bg-black/80 flex items-center justify-center px-4">
+      <div className="flex flex-col flex-full h-[min(90vh,auto)] bg-black text-white rounded-lg shadow-lg w-full max-w-4xl p-6 relative">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-white text-sm hover:text-primary"
@@ -28,7 +28,7 @@ export const DisclosureModal: React.FC<Props> = ({ isOpen, onClose, sections }) 
           ✕
         </button>
 
-        <h2 className="text-lg font-light mb-4">INVESTMENT DISCLOSURE</h2>
+        <h2 className="text-xl font-light mb-4">INVESTMENT DISCLOSURE</h2>
 
         {/* Mobile Dropdown */}
         <div className="md:hidden mb-4">
@@ -45,7 +45,7 @@ export const DisclosureModal: React.FC<Props> = ({ isOpen, onClose, sections }) 
           </select>
         </div>
         {/* Desktop Tabs */}
-        <div className="hidden md:flex text-xs space-x-4 border-b border-white/20 mb-4 overflow-x-auto">
+        <div className="hidden md:flex text-xs space-x-4 border-b border-white/20 mb-4 py-4 overflow-x-auto">
           {sections.map(sec => (
             <button
               key={sec.id}
@@ -59,7 +59,7 @@ export const DisclosureModal: React.FC<Props> = ({ isOpen, onClose, sections }) 
           ))}
         </div>
 
-        <div className="max-h-64 overflow-y-auto text-sm text-info-600 text-justify">
+        <div className="max-h-64 overflow-y-auto text-sm text-info-600 mb-8 mt-2 text-justify">
           <div
             dangerouslySetInnerHTML={{
               __html: DOMPurify.sanitize(

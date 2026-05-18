@@ -19,16 +19,17 @@ import {
   AddressInput,
 } from "~~/components/globalEco";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
-import { TransferSummary } from "~~/components/globalEco/transferSummary";
 import { toast } from "react-hot-toast";
-import { useTransferHandler } from "~~/components/transfer/useTransferHandler";
-import { sendTransferConfirmation } from "~~/components/email/sendTransferEmail";
+import { useRefundHandler } from "~~/components/refunds/useRefundHandler";
+import { sendRefundConfirmation } from "~~/components/email/sendRefundEmail";
 import { getAddress } from "viem";
-import HelpStep from "~~/components/transfer/helpStep";
+import deployments from "~~/lib/contracts/deployments.json";
+import HelpStep from "~~/components/refunds/helpStep";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { mainnet, polygon } from "viem/chains";
 import { GLOBALCHAIN } from '~~/utils/globalEco/customChains';
 import { useRpcStatus } from "~~/hooks/globalEco/statusRpc";
+
 
 const RPC_URLS = {
   global: process.env.NEXT_PUBLIC_DEX_RPC_URL || "",
@@ -81,13 +82,10 @@ function formatMoneyFromDigits(raw: string) {
   });
 }
 
-export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) => {
+export const Refund = ({ openWalletModal }: { openWalletModal?: () => void }) => {
   const { address, isConnected, chain } = useAccount();
 
   const [step, setStep] = useState(0);
-  const [recipient, setRecipient] = useState<AddressType>();
-  const [localRecipient, setLocalRecipient] = useState(recipient ?? "");
-  const [amount, setAmount] = useState("");
   const [userFirstName, setUserFirstName] = useState("");
   const [userLastName, setUserLastName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -96,6 +94,7 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
   const [savedStep, setSavedStep] = useState<ModalStep | null>(null);
   const [showStablecoinInfo, setShowStablecoinInfo] = useState(false);
   const rpcUp = useRpcStatus();
+  const [data, setData] = useState("");
 
   console.log("RPC status:", rpcUp);
 
@@ -117,49 +116,35 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
   const [walletTokens, setWalletTokens] = useState<
     (typeof supportedTokens[0] & { balance: bigint })[]
   >([]);
-  const [selectedTokenSymbol, setSelectedTokenSymbol] = useState<string>("");
+  const [receipt, setUserReceipt] = useState<string>("");
+  const [contractAddress, setSelectedContractAddress] = useState<string>("");
   const [available, setAvailable] = useState<bigint | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [txResult, setTxResult] = useState<any>(null);
   const [addressError, setAddressError] = useState("");
   const [showWalletNotice, setShowWalletNotice] = useState(false);
+  const [isValid, setIsValid] = useState(false);
+
+  const validateHash = (value: string) => {
+
+    //Normalize
+    let v = value.trim().toLowerCase();
+    if (v.length > 0 && !v.startsWith("0x")) {
+      v = "0x" + v;
+    }
+
+    setUserReceipt(v);
+
+    const ok = /^0x[a-f0-9]{64}$/.test(v);
+    setIsValid(ok);
+
+  };
 
   enum ModalStep {
     DetailStep = 0,
     DoneStep = 1,
   }
-
-  // Merge tokens without duplicates by symbol
-  const mergedTokens = useMemo(() => {
-    const map = new Map<string, typeof supportedTokens[0]>();
-
-    [...supportedTokens, ...dividendTokens].forEach((token) => {
-      // Normalize to ensure 'isNative' is always boolean
-      const normalizedToken = {
-        ...token,
-        isNative: token.isNative ?? false, // default false if undefined
-        chain: token.chain ?? "unknown",
-      };
-
-      if (!map.has(normalizedToken.symbol)) {
-        map.set(normalizedToken.symbol, normalizedToken);
-      }
-    });
-
-    return Array.from(map.values());
-  }, []);
-
-
-  const selectedToken = useMemo(
-    () => mergedTokens.find((t) => t.symbol === selectedTokenSymbol),
-    [mergedTokens, selectedTokenSymbol]
-  );
-
-  const isValidAmount = (value: string): boolean => {
-    const num = parseFloat(value);
-    return !isNaN(num) && isFinite(num) && num > 0;
-  };
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -176,77 +161,18 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
     }
   };
 
-  // Ref to hold debounce timer
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-      if (recipient !== localRecipient) {
-      setLocalRecipient(recipient ?? "");
-      setAddressError("");
-      }
-  }, [recipient]);
-
-  // Validate and commit address after debounce or blur
-  const validateAndSetRecipient = (val: string) => {
-      try {
-      const checksummed = getAddress(val);
-      setRecipient(checksummed);
-      setAddressError("");
-      } catch {
-      setRecipient("");
-      setAddressError(val === "" ? "" : "Invalid Ethereum address");
-      }
-  };
-
-  const handleRecipientChange = (val: string) => {
-      // Always update the raw value
-      setRecipient(val);
-
-      // If empty, clear error
-      if (val === "") {
-          setAddressError("");
-          return;
-      }
-
-      // If not long enough yet, mark as incomplete
-      if (val.length < 42) {
-          setAddressError("Address incomplete");
-          return;
-      }
-
-      // Once length is correct, try to checksum/validate
-      try {
-          const checksummed = getAddress(val);
-          setRecipient(checksummed);
-          setAddressError("");
-      } catch {
-          setRecipient(val);
-          setAddressError("Invalid Ethereum address");
-      }
-  };
-
-  // On blur, immediately validate and commit
-    const handleBlur = () => {
-      if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-      debounceTimer.current = null;
-      }
-      validateAndSetRecipient(localRecipient.trim());
-  };
-
-  const { send } = useTransferHandler({
+  const { send } = useRefundHandler({
     sender: address,
     chainId: chain?.id,
-    selectedToken,
+    receipt,
+    contractAddress,
     available,
     signature: "",
-    openWalletModal,
-    setRecipient,
-    setSendValue: setAmount,
+    openWalletModal
   });
 
   const handleSendClick = async () => {
-    if (!recipient || !amount || !address) {
+    if (!address) {
       console.log("Missing required fields.");
       return;
     }
@@ -256,98 +182,34 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
     }
     setIsProcessing(true);
     try {
-      console.log("made it");
-      const result = await send(recipient, amount);
+     
+      const result = await send(receipt, contractAddress);
       setTxResult(result);
 
       if (!result?.success) {
-        toast.error(`Transfer failed: ${result?.error || "Unknown error"}`);
+        toast.error(`Refund request failed: ${result?.error || "Unknown error"}`);
         return;
       }
 
-      await sendTransferConfirmation({
-        templateType: "transfer",
+      await sendRefundConfirmation({
+        templateType: "refund",
         userFirstName,
         userLastName,
         userEmail,
         connectedWallet: address,
+        contractAddress: contractAddress,
         receipt: result.receipt2?.toString() || "",
       });
       toast.success("Investment confirmation email sent.");
       setStep(1);
     } catch (error: any) {
-      toast.error(`Transfer failed: ${error?.message || "Unknown error"}`);
+      toast.error(`Refund request failed: ${error?.message || "Unknown error"}`);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Fetch selected token balance with proper chain object and transport
-  useEffect(() => {
-    let isMounted = true;
-    const fetchBalance = async () => {
-      if (!address || !selectedToken) {
-        setAvailable(undefined);
-        return;
-      }
-
-      const clients = {
-        ethereum: createPublicClient({
-          chain: mainnet,
-          transport: http(RPC_URLS.ethereum),
-        }),
-        polygon: createPublicClient({
-          chain: polygon,
-          transport: http(RPC_URLS.polygon),
-        }),
-        global: createPublicClient({
-          chain: GLOBALCHAIN,
-          transport: http(RPC_URLS.global),
-        }),
-      };
-
-      try {
-        // Select client by token address ownership
-        const client =
-          myChainSupportedTokenAddresses.has(selectedToken.address)
-            ? clients.global
-            : polyAddresses.has(selectedToken.address)
-            ? clients.polygon
-            : clients.ethereum;
-
-        const balance = selectedToken.isNative
-          ? await client.getBalance({ address })  // no chain param here
-          : await client.readContract({
-              address: selectedToken.address,
-              abi: erc20Abi,
-              functionName: "balanceOf",
-              args: [address],
-            }); // no chain param here
-
-        if (isMounted) {
-          setAvailable(balance);
-        }
-      } catch (e) {
-        if (isMounted) {
-          toast.error("Failed to fetch balance.");
-          setAvailable(0n);
-        }
-      }
-    };
-
-    fetchBalance();
-    return () => {
-      isMounted = false;
-    };
-    console.log("token: ", selectedToken?.symbol);
-  }, [address, selectedToken]);
-
-  // Loading state for form validation
-  useEffect(() => {
-    setLoading(!recipient || !amount || !address);
-  }, [recipient, amount, address]);
-
-  const stepLabels = ["Transfer Details", "Done"];
+  const stepLabels = ["Refund Details", "Done"];
 
   function toggleHelp() {
     if (!isHelpMode) {
@@ -361,6 +223,24 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
       }
     }
   }
+
+  // Derive converted amount whenever depositAmount or exchangeRate changes
+    useEffect(() => {
+      if (!data) {
+        setSelectedContractAddress("");
+        return;
+      }
+  
+      let cAddress: any;
+      if (data === "AssetPurchase") {
+        cAddress = deployments.AssetPurchase;
+      }
+  
+      setSelectedContractAddress(
+        cAddress
+      );
+      
+    }, [data]);
 
   return (
     <div>
@@ -386,7 +266,7 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
             <>
               <div className="space-y-4">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-light text-primary">ASSET TRANSFER</h2>
+                  <h2 className="text-xl font-light text-primary">REFUND REQUEST</h2>
                   <button
                     onClick={toggleHelp}
                     aria-label="Toggle help"
@@ -396,94 +276,27 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
                     
                   </button>
                 </div>
+                <select
+                  className="select rounded-md bg-black w-full text-primary mt-2 outline-none hover:bg-secondary/5 border-none focus:ring-0 focus:outline-none"
+                  value={data}
+                  onChange={e => setData(e.target.value)}
+                >
+                  {/*<option value="" disabled>                                                                                                                  
+                    Select Request Type
+                  </option>*/}
+                  <option value="AssetPurchase">Product Purchase</option>
+                  {/*<option value="AcquisitionGateway">Native Currency Purchase</option>
+                  <option value="AssetPurchase">Dividend Deposit</option>
+                  <option value="AcquisitionGateway">Venture Deposit</option>*/}
+              </select>
 
-                <div className="space-y-1">
-                  <select
-                    className="select rounded-md bg-black w-full text-primary mt-2 outline-none hover:bg-secondary/5 border-none focus:ring-0 focus:outline-none"
-                    value={selectedTokenSymbol}
-                    onChange={(e) => setSelectedTokenSymbol(e.target.value)}
-                  >
-                    <option value="" disabled>
-                      {mergedTokens.length === 0
-                        ? "-- No Tokens Available --"
-                        : "Select Token to Transfer"}
-                    </option>
-                    {mergedTokens
-                      .filter(t => rpcUp || t.chain !== "global")   // Chain Status to Remove Native Transfers
-                      .filter(
-                        (t) =>
-                          t.symbol !== "COPx" &&
-                          t.symbol !== "GBDx"
-                      )
-                      .map((token) => (
-                        <option key={token.symbol} value={token.symbol}>
-                          {token.symbol} • {token.name}
-                        </option>
-                      ))}
-                  </select>
-                  <button
-                      type="button"
-                      onClick={() => setShowStablecoinInfo(true)}
-                      className="bg-white/10 animate-pulse backdrop-blur-md w-full px-6 py-2 mt-2 rounded-md text-sm text-white hover:bg-white/20 transition flex items-center gap-2 shadow-md"
-                  >
-                      Supported Stablecoin
-                  </button>                  
-                </div>
-
-                <AddressInput
-                  placeholder="Recipient Address"
-                  value={recipient ?? ""}
-                  onBlur={handleBlur}
-                  onChange={handleRecipientChange}
-                />
-                {addressError && (
-                  <p className="text-red-500 text-xs mt-1">{addressError}</p>
-                )}
                 <input
                   type="text"
-                  inputMode="decimal"
-                  pattern="[0-9]*"
+                  value={receipt}
+                  onChange={(e) => validateHash(e.target.value)} //setUserReceipt(e.target.value)} //need to protect the user here...
+                  placeholder="Input Receipt Hash '0x...'"
                   className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5"
-                  placeholder="Enter Amount to Transfer"
-                  value={amount}
-                  onChange={e => {
-                    const formatted = formatMoneyFromDigits(e.target.value);
-                    setAmount(formatted);
-                  }}
                 />
-
-                {selectedToken && (
-                  <TransferSummary
-                    from={address as `0x${string}`}
-                    to={recipient as `0x${string}`}
-                    token={{ ...selectedToken, chain: selectedToken.chain as "global" | "ethereum" | "polygon" | "bitcoin" }}
-                    amount={amount}
-                  />
-                )}
-
-                <div className="flex justify-between mb-4 px-2">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1">
-                      <span className="text-xs font-light">FROM</span>{" "}
-                      {isConnected && address ? (
-                        <Address address={address} onlyEnsOrAddress />
-                      ) : (
-                        <span className="text-sm ml-1">--</span>
-                      )}
-                    </div>
-                  </div>
-                  {/*<div>
-                    <span className="text-xs font-light">AVAILABLE</span>{" "}
-                    <span className="text-base font-light">
-                      {selectedToken && available !== undefined && available > 0n
-                        ? (Number(available) / 10 ** selectedToken.decimals).toFixed(2)
-                        : " --"}
-                    </span>
-                    {selectedToken && (
-                      <span className="text-xs text-gray-500">{selectedToken.symbol}</span>
-                    )}
-                  </div>*/}
-                </div>
 
                 <div className="">
                   <p className="text-white mb-2 mt-8 uppercase tracking-wide text-xs font-light">
@@ -559,10 +372,7 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
                     className="btn bg-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
                     onClick={handleSendClick}
                     disabled={
-                      !amount ||
-                      !isValidAmount(amount) ||
-                      !address ||
-                      !recipient ||
+                      !receipt||
                       isProcessing
                     }
                   >
@@ -586,7 +396,7 @@ export const Faucet = ({ openWalletModal }: { openWalletModal?: () => void }) =>
           )}
           {step === 1 && (
             <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 bg-white/5 rounded-lg shadow-md text-center overflow-y-auto">
-              <h3 className="text-xl font-light text-primary mb-4">TRANSFER COMPLETE</h3>
+              <h3 className="text-xl font-light text-primary mb-4">REQUEST COMPLETE</h3>
               <p className="text-gray-700 mb-2">
                 View Transaction Details The Dashboard.
               </p>

@@ -67,7 +67,7 @@ function parseLocalNumber (rawNumber: string, locale: string) {
   return Number(normalized);
 }
 
-export const OnStep: React.FC<Props> = ({
+export const LiquidateStep: React.FC<Props> = ({
   supportedTokens,
   selectedTokenSymbol,
   setSelectedTokenSymbol,
@@ -171,7 +171,7 @@ export const OnStep: React.FC<Props> = ({
         }
 
         // Compute token → GBDo
-        const exchangeRateFloat = tokenRate / gbdo;
+        const exchangeRateFloat = gbdo / tokenRate;
 
         // Extra validation
         if (!isFinite(exchangeRateFloat)) {
@@ -206,10 +206,8 @@ export const OnStep: React.FC<Props> = ({
       return;
     }
 
-    const rate = formatMoneyFromDigits(exchangeRate);
-    const locale = navigator.language || "en-US";
-    const amount = (parseLocalNumber(depositAmount, locale) * parseLocalNumber(exchangeRate, locale));
-    const converted = formatMoneyFromDigits((amount).toFixed(2)).toString();
+    // --- SET TO "0" ... FIFO LOGIC APPLIES && SWAP TO USER SPECIFIED TOKEN --- //
+    const converted = formatMoneyFromDigits((0).toFixed(2)).toString();
 
     setConvertedAmount(
       converted
@@ -221,7 +219,7 @@ export const OnStep: React.FC<Props> = ({
     <div className="flex flex-col h-full space-y-4">
     {/* Header - separate from background */}
     <div className="flex justify-between items-center mb-4">
-      <h2 className="text-xl font-light text-primary">GLOBAL DOLLAR PURCHASE</h2>
+      <h2 className="text-xl font-light text-primary">GLOBAL DOLLAR LIQUIDATION</h2>
       <button
         onClick={onHelpToggle}
         aria-label="Toggle help"
@@ -234,15 +232,15 @@ export const OnStep: React.FC<Props> = ({
     <div className="flex flex-col justify-between h-full rounded-xl">     
       <div className="space-y-4">
         <div>
-          <span className="text-xs mb-4 font-light">SELECT PAYMENT METHOD</span>
+          <span className="text-xs mb-4 font-light">SELECT PAYOUT METHOD</span>
           <select
             className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white/50 placeholder:text-white/50 hover:bg-secondary/5"
             value={selectedTokenSymbol}
             onChange={e => setSelectedTokenSymbol(e.target.value)}
           >
-            <option value="" disabled>Select Payment Token</option>
+            <option value="" disabled>Select Payout Token</option>
             {supportedTokens
-              .filter(t => !["GBDo", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(t.symbol))
+              .filter(t => !["GBDo", "GBDx", "COPx"].includes(t.symbol))
               .map(t => (
                 <option key={t.symbol} value={t.symbol}>
                   {t.symbol} • {t.name}
@@ -264,7 +262,7 @@ export const OnStep: React.FC<Props> = ({
             inputMode="decimal"
             pattern="[0-9]*"
             className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white/50 placeholder:text-white/50 hover:bg-secondary/5"
-            placeholder="Enter Spend Amount"
+            placeholder="Enter Amount To Liquidate"
             value={depositAmount}
             onChange={e => {
               const formatted = formatMoneyFromDigits(e.target.value);
@@ -273,7 +271,7 @@ export const OnStep: React.FC<Props> = ({
           />
 
         </div>
-        <div>
+        {/*<div>
           <input
             type="text"
             readOnly
@@ -286,7 +284,7 @@ export const OnStep: React.FC<Props> = ({
               1 {selectedTokenSymbol} ≈ {exchangeRate ? parseFloat(exchangeRate).toFixed(2) : ""} GBDo
             </p>
           )}
-        </div>
+        </div>*/}
 
         {/* Email inputs */}
         <div className="mt-12">

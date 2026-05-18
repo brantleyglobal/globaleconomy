@@ -11,6 +11,7 @@ import { Modal } from "~~/components/common/modal";
 import { DividendRedeemModal } from "~~/components/dividend/redemptionWidget";
 import { GlobalXchangeModal } from "~~/components/xchange/xchangeWidget";
 import { Faucet } from "~~/components/transfer/Faucet";
+import { Refund } from "~~/components/refunds/Refund";
 import { InvestmentModal } from "~~/components/invest/investmentModal";
 import { AcquireModal } from "~~/components/acquire/acquireModal";
 import MirrorModeToggle from "~~/components/common/mirrorToggle";
@@ -50,6 +51,7 @@ export const Header = () => {
   const [modalState, setModalState] = useState({
     swap: false,
     faucet: false,
+    refund: false,
     wallet: false,
     redeem: false,
     invest: false,
@@ -118,6 +120,12 @@ export const Header = () => {
                 className="text-white hover:text-primary transition"
               >
                 TRANSFER
+              </button>
+              <button
+                onClick={() => setModalState(s => ({ ...s, refund: true }))}
+                className="text-white hover:text-primary transition"
+              >
+                REFUNDS
               </button>
               <button
                 onClick={() => setModalState(s => ({ ...s, invest: true }))}
@@ -205,6 +213,17 @@ export const Header = () => {
               <li>
                 <button
                   onClick={() => {
+                    setModalState(s => ({ ...s, refund: true }));
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left py-1 px-6 hover:text-primary transition"
+                >
+                  REFUNDS
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
                     setModalState(s => ({ ...s, invest: true }));
                     setMobileMenuOpen(false);
                   }}
@@ -237,6 +256,13 @@ export const Header = () => {
         onClose={() => setModalState(s => ({ ...s, faucet: false }))}
       >
         <Faucet openWalletModal={() => setModalState({ ...modalState, wallet: true })} />
+      </Modal>
+
+      <Modal
+        isOpen={modalState.refund}
+        onClose={() => setModalState(s => ({ ...s, refund: false }))}
+      >
+        <Refund openWalletModal={() => setModalState({ ...modalState, wallet: true })} />
       </Modal>
 
       <Modal

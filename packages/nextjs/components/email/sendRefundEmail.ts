@@ -12,15 +12,17 @@ interface SendInvestmentParams {
   userFirstName: string;
   userLastName: string;
   connectedWallet: string;
+  contractAddress: string;
   receipt: string;
 }
 
-export async function sendTransferConfirmation({
+export async function sendRefundConfirmation({
   templateType,
   userEmail,
   userFirstName,
   userLastName,
   connectedWallet,
+  contractAddress,
   receipt,
 }: SendInvestmentParams): Promise<any> {
   const payload = {
@@ -34,6 +36,7 @@ export async function sendTransferConfirmation({
       lastname: userLastName || "",
       userAddress: connectedWallet,
       receipt: receipt || "",
+      contractaddress: contractAddress,
     },
   };
 

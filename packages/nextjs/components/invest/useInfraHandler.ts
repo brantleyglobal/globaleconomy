@@ -6,7 +6,7 @@ import infraAbi from "~~/lib/contracts/abi/RegionInfrastructure.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import type { Token } from "~~/components/constants/tokens";
 import { logInfraCommit } from "./logInfraCommit";
-import { sendTransferOnTargetChain } from "~~/utils/targetChain";
+import { sendTransferOnTargetChain, ensureGlobalChain } from "~~/utils/targetChain";
 
 // Helper to generate term code (YYQDD)
 function generateTermCode(): string {
@@ -125,6 +125,8 @@ export function useInfra(): UseDepositResult {
 
         /*************** CROSS CHAIN TRANSFER CALL ***************/
 
+        await ensureGlobalChain(window.ethereum);
+
         if (!provider) {
           throw new Error("No provider available");
         }
@@ -139,6 +141,7 @@ export function useInfra(): UseDepositResult {
         const startQuarterIndex = generateTermCode();
 
         const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
+        const now = new Date(Date.now()).toISOString();
 
         let dTxHash;
         let receipt2;
@@ -147,6 +150,7 @@ export function useInfra(): UseDepositResult {
         if (token.symbol == "GBDo") {
           try {
             dTxHash = await infraContract.deposit!(
+              now,
               holdingWalletAddress,
               token,
               token2,
@@ -181,10 +185,6 @@ export function useInfra(): UseDepositResult {
             provider // pass provider here
           ));
         }
-
-
-
-        const now = new Date(Date.now()).toISOString();
 
         const successPayload: VaultPayload = {
           txhash: receipt2?.toString() ?? "",

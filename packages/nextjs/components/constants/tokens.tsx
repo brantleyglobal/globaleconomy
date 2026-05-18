@@ -42,7 +42,7 @@ export const generateDividendTokens = (): Token[] => {
   return tokens;
 };
 
-export const supportedTokens = [
+export const supportedTokens: Token[] = [
 
   {
     name: "Global Dollar",
@@ -69,54 +69,6 @@ export const supportedTokens = [
     chain: "global",
   },
   {
-    name: "The Globe",
-    symbol: "GLB",
-    address: deployments.Globe,
-    decimals: 18,
-    isNative: false,
-    chain: "global",
-  },
-  {
-    name: "TRANS-GREENTECH REFINERY & DEPOT MX",
-    symbol: "TGMX",
-    address: deployments.TGMX,
-    decimals: 18,
-    isNative: false,
-    chain: "global",
-  },
-  {
-    name: "TRANS-GREENTECH REFINERY & DEPOT US",
-    symbol: "TGUSA",
-    address: deployments.TGUSA,
-    decimals: 18,
-    isNative: false,
-    chain: "global",
-  },
-  {
-    name: "BG CLEAN REAL ESTATE",
-    symbol: "CREs",
-    address: deployments.BGFFS,
-    decimals: 18,
-    isNative: false,
-    chain: "global",
-  },
-  {
-    name: "BG CLEAN REAL ESTATE",
-    symbol: "CREh",
-    address: deployments.BGFRS,
-    decimals: 18,
-    isNative: false,
-    chain: "global",
-  },
-  {
-    name: "BG CLEAN GRID",
-    symbol: "CGRi",
-    address: deployments.BGGRID,
-    decimals: 18,
-    isNative: false,
-    chain: "global",
-  },
-  {
     name: "USD Coin",
     symbol: "USDC",
     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
@@ -124,10 +76,18 @@ export const supportedTokens = [
     isNative: false,
     chain: "ethereum",
   },
-  {
+  /*{
     name: "TrueAUD",
     symbol: "AUDT",
     address: "0x00006100F7090010005F1bd7aE6122c3C2CF0090",
+    decimals: 18,
+    isNative: false,
+    chain: "ethereum",
+  },*/
+  {
+    name: "Ripple USD",
+    symbol: "RLUSD",
+    address: "0x8292bb45bf1EE4D140127049757C2E0fF06317ED",
     decimals: 18,
     isNative: false,
     chain: "ethereum",
@@ -140,30 +100,6 @@ export const supportedTokens = [
     isNative: false,
     chain: "ethereum",
   },
-  /*{
-    name: "Wrapped Bitcoin",
-    symbol: "WBTC",
-    address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
-    decimals: 8,
-    isNative: false,
-    chain: "ethereum",
-  },*/
-  /*{
-    name: "Bitcoin",
-    symbol: "BTC",
-    address: "0x00000000000000000000000000000000000000b0",
-    decimals: 8,
-    isNative: false,
-    chain: "bitcoin",
-  },*/
-  /*{
-    name: "Wrapped Binance Coin",
-    symbol: "WBNB",
-    address: "0xB8c77482e45F1F44dE1745F52C74426C631bDD52",
-    decimals: 18,
-    isNative: false,
-    chain: "ethereum",
-  },*/
   {
     name: "Dai Stablecoin",
     symbol: "DAI",
@@ -204,14 +140,14 @@ export const supportedTokens = [
     isNative: false,
     chain: "polygon",
   },
-  /*{
+  {
     name: "Moneta Mexicana",
     symbol: "MMXN",
-    address: "0x6B9f031D718dDed0d681C20cb754F97b3BB81b78",
+    address: "0x95C2E7cbc7Ae370E28160Bd04297C53F96d092B4",
     decimals: 18,
     isNative: false,
     chain: "ethereum",
-  },*/
+  },
   {
     name: "PayPal USD",
     symbol: "PYUSD",
@@ -248,14 +184,6 @@ export const supportedTokens = [
     name: "Tether USD",
     symbol: "USDT",
     address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-    decimals: 6,
-    isNative: false,
-    chain: "ethereum",
-  },
-  {
-    name: "Australian Digital Dollar",
-    symbol: "AUDD",
-    address: "0x4cce605ed955295432958d8951d0b176c10720d5",
     decimals: 6,
     isNative: false,
     chain: "ethereum",

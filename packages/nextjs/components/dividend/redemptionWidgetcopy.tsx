@@ -91,7 +91,7 @@ export const DividendRedeemModal = ({ openWalletModal }: FaucetProps) => {
 
   // Fetch balances on address or client change
   /*useEffect(() => {
-    if (!address || !publicClient) {
+    if(!address || !publicClient) {
       setWalletTokens([]);
       setSelectedTokenSymbol("");
       return;
@@ -127,7 +127,7 @@ export const DividendRedeemModal = ({ openWalletModal }: FaucetProps) => {
       }
     };
     fetchBalances();
-  }, [address, publicClient]);*/
+  }, [address, publicClient]); */
 
   // Fetch credit from SmartVault
   useEffect(() => {

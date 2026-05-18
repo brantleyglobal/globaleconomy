@@ -7,8 +7,9 @@ import { useAccount } from "wagmi";
 import { toast } from "react-hot-toast";
 import { useTokenBalance } from "~~/components/invest/useTokenBalance";
 import { useDeposit } from "~~/components/acquire/useAcquisitionHandler";
-import type { Props as InputStepProps  } from "~~/components/acquire/steps/onStep";
+import SelectionStep from  "~~/components/acquire/steps/selectionStep";
 import { OnStep } from "~~/components/acquire/steps/onStep";
+import { LiquidateStep } from "~~/components/acquire/steps/liquidateStep";
 import { DoneStep } from "~~/components/invest/steps/doneStep";
 import { sendAcquisitionConfirmation } from "~~/components/email/sendAcquisitionEmail";
 import HelpStep from "~~/components/acquire/steps/helpStep";
@@ -20,8 +21,10 @@ type Props = {
 };
 
 enum ModalStep {
-  OnStep = 0,
-  DoneStep = 1,
+  SelectionStep = 0,
+  OnStep = 1,
+  LiquidateStep = 2,
+  DoneStep = 3,
 }
 
 export const AcquireModal: React.FC<Props> = ({
@@ -29,15 +32,13 @@ export const AcquireModal: React.FC<Props> = ({
   onClose,
 }) => {
   const router = useRouter();
-  const [step, setStep] = useState<ModalStep>(ModalStep.OnStep);
+  const [step, setStep] = useState<ModalStep>(ModalStep.SelectionStep);
   const [isHelpMode, setIsHelpMode] = useState(false);
 
   const [savedStep, setSavedStep] = useState<ModalStep | null>(null);
-  const [userAction, setUserAction] = useState<"term" | "region" | "speculative" | null>(null);
-  
-  const [isTermSelected, setIsTermSelected] = useState(false);
-  const [isRegionSelected, setIsRegionSelected] = useState(false);
-  const [isSpeculativeSelected, setIsSpeculativeSelected] = useState(false);
+  const [userAction, setUserAction] = useState<"acquire" | "liquidate" | null>(null);
+  const [isAcquireSelected, setIsAcquireSelected] = useState(false);
+  const [isLiquidateSelected, setIsLiquidateSelected] = useState(false);
 
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [termsText, setTermsText] = useState("");
@@ -159,6 +160,7 @@ export const AcquireModal: React.FC<Props> = ({
       let receiptx = "";
 
       const txHash = await deposit(
+        userAction!,
         depositAmount,
         convertedAmount,
         selectedToken,
@@ -224,6 +226,20 @@ export const AcquireModal: React.FC<Props> = ({
       ) : (
         <>
           <div className="space-y-2 h-full h-[min(90vh,auto)] flex flex-col">
+            {step === ModalStep.SelectionStep && (
+              <SelectionStep
+                userAction={userAction}
+                setUserAction={setUserAction}
+                onNext={() => {
+                  if (!userAction) return;
+                  setIsAcquireSelected(userAction === "acquire");
+                  setIsLiquidateSelected(userAction === "liquidate");
+                  if (userAction === "acquire") setStep(ModalStep.OnStep);
+                  else setStep(ModalStep.LiquidateStep);
+                }}
+                onHelpToggle={() => setIsHelpMode(true)}
+              />
+            )}
             {step === ModalStep.OnStep && (
               <OnStep
                 supportedTokens={supportedTokens.map(token => ({
@@ -249,6 +265,42 @@ export const AcquireModal: React.FC<Props> = ({
                 onConfirm={handleConfirm}
                 isProcessing={isAnyProcessing}
                 disabled={!connectedWallet || isAnyProcessing}
+                onBack={() => setStep(ModalStep.SelectionStep)}
+                onNext={() => {
+                  if (!selectedTokenSymbol || selectedQuarter <= 0 || !depositAmount) {
+                    toast.error("Please fill all the investment details.");
+                    return;
+                  }
+                  setStep(ModalStep.DoneStep);
+                }}
+              />
+            )}
+            {step === ModalStep.LiquidateStep && (
+              <LiquidateStep
+                supportedTokens={supportedTokens.map(token => ({
+                  ...token,
+                  chain: token.chain as "global" | "ethereum" | "polygon" | "bitcoin",
+                }))}
+                selectedTokenSymbol={selectedTokenSymbol}
+                setSelectedTokenSymbol={setSelectedTokenSymbol}
+                depositAmount={depositAmount}
+                setDepositAmount={setDepositAmount}
+                convertedAmount={convertedAmount}
+                setConvertedAmount={setConvertedAmount}
+                exchangeRate={exchangeRate}
+                setExchangeRate={setExchangeRate}
+                userFirstName={userFirstName}
+                setUserFirstName={setUserFirstName}
+                userLastName={userLastName}
+                setUserLastName={setUserLastName}
+                userEmail={userEmail}
+                setUserEmail={setUserEmail}
+                connectedWallet={connectedWallet}
+                onHelpToggle={() => setIsHelpMode(true)}
+                onConfirm={handleConfirm}
+                isProcessing={isAnyProcessing}
+                disabled={!connectedWallet || isAnyProcessing}
+                onBack={() => setStep(ModalStep.SelectionStep)}
                 onNext={() => {
                   if (!selectedTokenSymbol || selectedQuarter <= 0 || !depositAmount) {
                     toast.error("Please fill all the investment details.");

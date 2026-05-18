@@ -11,6 +11,7 @@ type Props = {
   paymentMethod: "native" | "stable" | "cash" | "paypal" | "applepay" | "klarna" | "affirm" | "afterpay";
   tokenSymbol: string;
   estimatedTotal: string;
+  variationTotal: number | undefined;
   quantity: number;
   deliveryDays: number;
   deliveryDeadline: string;
@@ -23,6 +24,7 @@ export const CheckoutReviewStep: React.FC<Props> = ({
   paymentMethod,
   tokenSymbol,
   estimatedTotal,
+  variationTotal,
   quantity,
   deliveryDays,
   deliveryDeadline,
@@ -59,6 +61,8 @@ export const CheckoutReviewStep: React.FC<Props> = ({
       setIsProcessing(false);
     }
   };
+
+  const baseAmount = Number(estimatedTotal) - Number(variationTotal);
 
   function mapCountryToRegion(countryCode: string): Region {
     const country = supportedCountries.find(c => c.code === countryCode);
@@ -173,6 +177,24 @@ export const CheckoutReviewStep: React.FC<Props> = ({
             Product Total:{" "}
             <span className="bg-ghost text-white px-2 py-1 rounded-full font-semibold">
               {Number(estimatedTotal).toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })} {paymentMethod === "cash" ? "USD" : tokenSymbol}
+            </span>
+          </p>
+          <p className="text-white/80 tracking-wide text-xs font-semibold">
+            Base Cost:{" "}
+            <span className="bg-ghost text-white px-2 py-1 rounded-full font-semibold">
+              {Number(baseAmount).toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })} {paymentMethod === "cash" ? "USD" : tokenSymbol}
+            </span>
+          </p>
+          <p className="text-white/80 tracking-wide text-xs font-semibold">
+            Configuration Cost:{" "}
+            <span className="bg-ghost text-white px-2 py-1 rounded-full font-semibold">
+              {Number(variationTotal).toLocaleString("en-US", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
               })} {paymentMethod === "cash" ? "USD" : tokenSymbol}

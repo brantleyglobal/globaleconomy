@@ -79,6 +79,7 @@ const CheckoutModalBase = (
   const [returnsText, setReturnsText] = useState<string | null>(null);
   const [provider, setProvider] = useState<EthereumProvider | null>(null);
   const [walletName, setWalletName] = useState<string>("");
+  const [variantTotal, setVariantTotal] = useState<number>();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -317,7 +318,10 @@ const CheckoutModalBase = (
 
     // Final calculation
     const finalPrice = (Math.round((subtotalGBDo * gbdoRate) / tokenRate!) * 100 / 100);
-    const variationTotal = (Math.round((vTotal * gbdoRate) / tokenRate!) * 100 / 100);
+    const variationTotal = (Math.round((vTotal * gbdoRate) / tokenRate!) * 100 / 100) * quantity;
+    setVariantTotal(
+      variationTotal
+    );
     //console.log(`[Pricing] Final Price in ${effectiveSymbol}:`, finalPrice);
 
     return {finalPrice, variationTotal};
@@ -340,6 +344,7 @@ const CheckoutModalBase = (
 
     console.log("Total: ", finalPrice);
     console.log("Variation Total: ", variationTotal);
+
 
     setField("estimatedTotal", finalPrice.toFixed(2));
     setCurrentStep(5);
@@ -531,6 +536,7 @@ const CheckoutModalBase = (
               <h2 className="text-xl font-light text-primary">AGREEMENTS</h2>
             </div>
             <div className="relative z-20 text-sm text-gray-400 animate-bounce">
+                All Purchases are subject to restock fees. Please read below.
                 Scroll to accept ↓
               </div>
             <div className="flex-grow max-h-150 sm:max-h-95 overflow-y-auto text-xs sm:text-sm border px-4 rounded bg-black text-justify text-white space-y-8">
@@ -604,6 +610,7 @@ const CheckoutModalBase = (
             paymentMethod={paymentMethod}
             tokenSymbol={tokenSymbol}
             estimatedTotal={estimatedTotal}
+            variationTotal={variantTotal}
             quantity={quantity}
             deliveryDays={deliveryDays}
             deliveryDeadline={deliveryDeadline}

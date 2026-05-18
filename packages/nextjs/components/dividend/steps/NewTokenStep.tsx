@@ -44,7 +44,7 @@ type Props = {
   isDisabled?: boolean;
 };
 
-export default function AddressStep({
+export default function TokenStep({
   newAddress,
   setNewAddress,
   selectedTokenSymbol,
@@ -152,16 +152,16 @@ export default function AddressStep({
         </button>
       </div>
       <div className="space-y-1 mt-4">
-        <span className="text-xs font-light">NEW PAYOUT WALLET ADDRESS</span>
+        <span className="text-xs font-light">NEW PAYOUT ADDRESS</span>
           <div className="relative inline-block ml-2">
             <span className="text-xs font-light cursor-pointer group">ⓘ
                 <div className="absolute right-0 mt-2 w-64 px-3 py-2 text-xs text-white bg-[#061708] shadow-lg rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 pointer-events-none">
-                This new Wallet Address will be used for all future payouts unless altered. The can only change your address from the current Wallet Address on currently on file.
+                This new Token that will be used for all future payouts unless altered. The can only change your payout token from the current Wallet Address on currently on file.
                 </div>
             </span>              
         </div>
         <AddressInput
-          placeholder="Enter Wallet Address"
+          placeholder="Enter Payout Token"
           value={localNewAddress}
           onBlur={handleBlur}
           onChange={handleAddressChange}

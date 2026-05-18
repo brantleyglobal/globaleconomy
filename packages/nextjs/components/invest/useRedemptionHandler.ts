@@ -22,10 +22,22 @@ interface TransferHandlerProps {
   chainId?: number;
   signature: string;
   selectedToken?: TokenType;
+  selectedToken2?: TokenType;
   available?: bigint;
   openWalletModal?: () => void;
   autoPay?: boolean;
   newAddress?: string;
+  newToken?: string;
+  amount?: string;
+}
+
+function parseLocalNumber (rawNumber: string, locale: string) {
+  const amountToFormat = Intl.NumberFormat(locale).format(1.1);
+  const decimal = amountToFormat.charAt(amountToFormat.length - 2);
+
+  const normalized = rawNumber.replace(new RegExp(`[^0-9${decimal}-]`,"g"), "");
+
+  return Number(normalized);
 }
 
 export function useRedemptionHandler(config: TransferHandlerProps) {
@@ -33,11 +45,14 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
     sender = "",
     chainId = 0,
     selectedToken = {},
+    selectedToken2 = {},
     available = 0n,
     openWalletModal,
     signature,
     autoPay,
     newAddress,
+    newToken,
+    amount,
   } = config;
 
   const [loading, setLoading] = useState(false);
@@ -65,6 +80,10 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
       // Determine if token is ERC20 (symbol not GBDo and address exists)
       const isERC20 = selectedToken.symbol !== "GBDo" && !!selectedToken.address;
 
+      const locale = navigator.language || "en-US";
+      const adjustedAmount = parseLocalNumber(String(amount), locale);
+      const parsedValue = parseUnits(String(adjustedAmount), 18);
+
       const { rates, gbdoRate } = await getExchangeRates();
         
       // Find selected token's rate from rates array
@@ -86,7 +105,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
       const exchangeRate = parseUnits(exchangeRateFloat.toFixed(18), selectedToken.decimals);
 
       // Calculate current financial quarter term code (YYQDD format)
-      const now = new Date();
+      const now = new Date(Date.now());
       const year = now.getFullYear();
       const quarter = Math.floor(now.getMonth() / 3) + 1;
 
@@ -106,16 +125,30 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
       const contract = new ethers.Contract(selectedToken.address, termAbi[0], provider);
       const contract2 = new ethers.Contract(selectedToken.address, termAbi[1], provider);
 
+      let tokenTx, receipt;
+
       if (newAddress) {
         const vaultContract = new Contract(deployments.SmartVault, smartVaultabi.abi, signer);
         const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
 
         if (!["GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(selectedToken.symbol!)) {
-          const tokenTx = await vaultContract.changePayoutAddress(newAddress);
-          const receipt = await tokenTx.wait(); 
+          tokenTx = await vaultContract.changePayoutAddress(newAddress);
+          receipt = await tokenTx.wait(); 
         } else {
-          const tokenTx = await infraContract.changePayoutAddress(newAddress);
-          const receipt = await tokenTx.wait();
+          tokenTx = await infraContract.changePayoutAddress(newAddress);
+          receipt = await tokenTx.wait();
+        }
+
+      } else if (newToken) {
+        const vaultContract = new Contract(deployments.SmartVault, smartVaultabi.abi, signer);
+        const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
+
+        if (!["GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(selectedToken.symbol!)) {
+          tokenTx = await vaultContract.changePayoutToken(newToken);
+          receipt = await tokenTx.wait(); 
+        } else {
+          tokenTx = await infraContract.changePayoutToken(newToken);
+          receipt = await tokenTx.wait();
         }
 
       } else {
@@ -136,7 +169,6 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         const vaultContract = new Contract(deployments.SmartVault, smartVaultabi.abi, signer);
         const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
 
-        let tokenTx, receipt;
 
         if (!["GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(selectedToken.symbol!)) {
           // Check allowance for vault
@@ -151,7 +183,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           }
 
           // Withdraw
-          tokenTx = await vaultContract.withdraw(selectedToken.address, {gasLimit: 2_500_000});
+          tokenTx = await vaultContract.withdraw(selectedToken.address, selectedToken2.address, amount, now, {gasLimit: 2_500_000});
           receipt = await tokenTx.wait();
 
           if (autoPay && receipt.status === 1) {
@@ -177,7 +209,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           }
 
           // Withdraw
-          tokenTx = await infraContract.withdraw(selectedToken.address, {gasLimit: 1_700_000});
+          tokenTx = await infraContract.withdraw(selectedToken.address, selectedToken2.address, amount, now, {gasLimit: 1_700_000}); //NEED TO RESTRICT TO TOKENS THE USER ACTUALLY HAS A BALANCE FOR
           receipt = await tokenTx.wait();
 
           if (autoPay && receipt.status === 1) {
@@ -191,25 +223,18 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           }
         }
 
-        if (!receipt) throw new Error("Transaction receipt is null");
-
-        // Parse RedemptionFulfilled event logs to get amount to send
-        const iface = new Interface(infraAbi.abi);
-        let amountToSend: bigint | undefined;
-
-        for (const log of receipt.logs) {
-          try {
-            const parsed = iface.parseLog({ topics: [...log.topics], data: log.data });
-            if (parsed.name === "RedemptionFulfilled") {
-              amountToSend = parsed.args.amount ?? parsed.args[0];
-              break;
-            }
-          } catch { /* ignore non-matching logs */ }
-        }
-
         let chainStatus = false;
         if (receipt!) {
           chainStatus = true;
+        }
+
+        let notes;
+        if (newAddress) {
+          notes = "Address Change Requested";
+        } else if (newToken) {
+          notes = "Token Change Requested";
+        } else {
+          notes = "Redemption Requested";
         }
 
         // Prepare payload for redemption logging
@@ -217,17 +242,17 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           txhash: receipt,
           contractaddress: contractAddress,
           useraddress: sender,
-          amount: amountToSend?.toString(),
-          asset: selectedToken.symbol,
+          amount: amount,
+          asset: selectedToken2.symbol,
           status: "accepted",
           chainstatus: chainStatus,
           queuedat: processedAt,
           processedat: null,
           priority: 0,
           retrycount: 0,
-          receipthash: receipt.blockHash,
-          notes: "Transfer Successful",
-          timestamp: new Date(Date.now()).toISOString(),
+          receipthash: receipt,
+          notes: notes,
+          timestamp: now,
         };
 
         // Log redemption to backend
@@ -256,8 +281,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         return {
           success: true,
           txHash: receipt,
-          receiptHash: receipt.blockHash,
-          amount: amountToSend?.toString(),
+          receiptHash: receipt,
           token: selectedToken.symbol ?? "unknown",
           status: "queued",
         };

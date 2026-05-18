@@ -123,7 +123,7 @@ export default function ReviewStep(props: Props) {
       }
 
       setXchangeId(result.xchangeId?.toString() || "");
-      const receipt = result?.txHash || "";
+      const receipt = result?.receiptHash || "";
       console.log("Sending Confirmation");
 
       const emailParams = {

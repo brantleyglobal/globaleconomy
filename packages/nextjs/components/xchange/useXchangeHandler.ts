@@ -8,7 +8,7 @@ import deployments from "~~/lib/contracts/deployments.json";
 import { supportedTokens, Token } from "~~/components/constants/tokens";
 import { Address as AddressType } from "viem";
 import { getExchangeRates } from "~~/lib/exchangeRates";
-import { sendTransferOnTargetChain, CHAINS, switchOrAddChain } from "~~/utils/targetChain"
+import { sendTransferOnTargetChain, CHAINS, ensureGlobalChain  } from "~~/utils/targetChain"
 import { deposit } from "viem/zksync";
 
 interface TransferHandlerProps {
@@ -132,7 +132,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
     console.log("SafeCheck...");
 
     let txhash = "";
-    let receipt: TransactionReceipt | null = null;
+    let receipt: any;
     let payoutFormatted = ""; 
     let swapAddress: string | undefined;
     let tokenTx2;
@@ -634,7 +634,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
       return {
         success: true,
         txHash: txhash,
-        receiptHash: receipt?.blockHash ?? receipt2,
+        receiptHash: receipt,
         xchangeId: xchangeId,
         amount: payoutFormatted,
         token: selectedToken.symbol ?? "unknown",

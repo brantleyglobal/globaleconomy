@@ -139,6 +139,10 @@ export async function sendTransferOnTargetChain(
   btcWallet?: BitcoinWallet,
   provider?: any
 ) {
+
+  let receipt2;
+  let dTxHash;
+
   if (!selectedToken.address) throw new Error("Token address required");
 
   const activeProvider = provider || window.ethereum;
@@ -176,7 +180,6 @@ export async function sendTransferOnTargetChain(
   const accounts = await web3.eth.getAccounts();
   const from = accounts[0];
 
-  let receipt2;
   if (selectedToken.symbol === "GBDo") {
     // Native transfer: input is already 18 decimals, chain uses 18 → no rescale
     const value = rescaleAmount(tamount, 18, chainInfo.nativeCurrency.decimals);
@@ -187,7 +190,9 @@ export async function sendTransferOnTargetChain(
       value,
       gas: "80000",
     });
+
   } else {
+
     // ERC20 transfer: rescale from 18 → token.decimals
     const decimals = selectedToken.decimals ?? 18;
     const value = rescaleAmount(tamount, 18, decimals);
@@ -200,5 +205,14 @@ export async function sendTransferOnTargetChain(
   // Reset back to GlobalChain if required
   await switchOrAddChain(activeProvider, CHAINS.global);
 
-  return { dTxHash: receipt2.transactionHash, receipt2 };
+  return { dTxHash: dTxHash, receipt2 };
+}
+
+export async function ensureGlobalChain(provider: any) {
+  const target = CHAINS.global;
+  const current = await provider.request({ method: "eth_chainId" });
+
+  if (normalizeChainId(current) !== normalizeChainId(target.chainId)) {
+    await switchOrAddChain(provider, target);
+  }
 }

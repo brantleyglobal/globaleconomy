@@ -28,6 +28,12 @@ export const WalletAutoAdd = () => {
     },
   ];
 
+  const ALLOWED_CHAINS =[
+    GLOBALCHAIN.id,
+    137,
+    1,
+  ]
+
   const addTokenToWallet = async ({ address, symbol, decimals, image }: typeof TOKENS[number]) => {
     try {
       await window.ethereum.request({
@@ -98,8 +104,10 @@ export const WalletAutoAdd = () => {
     const isMetaMask = window?.ethereum?.isMetaMask;
 
     // Only run once per page load
-    if (!hasRun.current && isConnected && isMetaMask && chainId !== GLOBALCHAIN.id) {
+    if (!hasRun.current && isConnected && isMetaMask) {
       hasRun.current = true;
+    }
+    if (!ALLOWED_CHAINS.includes(chainId)) {
       switchToGLOBALCHAIN();
     }
   }, [isConnected, chainId]);

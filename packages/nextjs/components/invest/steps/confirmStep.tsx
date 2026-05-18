@@ -40,7 +40,12 @@ export function ConfirmStep({
   return (
     <div className="flex flex-col flex-full h-full">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-light text-primary tracking-wide">CONTRACT SUMMARY & CONFIRMATION</h3>
+        <div>
+          <h3 className="text-xl font-light text-primary tracking-wide">CONTRACT SUMMARY & CONFIRMATION</h3>
+          <p className="font-semibold text-justify text-sm pr-10 text-secondary">
+            BE ADVISED: <span className="font-semibold text-sm text-primary">Vault and Venture contract investing is <span className= "font semibold text-secondary" >IRREVERSIBLE</span>. While no refunds are possible trading or selling of your assets are possible prior to beginning the redemption process. Please REVIEW ALL VALUES before proceeding. Returns or redemption of original investment are outlined in the Terms & Conditions, Overview & Disclosure.</span>
+          </p>
+        </div>
         <button
           onClick={onHelpToggle}
           aria-label="Toggle help"

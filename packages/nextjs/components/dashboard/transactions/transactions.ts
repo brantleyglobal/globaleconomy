@@ -19,8 +19,8 @@ export interface Transaction {
   payout?: string;
 
   // GBDo
-  stablein?: string;
-  gbdout?: string;
+  amountin?: string;
+  amountout?: string;
   
   // Xchange
   tokena?: string;

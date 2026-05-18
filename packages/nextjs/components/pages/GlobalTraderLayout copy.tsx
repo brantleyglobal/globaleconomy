@@ -32,7 +32,7 @@ const InvestmentModal = dynamic(() =>
 );
 
 const GlobalWalletModal = dynamic(() =>
-  import("~~/components/globalEco/WalletConnectButton/globalWalletConnect").then(mod => mod.GlobalWalletModal),
+  import("~~/utils/globalEco/walletConnectButton").then(mod => mod.WalletConnectButton),
   { ssr: false }
 );
 

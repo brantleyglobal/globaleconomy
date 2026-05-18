@@ -4,7 +4,7 @@ import smartVaultAbi from "~~/lib/contracts/abi/SmartVault.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import type { Token } from "~~/components/constants/tokens";
 import { logVaultCommit } from "./logVaultCommit";
-import { sendTransferOnTargetChain } from "~~/utils/targetChain";
+import { sendTransferOnTargetChain, ensureGlobalChain } from "~~/utils/targetChain";
 
 // Helper to generate term code (YYQDD)
 function generateTermCode(): number {
@@ -130,6 +130,8 @@ export function useDeposit(): UseDepositResult {
         /*************** CROSS CHAIN TRANSFER CALL ***************/
         //console.log("Selected token:", token.symbol, token.chain, token.address);
 
+        await ensureGlobalChain(window.ethereum);
+
         if (!provider) {
           throw new Error("No provider available");
         }
@@ -144,6 +146,7 @@ export function useDeposit(): UseDepositResult {
         const startQuarterIndex = generateTermCode();
 
         const vaultContract = new Contract(deployments.SmartVault, smartVaultAbi.abi, signer);
+        const now = new Date(Date.now()).toISOString();
 
         let dTxHash;
         let receipt2;
@@ -152,6 +155,7 @@ export function useDeposit(): UseDepositResult {
         if (token.symbol == "GBDo") {
           try  {
             dTxHash = await vaultContract.deposit!(
+              now,
               holdingWalletAddress,
               token, 
               parsedValue,
@@ -187,8 +191,6 @@ export function useDeposit(): UseDepositResult {
             provider // pass provider here
           ));
         }
-
-        const now = new Date(Date.now()).toISOString();
 
         const successPayload: VaultPayload = {
           txhash: receipt2?.toString() ?? "",

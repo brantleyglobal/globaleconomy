@@ -2,8 +2,8 @@ import React from "react";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
 type Props = {
-  userAction: "addressChange" | "redemption" | null;
-  setUserAction: (value: "addressChange" | "redemption" | null) => void;
+  userAction: "addressChange" | "tokenChange" | "redemption" | null;
+  setUserAction: (value: "addressChange" |  "tokenChange" | "redemption" | null) => void;
   onHelpToggle: () => void;
   onNext: () => void;
 };
@@ -13,7 +13,7 @@ export default function SelectionStep({ userAction, setUserAction, onHelpToggle,
     <>
       <div className="flex flex-col flex-full">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-light text-primary">XCHANGE SELECTION</h3>
+          <h3 className="text-xl font-light text-primary">REDEMPTION PROCESSING</h3>
           <button
             onClick={onHelpToggle}
             aria-label="Toggle help"
@@ -22,6 +22,20 @@ export default function SelectionStep({ userAction, setUserAction, onHelpToggle,
             <HelpOutlineIcon />
             
           </button>
+        </div>
+        {/* REDEMPTION */}
+        <div
+            role="tab"
+            tabIndex={0}
+            aria-selected={userAction === "redemption"}
+            onClick={() => setUserAction("redemption")}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setUserAction("redemption") }}
+            className={`cursor-pointer max-h-[300px] justify-between overflow-y-auto shadow-md bg-primary/5 mb-4 hover:shadow-xl hover:bg-secondary/30 hover:scale-[1.02] rounded-lg p-4 ${userAction === "redemption" ? "bg-secondary/30" : "bg-black/40"}`}
+        >
+            <h4 className="text-md font-light mt-2 text-white">PROCESS PREDEMPTION</h4>
+            <p className="text-xs text-white text-justify">
+              Process you dividend claim from your existing investment deposit.
+            </p>
         </div>
 
         {/* ADDRESS CHANGE */}
@@ -39,18 +53,18 @@ export default function SelectionStep({ userAction, setUserAction, onHelpToggle,
             </p>
         </div>
 
-        {/* REDEMPTION */}
+        {/* PAYOUT TOKEN CHANGE */}
         <div
             role="tab"
             tabIndex={0}
-            aria-selected={userAction === "redemption"}
-            onClick={() => setUserAction("redemption")}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setUserAction("redemption") }}
-            className={`cursor-pointer max-h-[300px] justify-between overflow-y-auto shadow-md bg-primary/5 mb-4 hover:shadow-xl hover:bg-secondary/30 hover:scale-[1.02] rounded-lg p-4 ${userAction === "redemption" ? "bg-secondary/30" : "bg-black/40"}`}
+            aria-selected={userAction === "tokenChange"}
+            onClick={() => setUserAction("tokenChange")}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setUserAction("tokenChange") }}
+            className={`cursor-pointer max-h-[300px] justify-between overflow-y-auto shadow-md bg-primary/5 mb-4 hover:shadow-xl hover:bg-secondary/30 hover:scale-[1.02] rounded-lg p-4 ${userAction === "addressChange" ? "bg-secondary/30" : "bg-black/40"}`}
         >
-            <h4 className="text-md font-light mt-2 text-white">PROCESS PREDEMPTION</h4>
+            <h4 className="text-md font-light mt-2 text-white">CHANGE PAYOUT TOKEN</h4>
             <p className="text-xs text-white text-justify">
-              Process you dividend claim from your existing investment deposit.
+              Change your payout address.
             </p>
         </div>
 

@@ -1,12 +1,11 @@
-import { useState, useCallback, useEffect } from "react";
-import { ethers, Contract, BrowserProvider, parseUnits, formatUnits, Interface, isAddress, TransactionResponse, TransactionReceipt } from "ethers";
+import { useState, useCallback } from "react";
+import { parseUnits, Interface, Contract } from "ethers";
 import acquisitionAbi from "~~/lib/contracts/abi/AcquisitionGateway.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import { erc20Abi } from "viem";
 import type { Token } from "~~/components/constants/tokens";
 import { logAcquisitionCommit } from "./logAcquisitionCommit";
 import { Address } from "viem";
-import { sendReconciliation } from "~~/lib/reconciliatonHelper";
 import { sendTransferOnTargetChain } from "~~/utils/targetChain"
 
 interface AcquisitionPayload {
@@ -14,8 +13,8 @@ interface AcquisitionPayload {
   contractaddress: string;
   useraddress: string;
   exchangerate: bigint;
-  stablein: bigint;
-  gbdout: bigint;
+  amountin: bigint;
+  amountout: bigint;
   paymentmethod: string;
   status: string;
   chainstatus: boolean;
@@ -29,6 +28,7 @@ interface UseDepositResult {
   isProcessing: boolean;
   error: Error | null;
   deposit: (
+    useraction: string,
     amountStr: string,
     amountoutStr: string,
     token: Token,
@@ -70,6 +70,7 @@ export function useDeposit(): UseDepositResult {
 
   const deposit = useCallback(
     async (
+      useraction: string,
       amountStr: string,
       amountoutStr: string,
       token: Token,
@@ -84,16 +85,22 @@ export function useDeposit(): UseDepositResult {
       let parsedValue2;
       let dTxHash;
       let receipt2;
+      let chainStatus = false;
+      const timeStamp = new Date(Date.now());
 
       try {
 
         const iface = new Interface(acquisitionAbi.abi);
         const locale = navigator.language || "en-US";
         const adjustedAmount = parseLocalNumber(amountStr, locale);
-        const adjustedOutAmount = parseLocalNumber(amountStr, locale);
+        const adjustedOutAmount = parseLocalNumber(amountoutStr, locale);
         parsedValue = parseUnits(String(adjustedAmount), 18);
         parsedValue2 = parseUnits(String(adjustedOutAmount), 18);
         const exchangeRate = parseUnits(String(rate), 18);
+
+        const signer = await provider.getSigner();
+
+        const purchaseContract = new Contract(deployments.AcquisitionGateway, acquisitionAbi.abi, signer);
 
         let callAddress;
         if (token.symbol === "ETH") {
@@ -112,46 +119,62 @@ export function useDeposit(): UseDepositResult {
           exchangeRate,
         ]);
 
-        let holdingWalletAddress;
-        if (token.symbol === "BTC"){
-          holdingWalletAddress = process.env.NEXT_PUBLIC_BITCOLLECTOR_ADDRESS!;
-        } else {        
-          holdingWalletAddress = process.env.NEXT_PUBLIC_ACQUIRE!;
+        if (useraction === "acquire") {
+          let holdingWalletAddress;
+          if (token.symbol === "BTC"){
+            holdingWalletAddress = process.env.NEXT_PUBLIC_BITCOLLECTOR_ADDRESS!;
+          } else {        
+            holdingWalletAddress = process.env.NEXT_PUBLIC_ACQUIRE!;
+          }
+
+          /*************** CROSS CHAIN TRANSFER CALL ***************/
+          if (!provider) {
+            throw new Error("No provider available");
+          }
+          ({ dTxHash, receipt2 } = await sendTransferOnTargetChain(
+            holdingWalletAddress,
+            parsedValue,
+            {
+              address: token.address!,
+              decimals: token.decimals,
+              symbol: token.symbol,
+              chain: token.chain,
+            },
+            btcWallet,
+            provider // pass provider here
+          ));
+        } else if (useraction === "liquidate") {
+
+          dTxHash = await purchaseContract.liquidate!(
+            parsedValue,
+            timeStamp,
+            {
+              value: parsedValue,
+              gasLimit: 1_500_000
+            }
+          );
+          receipt2 = await dTxHash.wait();
+          chainStatus = true;
         }
 
-        /*************** CROSS CHAIN TRANSFER CALL ***************/
-        if (!provider) {
-          throw new Error("No provider available");
-        }
-        ({ dTxHash, receipt2 } = await sendTransferOnTargetChain(
-          holdingWalletAddress,
-          parsedValue,
-          {
-            address: token.address!,
-            decimals: token.decimals,
-            symbol: token.symbol,
-            chain: token.chain,
-          },
-          btcWallet,
-          provider // pass provider here
-        ));
+        console.log("after try/catch")
 
         const now = new Date(Date.now()).toISOString();
 
         const successPayload: AcquisitionPayload = {
           txhash: receipt2?.toString() || "",
-          contractaddress: deployments.SmartVault,
+          contractaddress: deployments.AcquisitionGateway,
           useraddress: userAddress,
           exchangerate: exchangeRate,
-          stablein: parsedValue,
-          gbdout: parsedValue,
+          amountin: parsedValue,
+          amountout: parsedValue2,
           paymentmethod: token.symbol,
           status: "accepted",
           chainstatus: false,
           processedat: now,
           receipthash: receipt2?.toString() || "",
-          notes: "success:",
-          timestamp: now,
+          notes: "success",
+          timestamp: timeStamp.toISOString(),
         };
 
         await logAcquisitionCommit(successPayload);

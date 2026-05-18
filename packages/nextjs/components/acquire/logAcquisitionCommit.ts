@@ -3,8 +3,8 @@ interface AcquisitionPayload {
   contractaddress: string;
   useraddress: string;
   exchangerate: bigint;
-  stablein: bigint;
-  gbdout: bigint;
+  amountin: bigint;
+  amountout: bigint;
   paymentmethod: string;
   status: string;
   chainstatus: boolean;
