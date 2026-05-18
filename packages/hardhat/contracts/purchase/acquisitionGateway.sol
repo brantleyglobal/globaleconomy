@@ -1,28 +1,35 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.21;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./GBDo.sol";
-import "./GBDx.sol";
-import "./COPx.sol";
+import "../proxies/globalLedgerProxy.sol";
+import "../currency/GBDo.sol";
 
 contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
+
+    GlobalLedgerProxy public ledgerProxy;
+    GlobalDollar public stakeablecoins;
 
     struct Purchase {
         uint256 timestamp;
         address user;
         address token;
         address payoutSetter;
+        address refundSetter;
         uint32 termIndex;
         uint256 amountin;
-        uint256 amountout;
+        uint256[22] amountout;
+        uint256[22] exchangeRate;
         bytes32 purchaseTxHash;
         bytes32 payoutTxHash;
+        bytes32 refundHash;
+        bool refund;
+        bool credit;
     }
 
     struct RateRange {
@@ -30,9 +37,13 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         uint256 max;
     }
 
-    GlobalDollar public stakeablecoins;
+    struct PurchaseRef {
+        address user;
+        uint32 purchaseIndex;
+    }
 
     address[] public stablecoins;
+    address[] public admins;
     
     address constant NATIVE_TOKEN = address(0);
 
@@ -43,18 +54,21 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
     uint256 private _supply;
     
     // Mapping for quick stablecoin whitelist check
+    mapping(address => bool) private adminWhitelistMap;
     mapping(address => bool) private stablecoinWhitelistMap;
-    mapping(uint256 => Purchase) public purchasesByTimestamp;
+    mapping(uint256 => PurchaseRef) public purchasesByTimestamp;
+    mapping(bytes32 => PurchaseRef) public purchasesByHash;
     mapping(address => Purchase[]) public purchasesByUser;
-    mapping(bytes32 => bool) public processedDeposits;
+    mapping(bytes32 => bool) public processedHashes;
     mapping(address => uint8) stablecoinIndex;
     mapping(uint8 => RateRange) public rateRange;
 
     event Acquisitioned(address indexed user, uint256 amountOut, uint256 amountIn);
-    event PurchaseTimestamp( uint256 timestamp, address indexed user, address token, uint256 amountOut, uint256 amountIn);
+    event PurchaseTimestamp( uint256 timestamp, address indexed user, address token, uint32 termIndex, uint256[22] amountOut, uint256 amountIn, bytes32 payoutHash, bool refund, bytes32 refundHash);
     event PayoutTxHashCorrected(address user, bytes32 old, bytes32 newTxHash, address payoutSetter);
     event UnexpectedPayoutTxHash(address indexed user, bytes32 existingHash, address existingSetter, uint256 amount, address attemptedSetter);
     event PayoutProcessed(uint256 timeStamp, address user, uint256 amount, uint32 termIndex, bytes32 payoutHash);
+    event LiquidateUser(address user, uint256[22] stableOut, uint256 amountin);
 
     uint256 constant DECIMALS = 1e18;
     uint256 constant GBDr = 1030000000000000000;
@@ -89,7 +103,9 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
 
     function initialize(
         address _owner,
-        address[] memory initialStables
+        address[] memory initialStables,
+        address[] memory adminList,
+        address ledgerProxyAddress
     ) public initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
@@ -97,16 +113,27 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         _transferOwnership(_owner);
 
         depositFeeBps = 25;
+        ledgerProxy = GlobalLedgerProxy(ledgerProxyAddress);
 
-        // Initialize stablecoin whitelist and store in map and array for iteration
+
+        // Initialize whitelist and store in map and array for iteration
         for (uint256 i = 0; i < initialStables.length; i++) {
             address sc = initialStables[i];
-            require(sc != address(0), "Zero address not allowed");
+            //require(sc != address(0), "Zero address not allowed");
 
             stablecoinWhitelistMap[sc] = true;
             stablecoins.push(sc);
 
             stablecoinIndex[sc] = uint8(i);
+        }
+
+        // Initialize whitelist and store in map and array for iteration
+        for (uint256 i = 0; i < adminList.length; i++) {
+            address a = adminList[i];
+            require(a != address(0), "Zero address not allowed");
+
+            adminWhitelistMap[a] = true;
+            admins.push(a);
         }
     }
 
@@ -117,6 +144,10 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         return stablecoinWhitelistMap[token];
     }
 
+    function _isAdmin(address admin) internal view returns (bool) {
+        return adminWhitelistMap[admin];
+    }
+
     // Deposit with reentrancy guard
     function acquisition(
         address user,
@@ -124,11 +155,13 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         uint256 amountin,
         uint256 amountout,
         uint256 rate,
-        bytes32 depositHash
-    ) external payable onlyOwner nonReentrant {
+        bytes32 depositHash,
+        uint256 timeStamp
+    ) external payable nonReentrant {
         require(_isWhitelisted(token), "Token not whitelisted");
-        require(!processedDeposits[depositHash], "Duplicate Hash");
-        processedDeposits[depositHash] = true;
+        require(_isAdmin(msg.sender), "Permission Denied");
+        require(!processedHashes[depositHash], "Duplicate Hash");
+        processedHashes[depositHash] = true;
         
         uint256 fee = (amountin * depositFeeBps) / 10000;
         uint256 baseAmount = amountout / rate;
@@ -153,7 +186,7 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         supply(updatedSupply);
 
         
-        uint256 ts = block.timestamp;
+        uint256 ts = timeStamp;
 
         // 1. Allocate new user purchase slot
         purchasesByUser[user].push();
@@ -165,22 +198,25 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         p.user = user;
         p.token = token;
         p.amountin = amountin;
-        p.amountout = gbdAmountout;
+        p.amountout[i] = gbdAmountout;
+        p.exchangeRate[i] = rate;
         p.termIndex = uint32(index);
         p.purchaseTxHash = depositHash;
         p.payoutSetter = msg.sender;
-
-        // 3. Store in timestamp mapping (NOT automatic)
-        purchasesByTimestamp[ts] = p;
+        p.credit = true;
 
         // 4. Store timestamp for iteration (NOT automatic)
         purchaseTimestamps.push(ts);
+
+        purchasesByTimestamp[ts] = PurchaseRef({ user: user, purchaseIndex: uint32(index) });
 
         if (processTimeStampStart == 0) {
             processTimeStampStart = ts;
         }
 
         processTimeStampEnd = ts;
+
+        ledgerProxy.recordAcquisition(user, token, timeStamp, amountout, amountin, rate, depositHash);
 
         emit Acquisitioned(user, gbdAmountout, amountin);
     }
@@ -239,13 +275,16 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
             // Skip timestamps outside the batch
             if (ts < start || ts > end) continue;
 
-            Purchase storage w = purchasesByTimestamp[ts];
+            PurchaseRef memory r = purchasesByTimestamp[ts];
+            Purchase storage w = purchasesByUser[r.user][r.purchaseIndex];
+
+            uint8 cid = stablecoinIndex[w.token];
 
             // Skip already processed payouts
             if (w.payoutTxHash != bytes32(0)) continue;
 
             // Execute payout
-            payable(w.user).transfer(w.amountout);
+            payable(w.user).transfer(w.amountout[cid]);
 
             // Compute tx hash
             bytes32 txHash = keccak256(
@@ -267,7 +306,7 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
             emit PayoutProcessed(
                 ts,
                 w.user,
-                w.amountout,
+                w.amountout[cid],
                 w.termIndex,
                 txHash
             );
@@ -282,40 +321,174 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
     function correctPayoutTxHash(
         address user,
         uint32 termIndex,
-        bytes32 newTxHash
+        bytes32 newTxHash,
+        bytes32 refundHash
     ) external onlyOwner {
-
         // Validate term index
-        //require(termIndex < withdrawalsByUser[user].length, "Invalid term index");
+        require(termIndex < purchasesByUser[user].length, "Invalid term index");
 
-        // Load the correct term record
-        Purchase memory u = purchasesByUser[user][termIndex];
+        // Load the correct term record (use storage so changes persist)
+        Purchase storage u = purchasesByUser[user][termIndex];
 
-        // A payout must exist for this stage before correcting a hash
-        require(u.amountout != 0, "Payout not yet computed");
+        // Old hashes for event
+        bytes32 oldHash;
+        
+        // At least one of the supplied hashes must be non-zero
+        bytes32 newHash;
+        if (newTxHash == bytes32(0) && refundHash == bytes32(0)) {
+            revert("No Hash Included In The Transaction Call");
+        }
 
-        // Old hash must exist
-        bytes32 old = u.payoutTxHash;
-        require(old != bytes32(0), "Nothing to correct");
+        // Check duplicates only for non-zero incoming hashes
+        if (newTxHash != bytes32(0)) {
+            require(!processedHashes[newTxHash], "Duplicate Purchase Hash");
+            processedHashes[newTxHash] = true;
+            newHash = newTxHash;
+            oldHash = u.purchaseTxHash;
+            u.purchaseTxHash = newTxHash;
+            u.payoutSetter = msg.sender;
+        }
+        if (refundHash != bytes32(0)) {
+            require(!processedHashes[refundHash], "Duplicate Refund Hash");
+            processedHashes[refundHash] = true;
+            newHash = refundHash;
+            oldHash = u.refundHash;
+            u.refundHash = refundHash;
+            u.refundSetter = msg.sender;
+        }
 
-        // Apply correction
-        u.payoutTxHash = newTxHash;
-        u.payoutSetter = msg.sender;
-
-        emit PayoutTxHashCorrected(user, old, newTxHash, msg.sender);
+        emit PayoutTxHashCorrected(user, oldHash, newHash, msg.sender);
     }
 
     function getPurchase(uint256 timestamp) public {
-        Purchase memory w = purchasesByTimestamp[timestamp];
-        emit PurchaseTimestamp(w.timestamp, w.user, w.token, w.amountin, w.amountout);
+
+        if (msg.sender == owner()) {
+
+            PurchaseRef memory r = purchasesByTimestamp[timestamp];
+            Purchase memory w = purchasesByUser[r.user][r.purchaseIndex];
+            emit PurchaseTimestamp(w.timestamp, w.user, w.token, w.termIndex, w.amountout, w.amountin, w.payoutTxHash, w.refund, w.refundHash);
+
+        } else {
+
+            require(_isAdmin(msg.sender), "Permission Denied");
+            PurchaseRef memory r = purchasesByTimestamp[timestamp];
+            Purchase memory w = purchasesByUser[r.user][r.purchaseIndex];
+            emit PurchaseTimestamp(w.timestamp, w.user, w.token, w.termIndex, w.amountout, w.amountin, w.payoutTxHash, w.refund, w.refundHash);
+        }
     }
 
-    function getPurchasesInRange(uint256 startTs, uint256 endTs) public {
-        for (uint256 i = 0; i < purchaseTimestamps.length; i++) {
-            uint256 ts = purchaseTimestamps[i];
-            if (ts >= startTs && ts <= endTs) {
-                Purchase memory w = purchasesByTimestamp[ts];
-                emit PurchaseTimestamp(w.timestamp, w.user, w.token, w.amountin, w.amountout);
+    function getPurchasesInRange(uint256 startTs, uint256 endTs, bool process) public {
+
+        if (process == true){
+
+            require (msg.sender == owner(), "Only Owner Required for off-chain deposits");
+
+            for (uint256 i = 0; i < purchaseTimestamps.length; i++) {
+                uint256 ts = purchaseTimestamps[i];
+                if (ts >= startTs && ts <= endTs) {
+                    PurchaseRef memory r = purchasesByTimestamp[ts];
+                    Purchase memory w = purchasesByUser[r.user][r.purchaseIndex];
+
+                    emit PurchaseTimestamp(w.timestamp, w.user, w.token, w.termIndex, w.amountout, w.amountin, w.payoutTxHash, w.refund, w.refundHash);
+                }
+            }
+
+        } else {
+            
+            require(_isAdmin(msg.sender), "Permission Denied");
+
+            for (uint256 i = 0; i < purchaseTimestamps.length; i++) {
+                uint256 ts = purchaseTimestamps[i];
+                if (ts >= startTs && ts <= endTs) {
+                    PurchaseRef memory r = purchasesByTimestamp[ts];
+                    Purchase memory w = purchasesByUser[r.user][r.purchaseIndex];
+                    emit PurchaseTimestamp(w.timestamp, w.user, w.token, w.termIndex, w.amountout, w.amountin, w.payoutTxHash, w.refund, w.refundHash);
+                }
+            }
+        }
+    }
+
+    function liquidate (address payoutToken, uint256 amount, uint256 timeStamp) external payable {
+
+        uint256 ts = timeStamp;
+
+        if (_isAdmin(msg.sender)) {
+
+            //require(purchasesByTimestamp[ts].user == address(0), "Timestamp already used");
+            PurchaseRef memory r = purchasesByTimestamp[timeStamp];
+            Purchase memory p = purchasesByUser[r.user][r.purchaseIndex];
+
+            // --- Ledger Logic
+            (uint256[22] memory stableOuts) = ledgerProxy.liquidateNative(p.user, p.amountin, timeStamp); //Double check
+
+            // Store per-currency outputs
+            for (uint256 i = 0; i < 22; i++) {
+                //uint8 cid = cids[i];
+                uint256 amt = stableOuts[i];
+
+                p.amountout[i] = amt;
+
+                // Effective rate for THIS currency only
+                // (native consumed for this currency) / (stable returned)
+                // You can also have repayNative return this directly.
+                // --- rates applied in Ledger logic...
+            }
+
+            emit LiquidateUser(p.user, p.amountout, amount);
+
+        } else {
+
+            require(msg.value > 0, "No Currency Value Detected");
+
+
+            purchasesByUser[msg.sender].push();
+            uint256 index = purchasesByUser[msg.sender].length - 1;
+            Purchase storage p = purchasesByUser[msg.sender][index];
+
+            // 2. Fill the struct
+            p.timestamp = ts;
+            p.user = msg.sender;
+            p.token = payoutToken;
+            p.amountin = amount;
+            p.termIndex = uint32(index);
+            p.payoutSetter = msg.sender;
+            p.refund = true;
+            p.credit = false;
+
+            // 4. Store timestamp for iteration (NOT automatic)
+            purchaseTimestamps.push(ts);
+
+            //require(purchasesByTimestamp[ts].user == address(0), "Timestamp already used");
+            purchasesByTimestamp[ts] = PurchaseRef({ user: msg.sender, purchaseIndex: uint32(index) });
+
+            // --- Ledger Logic
+            (uint256[22] memory stableOuts) = ledgerProxy.liquidateNative(p.user, p.amountin, timeStamp); //Double check
+
+            // Store per-currency outputs
+            for (uint256 i = 0; i < 22; i++) {
+                //uint8 cid = cids[i];
+                uint256 amt = stableOuts[i];
+
+                p.amountout[i] = amt;
+
+                // Effective rate for THIS currency only
+                // (native consumed for this currency) / (stable returned)
+                // You can also have repayNative return this directly.
+                // --- rates applied in Ledger logic...
+            }
+        }
+    }
+
+    function addAdmin (address admin) external onlyOwner {
+        admins.push(admin);
+    }
+
+    function removeAdmin (address admin) external onlyOwner {
+        for (uint i = 0; i < admins.length; i++) {
+            if (admins[i] == admin) {
+                admins[i] = admins[admins.length - 1];
+                admins.pop();
+                break;
             }
         }
     }

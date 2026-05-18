@@ -57,21 +57,28 @@ const userFunctions: Record<string, string[]> = {
   ],
   AcquisitionGateway: [
     "acquisition(address user, address token, uint256 amountin, uint256 amountout, uint256 rate, bytes32 depositHash) **Admin Only**",
-    "getPurchasesInRange(uint256 startTs, uint256 endTs)"
+    "liquidate (address payoutToken, uint256 amount, uint256 timeStamp)",
+    "getPurchasesInRange(uint256 startTs, uint256 endTs) **Admin Only**"
   ],
   SmartVault: [
     "deposit(address user, address token, uint256 amount, uint8 committedQuarters, uint16 injectedTime, uint256 rate, bytes32 depositHash) **Admin Only**",
     "(address dividendToken, uint256 _holderBalance)",
     "withdraw(address dividendToken, uint256 holderBalance)",
-    "getWithdrawInRange(uint256 startTs, uint256 endTs)",
-    "getDepositsInRange(uint256 startTs, uint256 endTs)",
+    "changePayoutToken(address newToken)",
+    "changePayoutAddress(address newUser)",
+    "autoPay()",
+    "getWithdrawInRange(uint256 startTs, uint256 endTs) **Admin Only**",
+    "getDepositsInRange(uint256 startTs, uint256 endTs) **Admin Only**",
   ],
   RegionInfrastructure: [
     "deposit(address user, address token, address venture, uint256 amount, uint16 injectedTime, uint256 rate, bytes32 depositHash) **Admin Only**",
     "(address dividendToken, uint256 _holderBalance)",
     "withdraw(address dividendToken, uint256 holderBalance)",
-    "getWithdrawInRange(uint256 startTs, uint256 endTs)",
-    "getDepositsInRange(uint256 startTs, uint256 endTs)",
+    "changePayoutToken(address newToken)",
+    "changePayoutAddress(address newUser)",
+    "autoPay()",
+    "getWithdrawInRange(uint256 startTs, uint256 endTs) **Admin Only**",
+    "getDepositsInRange(uint256 startTs, uint256 endTs) **Admin Only**",
   ],
 };
 

@@ -75,6 +75,31 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": false,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256[22]",
+          "name": "stableOut",
+          "type": "uint256[22]"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amountin",
+          "type": "uint256"
+        }
+      ],
+      "name": "LiquidateUser",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": true,
           "internalType": "address",
           "name": "previousOwner",
@@ -181,15 +206,39 @@
         },
         {
           "indexed": false,
-          "internalType": "uint256",
+          "internalType": "uint32",
+          "name": "termIndex",
+          "type": "uint32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256[22]",
           "name": "amountOut",
-          "type": "uint256"
+          "type": "uint256[22]"
         },
         {
           "indexed": false,
           "internalType": "uint256",
           "name": "amountIn",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "payoutHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "refund",
+          "type": "bool"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "refundHash",
+          "type": "bytes32"
         }
       ],
       "name": "PurchaseTimestamp",
@@ -276,6 +325,11 @@
           "internalType": "bytes32",
           "name": "depositHash",
           "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timeStamp",
+          "type": "uint256"
         }
       ],
       "name": "acquisition",
@@ -284,10 +338,42 @@
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "admin",
+          "type": "address"
+        }
+      ],
+      "name": "addAdmin",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "addToReconciliationPool",
       "outputs": [],
       "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "admins",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -318,6 +404,11 @@
         {
           "internalType": "bytes32",
           "name": "newTxHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "refundHash",
           "type": "bytes32"
         }
       ],
@@ -363,6 +454,11 @@
           "internalType": "uint256",
           "name": "endTs",
           "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "process",
+          "type": "bool"
         }
       ],
       "name": "getPurchasesInRange",
@@ -403,6 +499,11 @@
               "type": "address"
             },
             {
+              "internalType": "address",
+              "name": "refundSetter",
+              "type": "address"
+            },
+            {
               "internalType": "uint32",
               "name": "termIndex",
               "type": "uint32"
@@ -413,9 +514,14 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256",
+              "internalType": "uint256[22]",
               "name": "amountout",
-              "type": "uint256"
+              "type": "uint256[22]"
+            },
+            {
+              "internalType": "uint256[22]",
+              "name": "exchangeRate",
+              "type": "uint256[22]"
             },
             {
               "internalType": "bytes32",
@@ -426,6 +532,21 @@
               "internalType": "bytes32",
               "name": "payoutTxHash",
               "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "refundHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bool",
+              "name": "refund",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "credit",
+              "type": "bool"
             }
           ],
           "internalType": "struct AcquisitionGateway.Purchase[]",
@@ -474,6 +595,11 @@
               "type": "address"
             },
             {
+              "internalType": "address",
+              "name": "refundSetter",
+              "type": "address"
+            },
+            {
               "internalType": "uint32",
               "name": "termIndex",
               "type": "uint32"
@@ -484,9 +610,14 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256",
+              "internalType": "uint256[22]",
               "name": "amountout",
-              "type": "uint256"
+              "type": "uint256[22]"
+            },
+            {
+              "internalType": "uint256[22]",
+              "name": "exchangeRate",
+              "type": "uint256[22]"
             },
             {
               "internalType": "bytes32",
@@ -497,6 +628,21 @@
               "internalType": "bytes32",
               "name": "payoutTxHash",
               "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "refundHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bool",
+              "name": "refund",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "credit",
+              "type": "bool"
             }
           ],
           "internalType": "struct AcquisitionGateway.Purchase",
@@ -537,11 +683,57 @@
           "internalType": "address[]",
           "name": "initialStables",
           "type": "address[]"
+        },
+        {
+          "internalType": "address[]",
+          "name": "adminList",
+          "type": "address[]"
+        },
+        {
+          "internalType": "address",
+          "name": "ledgerProxyAddress",
+          "type": "address"
         }
       ],
       "name": "initialize",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ledgerProxy",
+      "outputs": [
+        {
+          "internalType": "contract GlobalLedgerProxy",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "payoutToken",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timeStamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "liquidate",
+      "outputs": [],
+      "stateMutability": "payable",
       "type": "function"
     },
     {
@@ -591,7 +783,7 @@
           "type": "bytes32"
         }
       ],
-      "name": "processedDeposits",
+      "name": "processedHashes",
       "outputs": [
         {
           "internalType": "bool",
@@ -637,6 +829,30 @@
     {
       "inputs": [
         {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "name": "purchasesByHash",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint32",
+          "name": "purchaseIndex",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
@@ -645,49 +861,14 @@
       "name": "purchasesByTimestamp",
       "outputs": [
         {
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        },
-        {
           "internalType": "address",
           "name": "user",
           "type": "address"
         },
         {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "payoutSetter",
-          "type": "address"
-        },
-        {
           "internalType": "uint32",
-          "name": "termIndex",
+          "name": "purchaseIndex",
           "type": "uint32"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amountin",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amountout",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "purchaseTxHash",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "payoutTxHash",
-          "type": "bytes32"
         }
       ],
       "stateMutability": "view",
@@ -729,6 +910,11 @@
           "type": "address"
         },
         {
+          "internalType": "address",
+          "name": "refundSetter",
+          "type": "address"
+        },
+        {
           "internalType": "uint32",
           "name": "termIndex",
           "type": "uint32"
@@ -736,11 +922,6 @@
         {
           "internalType": "uint256",
           "name": "amountin",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amountout",
           "type": "uint256"
         },
         {
@@ -752,6 +933,21 @@
           "internalType": "bytes32",
           "name": "payoutTxHash",
           "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "refundHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bool",
+          "name": "refund",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "credit",
+          "type": "bool"
         }
       ],
       "stateMutability": "view",
@@ -779,6 +975,19 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "admin",
+          "type": "address"
+        }
+      ],
+      "name": "removeAdmin",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {

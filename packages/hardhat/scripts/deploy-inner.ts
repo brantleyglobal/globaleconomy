@@ -164,7 +164,7 @@ async function main() {
   // Create array of contract names based on your digits pattern
   const contractNames: string[] = [];
   for (let middle = 2; middle <= 8; middle++) {
-    let maxDigit = middle + 2;
+    let maxDigit = middle + 8;
     for (let fl = 1; fl <= maxDigit; fl++) {
       contractNames.push(`Dividend${fl}${middle}${fl}`);
     }
@@ -242,8 +242,7 @@ async function main() {
   const copx = await ethers.getContractAt("Copian", copxAddress);
 
   const stablecoinAddresses = [
-    //gbdoAddress, // COPx
-    gbdAddress, // GBDO
+    "0x0000000000000000000000000000000000000000", //GBDo      0
     "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC     1  
     "0x4A16BAf414b8e637Ed12019faD5Dd705735DB2e0", // QCAD     2
     "0x6B175474E89094C44Da98b954EedeAC495271d0F", // DAI      3
@@ -263,11 +262,14 @@ async function main() {
     "0x86B4dBE5D203e634a12364C0e428fa242A3FbA98", // GBPT     17
     "0x6FAff971d9248e7d398A98FdBE6a81F6d7489568", // TRYX     18
     "0x3231Cb76718CDeF2155FC47b5286d82e6eDA273f", // EURe     19
-    "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", // WBTC     20
-    "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH     21
-    "0xB8c77482e45F1F44dE1745F52C74426C631bDD52", // BNB      22
-    "0x00000000000000000000000000000000000000b0", //BTC       23
-    "0x00000000000000000000000000000000000000E0", //ETH       24
+    "0x0000000000000000000000000000000000000000", //GBDo      20
+    copxAddress,                                  // COPx     21
+    gbdAddress                                    // GBDO     22
+    //"0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", // WBTC     23
+    //"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH     24
+    //"0xB8c77482e45F1F44dE1745F52C74426C631bDD52", // BNB      25
+    //"0x00000000000000000000000000000000000000b0", //BTC       26
+    //"0x00000000000000000000000000000000000000E0", //ETH       27
     //"0x00006100F7090010005F1bd7aE6122c3C2CF0090", // AUDT
     //"0x05BBeD16620B352A7F889E23E3Cf427D1D379FFE", // NGNT
     //"0xc71daC923823D748a86D0A3618ABdA2d6dCd6bf4", // INRX
@@ -275,63 +277,6 @@ async function main() {
   
   const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 
-  /*const UniswapV2Factory = await deployProxy("UniswapV2Factory", deployed, [
-    deployer.address,
-    deployer.address,
-  ]);*/
-
-    // Deploy Counter implementation (non-upgradeable)
-  const GlobalSwap = await deployContract("GlobalSwap", deployed, []);
-  console.log(`GlobalSwap implementation deployed at: ${GlobalSwap}`);
-
-  // Deploy CounterFactory with the Counter implementation address
-  const GlobalSwapFactoryAddress = await deployContract("GlobalSwapFactory", deployed, []);
-  console.log(`GlobalSwapFactory deployed at: ${GlobalSwapFactoryAddress}`);
-
-  const GlobalSwapFactory = await ethers.getContractAt("GlobalSwapFactory", GlobalSwapFactoryAddress);
-  await GlobalSwapFactory.initialize(deployer.address, stablecoinAddresses);
-
-  const AssetPurchase = await deployProxy("AssetPurchase", deployed, [
-    deployer.address,
-    stablecoinAddresses,
-  ]);
-
-  const AcquisitionGateway = await deployProxy("AcquisitionGateway", deployed, [
-    deployer.address,
-    stablecoinAddresses,
-  ]);
-
-  console.log("Stakeablecoin addresses to be passed to SmartVault:");
-  for (const [index, addr] of stakeablecoinAddresses.entries()) {
-    console.log(`Index ${index}: Address ${addr}`);
-
-    const code = await ethers.provider.getCode(addr);
-    if (code === "0x") {
-      console.warn(`Warning: No contract code at address ${addr} (index ${index})`);
-    }
-  }
-
-  const SmartVault = await deployProxy("SmartVault", deployed, [
-    deployer.address,
-    stablecoinAddresses,
-    stakeablecoinAddresses,
-    usdc,
-  ]);
-
-  await gbdo.grantRole(await gbdo.MINTER_ROLE(), SmartVault);
-  console.log(`SmartVault granted MINTER_ROLE on GBD2x`);
-
-  for (const addr of stakeablecoinAddresses) {
-    try {
-      const tokenContract = new ethers.Contract(addr, gbdoxxAbi.abi, deployer);
-      const minterRole = await tokenContract.MINTER_ROLE();
-      const tx = await tokenContract.grantRole(minterRole, SmartVault);
-      await tx.wait();
-      console.log(`Granted MINTER_ROLE to SmartVault on token at ${addr}`);
-    } catch (error) {
-      console.error(`Failed to grant MINTER_ROLE on token at ${addr}:`, error);
-    }
-  }
 
   const globeAddress = await deployProxy("Globe", deployed, [
     deployer.address,
@@ -369,23 +314,112 @@ async function main() {
 
   const BGGRID = await ethers.getContractAt("BGGRID", bggridAddress);
 
-  const MultiCall3 = await deployContract("Multicall3", deployed, []);
-  console.log(`MultiCall deployed at: ${MultiCall3}`);
-
   const ventureAddresses = [
     globeAddress,
     tgusaAddress,
     tgmxAddress,
     bgffsAddress,
     bgfrsAddress,
-    bggridAddress,
+    bggridAddress
   ]
+
+  const adminAddresses = [
+    deployer.address,
+    "0xb84753ff376d8347f27ea669ad36f7e79f0c364e"
+  ]
+
+  console.log("stablecoinAddresses:", stablecoinAddresses);
+  console.log("stakeablecoinAddresses:", stakeablecoinAddresses);
+  console.log("ventureAddresses:", ventureAddresses);
+  console.log("adminAddresses:", adminAddresses);
+
+
+  const GlobalLedger = await deployProxy("GlobalLedger", deployed, [
+    deployer.address,
+    stablecoinAddresses,
+    stakeablecoinAddresses,
+  ]);
+
+  const GlobalLedgerRouter = await deployProxy("GlobalLedgerRouter", deployed, [
+  ]);
+
+  const GlobalLedgerProxy = await deployProxy("GlobalLedgerRouter", deployed, [
+    deployer.address,
+    GlobalLedger,
+    GlobalLedgerRouter
+  ]);
+
+    // Deploy Counter implementation (non-upgradeable)
+  const GlobalSwap = await deployContract("GlobalSwap", deployed, []);
+  console.log(`GlobalSwap implementation deployed at: ${GlobalSwap}`);
+
+  // Deploy CounterFactory with the Counter implementation address
+  const GlobalSwapFactoryAddress = await deployContract("GlobalSwapFactory", deployed, []);
+  console.log(`GlobalSwapFactory deployed at: ${GlobalSwapFactoryAddress}`);
+
+  const GlobalSwapFactory = await ethers.getContractAt("GlobalSwapFactory", GlobalSwapFactoryAddress);
+  await GlobalSwapFactory.initialize(deployer.address, stablecoinAddresses);
+
+  console.log(GlobalLedgerProxy);
+
+  const AssetPurchase = await deployProxy("AssetPurchase", deployed, [
+    deployer.address,
+    stablecoinAddresses,
+    adminAddresses,
+    GlobalLedgerProxy
+  ]);
+
+  const AcquisitionGateway = await deployProxy("AcquisitionGateway", deployed, [
+    deployer.address,
+    stablecoinAddresses,
+    adminAddresses,
+    GlobalLedgerProxy,
+  ]);
+
+  console.log("Stakeablecoin addresses to be passed to SmartVault:");
+  for (const [index, addr] of stakeablecoinAddresses.entries()) {
+    console.log(`Index ${index}: Address ${addr}`);
+
+    const code = await ethers.provider.getCode(addr);
+    if (code === "0x") {
+      console.warn(`Warning: No contract code at address ${addr} (index ${index})`);
+    }
+  }
+
+  const SmartVault = await deployProxy("SmartVault", deployed, [
+    deployer.address,
+    stablecoinAddresses,
+    stakeablecoinAddresses,
+    adminAddresses,
+    usdc,
+    GlobalLedgerProxy,
+  ]);
+
+  await gbdo.grantRole(await gbdo.MINTER_ROLE(), SmartVault);
+  console.log(`SmartVault granted MINTER_ROLE on GBD2x`);
+
+  for (const addr of stakeablecoinAddresses) {
+    try {
+      const tokenContract = new ethers.Contract(addr, gbdoxxAbi.abi, deployer);
+      const minterRole = await tokenContract.MINTER_ROLE();
+      const tx = await tokenContract.grantRole(minterRole, SmartVault);
+      await tx.wait();
+      console.log(`Granted MINTER_ROLE to SmartVault on token at ${addr}`);
+    } catch (error) {
+      console.error(`Failed to grant MINTER_ROLE on token at ${addr}:`, error);
+    }
+  }
+
+  const MultiCall3 = await deployContract("Multicall3", deployed, []);
+  console.log(`MultiCall deployed at: ${MultiCall3}`);
 
   const RegionInfrastructure = await deployProxy("RegionInfrastructure", deployed, [
     deployer.address,
     stablecoinAddresses,
     ventureAddresses,
-    copxAddress,
+    adminAddresses,
+    usdc,
+    GlobalLedgerProxy,
   ]);
 
   await GLOBE.grantRole(await GLOBE.MINTER_ROLE(), RegionInfrastructure);
@@ -405,22 +439,6 @@ async function main() {
 
   await BGGRID.grantRole(await BGGRID.MINTER_ROLE(), RegionInfrastructure);
   console.log(`RegionalInfra granted MINTER_ROLE on BGGRID`);
-
-  /*const TransferTracker = await deployProxy("TransferTracker", deployed, [
-    deployer.address,
-  ]);
-
-  const UserQueryHub = await deployProxy("UserQueryHub", deployed, [
-    deployer.address,
-    deployed["TransferTracker"],
-    deployed["AssetPurchase"],
-    deployed["SmartVault"],
-  ]);
-
-  const MainPoolManager = await deployProxy("PoolManager", deployed, [
-    deployer.address,
-    deployed["SmartVault"],
-  ]);*/
 
   // ABI Generation
   const generateTsAbis = await import("./generateTsAbis").then((m) => m.default);

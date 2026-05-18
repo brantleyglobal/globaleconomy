@@ -37,7 +37,7 @@ contract GlobalSwapFactory is Initializable, AccessControl {
         _grantRole(CREATOR_ROLE, _owner);
 
         for (uint256 i = 0; i < initialStables.length; i++) {
-            require(initialStables[i] != address(0), "Zero address not allowed");
+            //require(initialStables[i] != address(0), "Zero address not allowed");
             stablecoinWhitelistMap[initialStables[i]] = true;
             stablecoins.push(initialStables[i]);
         }
