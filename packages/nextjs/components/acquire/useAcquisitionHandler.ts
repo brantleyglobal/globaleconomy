@@ -159,7 +159,8 @@ export function useDeposit(): UseDepositResult {
 
         console.log("after try/catch")
 
-        const now = new Date(Date.now()).toISOString();
+        const ts = Date.now();
+        const now = ts.toString();
 
         const successPayload: AcquisitionPayload = {
           txhash: receipt2?.toString() || "",

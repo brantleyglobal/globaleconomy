@@ -5,14 +5,14 @@ import { Address as AddressType, getContract, erc20Abi } from "viem";
 import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { BanknotesIcon, WalletIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
-import { Token, dividendTokens } from "~~/components/constants/tokens";
+import { Token, dividendTokens, supportedTokens } from "~~/components/constants/tokens";
 import { ethers, Contract, BrowserProvider } from "ethers";
 import smartVaultabi from "~~/lib/contracts/abi/SmartVault.json";
 import { toast } from "react-hot-toast";
 import deployments from "~~/lib/contracts/deployments.json";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { useRedemptionHandler } from "~~/components/invest/useRedemptionHandler";
-import { sendInvestmentConfirmation } from "~~/components/email/sendInvestmentEmail";
+import { sendInvestmentConfirmation } from "~~/components/email/sendRedemptionEmail";
 import { AddressInput } from "~~/components/globalEco";
 import type { Address } from "viem";
 import { getAddress } from "viem";
@@ -41,6 +41,7 @@ type Props = {
   onBack: () => void;
   onNext: () => void;
   onHelpToggle: () => void;
+  openWalletModal?: () => void;
   isDisabled?: boolean;
 };
 
@@ -56,6 +57,7 @@ export default function AddressStep({
   userEmail,
   setUserEmail,
   onHelpToggle,
+  openWalletModal,
   onBack,
   onNext,
   isDisabled = false,  
@@ -138,10 +140,125 @@ export default function AddressStep({
 
   const stepLabels = ["Redemption Details", "Done"];
 
+  const selectedToken = useMemo(
+    () => walletTokens.find((t) => t.symbol === selectedTokenSymbol),
+    [walletTokens, selectedTokenSymbol]
+  );
+
+  const selectedToken2 = useMemo(
+    () => supportedTokens.find((t) => t.symbol === selectedTokenSymbol),
+    [supportedTokens, selectedTokenSymbol]
+  );
+
+  useEffect(() => {
+    if (!address || !publicClient) {
+      setWalletTokens([]);
+      setSelectedTokenSymbol("");
+      return;
+    }
+    const fetchBalances = async () => {
+        try {
+          const balances = await Promise.all(
+            dividendTokens.map(async (token) => {
+              let balance: bigint = 0n;
+              if (token.isNative) {
+                balance = await publicClient.getBalance({ address });
+              } else {
+                const contract = getContract({ address: token.address, abi: erc20Abi, client: publicClient });
+                balance = await contract.read.balanceOf([address]);
+              }
+              return { ...token,
+                chain: token.chain as "global" | "ethereum" | "polygon" | "bitcoin",
+                balance,
+              };
+            })
+          );
+          const tokensWithBalance = balances.filter((token) => token.balance > 0n);
+          setWalletTokens(tokensWithBalance);
+          if (tokensWithBalance.length > 0) {
+            setSelectedTokenSymbol(tokensWithBalance[0].symbol);
+          } else {
+            setSelectedTokenSymbol("");
+          }
+        } catch (error) {
+          console.error("Failed to fetch token balances:", error);
+          setWalletTokens([]);
+          setSelectedTokenSymbol("");
+        }
+      };
+      fetchBalances();
+    }, [address, publicClient]);
+
+  const { send } = useRedemptionHandler({
+    sender: address,
+    chainId,
+    selectedToken,
+    selectedToken2,
+    available,
+    signature: "",
+    openWalletModal,
+    newAddress,
+    autoPay,   // ← add this
+  });
+
+  // Handle send click and after redemption successfully send investment confirmation email
+  const handleSendClick = async () => {
+    if (!address) {
+      toast.error("Missing required fields.");
+      return;
+    }
+    setIsProcessing(true);
+    const toastId = toast.loading("Processing claim...");
+    try {
+      const result = await send();
+      if (!result?.success) {
+        toast.error(`Transfer failed: ${result?.error || "Unknown error"}`, { id: toastId });
+      } else {
+        toast.success("Transfer successful!", { id: toastId });
+
+        const receipt = result?.txHash || "";
+        if (!summary) {
+          toast.error("Summary info not available.");
+          return;
+        }
+
+        const { unlockLabel, eligibilityLabel, multiplier } = summary;
+
+        // Call investment email confirmation after successful redemption
+        if (selectedToken) {
+          await sendInvestmentConfirmation({
+            templateType: "walletchange",
+            userFirstName,
+            userLastName,
+            userEmail,
+            connectedWallet: address,
+            tokenSymbol: selectedToken.symbol,
+            tokenSymbol2: selectedToken2?.address || newAddress || "",
+            newAddress: newAddress!,
+            amount: "",
+            receipt,
+          });
+          toast.success("Investment confirmation email sent.");
+        }
+      }
+    } catch (error: any) {
+      toast.error(`Transfer failed: ${error?.message || "Unknown error"}`, { id: toastId });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const isRedemptionDisabled = 
+    !address || 
+    !chainId ||
+    !selectedToken || 
+    !newAddress || 
+    isProcessing
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-light text-primary">ADDRESS CHANGE</h3>
+        <h3 className="text-xl font-light text-primary">WALLET ADDRESS CHANGE</h3>
         <button
           onClick={onHelpToggle}
           aria-label="Toggle help"
@@ -152,21 +269,6 @@ export default function AddressStep({
         </button>
       </div>
       <div className="space-y-1 mt-4">
-        <span className="text-xs font-light">NEW PAYOUT WALLET ADDRESS</span>
-          <div className="relative inline-block ml-2">
-            <span className="text-xs font-light cursor-pointer group">ⓘ
-                <div className="absolute right-0 mt-2 w-64 px-3 py-2 text-xs text-white bg-[#061708] shadow-lg rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 pointer-events-none">
-                This new Wallet Address will be used for all future payouts unless altered. The can only change your address from the current Wallet Address on currently on file.
-                </div>
-            </span>              
-        </div>
-        <AddressInput
-          placeholder="Enter Wallet Address"
-          value={localNewAddress}
-          onBlur={handleBlur}
-          onChange={handleAddressChange}
-        />
-        {addressError && <p className="text-red-500 text-xs mt-1">{addressError}</p>}
         <span className="text-xs mb-4 font-light">SELECT TOKEN CONTRACT</span>
         <select
           className="select rounded-md bg-black w-full mt-2 text-info-600 mb-4 outline-none hover:bg-secondary/5 border-none focus:ring-0 focus:outline-none"
@@ -184,6 +286,21 @@ export default function AddressStep({
             </option>
           ))}
         </select>
+        <span className="text-xs font-light">NEW PAYOUT WALLET ADDRESS</span>
+        <div className="relative inline-block ml-2">
+          <span className="text-xs font-light cursor-pointer group">ⓘ
+              <div className="absolute right-0 mt-2 w-64 px-3 py-2 text-xs text-white bg-[#061708] shadow-lg rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 pointer-events-none">
+              This new Wallet Address will be used for all future payouts unless altered. The can only change your address from the current Wallet Address on currently on file.
+              </div>
+          </span>              
+        </div>
+        <AddressInput
+          placeholder="Enter Wallet Address"
+          value={localNewAddress}
+          onBlur={handleBlur}
+          onChange={handleAddressChange}
+        />
+        {addressError && <p className="text-red-500 text-xs mt-1">{addressError}</p>}
       </div>
 
       {/* AutoPay Seelection */}
@@ -279,11 +396,16 @@ export default function AddressStep({
           Previous
       </button>
       <button
-        className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
-        onClick={onNext}
-        disabled={isDisabled}
-        >
-        Next
+        className="btn bg-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
+        onClick={handleSendClick}
+        disabled={isRedemptionDisabled}
+      >
+        {isProcessing ? (
+          "Processing..."
+        ) : (
+          <BanknotesIcon className="h-5 w-4 shrink-0" />
+        )}
+        {isProcessing ? "Processing..." : "PROCESS"}
       </button>
     </div>
   </div>

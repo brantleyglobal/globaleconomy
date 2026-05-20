@@ -242,7 +242,7 @@ export const OnStep: React.FC<Props> = ({
           >
             <option value="" disabled>Select Payment Token</option>
             {supportedTokens
-              .filter(t => !["GBDo", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(t.symbol))
+              .filter(t => !["GBDo", "GBDx",  "BNB", "MATIC", "UNI", "LINK", "ETH", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(t.symbol))
               .map(t => (
                 <option key={t.symbol} value={t.symbol}>
                   {t.symbol} • {t.name}
@@ -391,7 +391,7 @@ export const OnStep: React.FC<Props> = ({
         <div className="overflow-hidden max-h-[40vh] rounded-t-xl">
             <div className="overflow-y-auto max-h-[calc(40vh-20px)] px-6 py-4 space-y-4 text-sm text-gray-300">
             {supportedTokens
-                .filter(({ symbol }) => !["GBDo", "BTC", "ETH", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(symbol))
+                .filter(({ symbol }) => !["GBDo", "LINK", "MATIC", "ETH", "UNI", "BNB", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(symbol))
                 .map(({ name, symbol, address }) => (
                 <div key={symbol} className="bg-white/5 backdrop-blur-md p-4 rounded-md shadow-sm">
                     <div className="flex justify-between items-center">

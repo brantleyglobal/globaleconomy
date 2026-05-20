@@ -1,7 +1,7 @@
 
 
 import { useState, useCallback, useEffect } from "react";
-import { Interface, parseUnits, Contract } from "ethers";
+import { Interface, parseUnits, Contract, ethers } from "ethers";
 import infraAbi from "~~/lib/contracts/abi/RegionInfrastructure.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import type { Token } from "~~/components/constants/tokens";
@@ -141,7 +141,8 @@ export function useInfra(): UseDepositResult {
         const startQuarterIndex = generateTermCode();
 
         const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
-        const now = new Date(Date.now()).toISOString();
+        const ts = Date.now();
+        const now = ts.toString();
 
         let dTxHash;
         let receipt2;
@@ -150,7 +151,7 @@ export function useInfra(): UseDepositResult {
         if (token.symbol == "GBDo") {
           try {
             dTxHash = await infraContract.deposit!(
-              now,
+              ts,
               holdingWalletAddress,
               token,
               token2,
@@ -158,7 +159,7 @@ export function useInfra(): UseDepositResult {
               committedQuarters,
               startQuarterIndex,
               rate,
-              0,
+              ethers.ZeroHash,
               {
                 value: parsedValue,
                 gasLimit: 1_000_000

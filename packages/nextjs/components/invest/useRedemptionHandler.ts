@@ -6,8 +6,6 @@ import smartVaultabi from "~~/lib/contracts/abi/SmartVault.json";
 import infraAbi from "~~/lib/contracts/abi/RegionInfrastructure.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import { erc20Abi, Address } from "viem";
-import { sendReconciliation } from "~~/lib/reconciliatonHelper";
-import { Interface } from "@ethersproject/abi";
 import { getExchangeRates } from "~~/lib/exchangeRates";
 
 interface TokenType {
@@ -109,6 +107,8 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
       const year = now.getFullYear();
       const quarter = Math.floor(now.getMonth() / 3) + 1;
 
+      const ts = Date.now();
+
       const termCodeStr = year * 4 + quarter;
 
       if (!selectedToken.address) {
@@ -132,10 +132,10 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
 
         if (!["GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(selectedToken.symbol!)) {
-          tokenTx = await vaultContract.changePayoutAddress(newAddress);
+          tokenTx = await vaultContract.changePayoutAddress(signerAddress, newAddress, selectedToken.address, termCodeStr);
           receipt = await tokenTx.wait(); 
         } else {
-          tokenTx = await infraContract.changePayoutAddress(newAddress);
+          tokenTx = await infraContract.changePayoutAddress(signerAddress, newAddress, selectedToken.address, termCodeStr);
           receipt = await tokenTx.wait();
         }
 
@@ -144,10 +144,10 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
 
         if (!["GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(selectedToken.symbol!)) {
-          tokenTx = await vaultContract.changePayoutToken(newToken);
+          tokenTx = await vaultContract.changePayoutToken(signerAddress, newToken, selectedToken.address, selectedToken2.address, termCodeStr);
           receipt = await tokenTx.wait(); 
         } else {
-          tokenTx = await infraContract.changePayoutToken(newToken);
+          tokenTx = await infraContract.changePayoutToken(signerAddress, newToken, selectedToken.address, selectedToken2.address, termCodeStr);
           receipt = await tokenTx.wait();
         }
 
@@ -183,7 +183,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           }
 
           // Withdraw
-          tokenTx = await vaultContract.withdraw(selectedToken.address, selectedToken2.address, amount, now, {gasLimit: 2_500_000});
+          tokenTx = await vaultContract.withdraw(selectedToken.address, selectedToken2.address, amount, ts, {gasLimit: 2_500_000});
           receipt = await tokenTx.wait();
 
           if (autoPay && receipt.status === 1) {
@@ -209,7 +209,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           }
 
           // Withdraw
-          tokenTx = await infraContract.withdraw(selectedToken.address, selectedToken2.address, amount, now, {gasLimit: 1_700_000}); //NEED TO RESTRICT TO TOKENS THE USER ACTUALLY HAS A BALANCE FOR
+          tokenTx = await infraContract.withdraw(selectedToken.address, selectedToken2.address, amount, ts, {gasLimit: 1_700_000}); //NEED TO RESTRICT TO TOKENS THE USER ACTUALLY HAS A BALANCE FOR
           receipt = await tokenTx.wait();
 
           if (autoPay && receipt.status === 1) {
@@ -229,11 +229,14 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         }
 
         let notes;
+        let mod;
         if (newAddress) {
           notes = "Address Change Requested";
         } else if (newToken) {
+          mod = selectedToken2.address;
           notes = "Token Change Requested";
         } else {
+          mod = newAddress;
           notes = "Redemption Requested";
         }
 
@@ -243,7 +246,8 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           contractaddress: contractAddress,
           useraddress: sender,
           amount: amount,
-          asset: selectedToken2.symbol,
+          modification: mod,
+          asset: selectedToken.symbol,
           status: "accepted",
           chainstatus: chainStatus,
           queuedat: processedAt,
@@ -252,7 +256,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           retrycount: 0,
           receipthash: receipt,
           notes: notes,
-          timestamp: now,
+          timestamp: ts.toString(),
         };
 
         // Log redemption to backend

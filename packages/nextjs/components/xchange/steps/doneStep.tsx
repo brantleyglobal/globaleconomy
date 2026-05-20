@@ -17,7 +17,7 @@ export const DoneStep: React.FC<Props> = ({ onClose, xchangeId }) => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 bg-white/5 rounded-lg shadow-md text-center overflow-y-auto">
-      <h3 className="text-xl font-light text-primary mb-4">ASSETEXCHANGE COMPLETE</h3>
+      <h3 className="text-xl font-light text-primary mb-4">ASSET XCHANGE COMPLETE</h3>
       {xchangeId && (
         <div className="mb-4">
           <label className="block mb-1 text-white font-light">Your Xchange ID:</label>

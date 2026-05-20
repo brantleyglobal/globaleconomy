@@ -122,12 +122,6 @@ export const Header = () => {
                 TRANSFER
               </button>
               <button
-                onClick={() => setModalState(s => ({ ...s, refund: true }))}
-                className="text-white hover:text-primary transition"
-              >
-                REFUNDS
-              </button>
-              <button
                 onClick={() => setModalState(s => ({ ...s, invest: true }))}
                 className="text-white hover:text-primary transition"
               >
@@ -142,6 +136,12 @@ export const Header = () => {
               >
                 HELP
               </Link>
+              <button
+                onClick={() => setModalState(s => ({ ...s, refund: true }))}
+                className="text-white hover:text-primary transition"
+              >
+                REFUNDS | RETURNS
+              </button>
             </div>
 
             {/* Mobile Menu Toggle */}
@@ -213,17 +213,6 @@ export const Header = () => {
               <li>
                 <button
                   onClick={() => {
-                    setModalState(s => ({ ...s, refund: true }));
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full text-left py-1 px-6 hover:text-primary transition"
-                >
-                  REFUNDS
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
                     setModalState(s => ({ ...s, invest: true }));
                     setMobileMenuOpen(false);
                   }}
@@ -245,6 +234,17 @@ export const Header = () => {
                   </Link>
                 </li>
               ))}
+              <li>
+                <button
+                  onClick={() => {
+                    setModalState(s => ({ ...s, refund: true }));
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left py-1 px-6 hover:text-primary transition"
+                >
+                  REFUNDS | RETURNS
+                </button>
+              </li>
             </ul>
           </div>
         )}

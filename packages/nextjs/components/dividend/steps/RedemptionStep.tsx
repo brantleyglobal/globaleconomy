@@ -12,7 +12,7 @@ import { toast } from "react-hot-toast";
 import deployments from "~~/lib/contracts/deployments.json";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { useRedemptionHandler } from "~~/components/invest/useRedemptionHandler";
-import { sendInvestmentConfirmation } from "~~/components/email/sendInvestmentEmail";
+import { sendInvestmentConfirmation } from "~~/components/email/sendRedemptionEmail";
 
 type FaucetProps = {
   openWalletModal?: () => void;
@@ -236,14 +236,10 @@ export default function RedemptionStep({
             userEmail,
             connectedWallet: address,
             tokenSymbol: selectedToken.symbol,
-            tokenSymbol2: "",
+            tokenSymbol2: selectedToken2?.address || newAddress || "",
+            newAddress: "",
             amount,
-            committedQuarters,
-            unlockLabel,
-            eligibilityLabel,
-            multiplier,
             receipt,
-            promo,
           });
           toast.success("Investment confirmation email sent.");
         }
@@ -260,7 +256,6 @@ export default function RedemptionStep({
     !isAmountValid || 
     !address || 
     !chainId ||
-    !recipient || 
     !selectedToken || 
     !selectedToken2 || 
     isProcessing
@@ -280,7 +275,7 @@ export default function RedemptionStep({
       </div>
       <div className="space-y-4">
         <div className="space-y-1">
-          <span className="text-xs mb-4 font-light">SELECT DIVIDEND TOKEN</span>
+          <span className="text-xs mb-4 font-light">SELECT DIVIDEND OR VENTURE TOKEN</span>
           <select
             className="select rounded-md bg-black w-full mt-2 text-info-600 mb-4 outline-none hover:bg-secondary/5 border-none focus:ring-0 focus:outline-none"
             value={selectedTokenSymbol}
@@ -288,7 +283,7 @@ export default function RedemptionStep({
               setSelectedTokenSymbol(e.target.value);
             }}
           >
-            <option value="" disabled>Select Dividend Token</option>
+            <option value="" disabled>Select Dividend or Venture Token</option>
             {dividendTokens
             .filter(t => !["GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh"].includes(t.symbol))
             .map(t => (
@@ -401,21 +396,21 @@ export default function RedemptionStep({
               <p className="text-red-500 text-xs mt-1">{emailError}</p>
           )}
         </div>
-        {/* Amount and Recipient inputs can be added here if needed */}
-        <div className="flex flex-col sm:flex-row relative justify-between items-center gap-4 mt-6 pt-4 border-t w-full">
-          <div className="flex flex-col items-start sm:flex-row sm:items-center w-full sm:gap-2">
+        {/* Wallet connect section and buttons */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 py-4 border-t bg-transparent w-full">
+          <div className="w-full sm:w-auto flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
             <WalletConnectButton />
             {!address && (
-              <>
+              <div className="relative inline-block">
                 <button
                   onClick={() => setShowWalletNotice(true)}
-                  className="w-6 h-6 rounded-full bg-white/40 hover:bg-red-200 flex items-center justify-center ml-2"
+                  className="w-6 h-6 rounded-full bg-white/30 hover:bg-red-200 flex items-center justify-center"
                   title="Wallet Required"
                 >
                   <ExclamationCircleIcon className="w-4 h-4 text-red-600" />
                 </button>
                 {showWalletNotice && (
-                  <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/70 border-t border-red-300 shadow-lg p-4 max-h-[40vh] overflow-y-auto animate-slide-up">
+                  <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/70 border-t border-red-300 shadow-lg px-4 max-h-[40vh] overflow-y-auto animate-slide-up">
                     <div className="flex items-center gap-2 mb-4">
                       <WalletIcon className="w-6 h-6 text-red-500" />
                       <h2 className="text-lg mt-2 font-semibold text-red-600">WALLET REQUIRED</h2>
@@ -433,33 +428,33 @@ export default function RedemptionStep({
                     </div>
                   </div>
                 )}
-              </>
+              </div>
             )}
+          </div>
+          {/* Footer Buttons */}
+          <div className="w-full sm:w-auto flex flex-col sm:flex-row justify-center sm:justify-end items-center gap-2">
+            {/*currentStep > 1 && (*/}
+            <button
+                className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
+                onClick={onBack}
+            >
+                Previous
+            </button>
+            <button
+              className="btn bg-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
+              onClick={handleSendClick}
+              disabled={isRedemptionDisabled}
+            >
+              {isProcessing ? (
+                "Processing..."
+              ) : (
+                <BanknotesIcon className="h-5 w-4 shrink-0" />
+              )}
+              {isProcessing ? "Processing..." : "PROCESS"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
-    {/* Footer Buttons */}
-    <div className="w-full sm:w-auto flex flex-col sm:flex-row justify-center sm:justify-end items-center gap-2">
-      {/*currentStep > 1 && (*/}
-      <button
-          className="btn btn-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
-          onClick={onBack}
-      >
-          Previous
-      </button>
-      <button
-        className="btn bg-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"
-        onClick={handleSendClick}
-        disabled={isRedemptionDisabled}
-      >
-        {isProcessing ? (
-          "Processing..."
-        ) : (
-          <BanknotesIcon className="h-5 w-4 shrink-0" />
-        )}
-        {isProcessing ? "Processing..." : "PROCESS"}
-      </button>
-    </div>
-  </div>
   );
 };

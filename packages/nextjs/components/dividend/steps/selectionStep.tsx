@@ -47,9 +47,9 @@ export default function SelectionStep({ userAction, setUserAction, onHelpToggle,
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setUserAction("addressChange") }}
             className={`cursor-pointer max-h-[300px] justify-between overflow-y-auto shadow-md bg-primary/5 mb-4 hover:shadow-xl hover:bg-secondary/30 hover:scale-[1.02] rounded-lg p-4 ${userAction === "addressChange" ? "bg-secondary/30" : "bg-black/40"}`}
         >
-            <h4 className="text-md font-light mt-2 text-white">CHANGE PAYOUT ADDRESS</h4>
+            <h4 className="text-md font-light mt-2 text-white">CHANGE PAYOUT WALLET ADDRESS</h4>
             <p className="text-xs text-white text-justify">
-              Change your payout address.
+              Change Your Payout Address.
             </p>
         </div>
 
@@ -60,11 +60,11 @@ export default function SelectionStep({ userAction, setUserAction, onHelpToggle,
             aria-selected={userAction === "tokenChange"}
             onClick={() => setUserAction("tokenChange")}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setUserAction("tokenChange") }}
-            className={`cursor-pointer max-h-[300px] justify-between overflow-y-auto shadow-md bg-primary/5 mb-4 hover:shadow-xl hover:bg-secondary/30 hover:scale-[1.02] rounded-lg p-4 ${userAction === "addressChange" ? "bg-secondary/30" : "bg-black/40"}`}
+            className={`cursor-pointer max-h-[300px] justify-between overflow-y-auto shadow-md bg-primary/5 mb-4 hover:shadow-xl hover:bg-secondary/30 hover:scale-[1.02] rounded-lg p-4 ${userAction === "tokenChange" ? "bg-secondary/30" : "bg-black/40"}`}
         >
             <h4 className="text-md font-light mt-2 text-white">CHANGE PAYOUT TOKEN</h4>
             <p className="text-xs text-white text-justify">
-              Change your payout address.
+              Change Your Payout Token.
             </p>
         </div>
 

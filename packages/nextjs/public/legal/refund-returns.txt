@@ -6,16 +6,16 @@
 
   <h2 style="margin-top:30px; font-weight: lighter; margin-bottom:16px;">SECTION 2 – Refunds</h2>
   <p>
-    All refunds are subject to processing fees, and said fees are based on the payment method used at the time of purchase as well as the time the refund request was made. Please contact <a href="mailto:info@legion-gen.com">info@legion-gen.com</a> to obtain possible fees. All purchasers have 15 days to request a refund. To initiate a refund, email <a href="mailto:info@legion-gen.com">info@legion-gen.com</a>.
+    All refunds are subject to processing fees, and said fees are based on the payment method used at the time of purchase as well as the time the refund request was made. Please contact <a href="mailto:info@brantley-global.com">info@brantley-global.com</a> to obtain possible fees. All purchasers have 15 days to request a refund. To initiate a refund, email <a href="mailto:info@brantley-global.com">info@brantley-global.com</a>.
   </p>
 
   <p>
-    All refunds requested following the initial 15-day time period and prior to shipping are subject to a partial refund equivalent to the order total less processing fees (including fees incurred at the time of purchase and any fees required to return payment), as well as a 10% restocking fee. The 10–50% restocking fee will be applied to the product purchase price, not including shipping or taxes. Restocking fees are determined based on the development stage of the product ordered by the purchaser.
+    All refunds requested following the initial 15-day time period and prior to shipping are subject to a partial refund equivalent to the order total less processing fees (including fees incurred at the time of purchase and any fees required to return payment). The 10–50% restocking fee will be applied to the product purchase price, not including shipping or taxes. Restocking fees are determined based on the development stage of the product ordered by the purchaser. Any return requested after 120 days will be denied.
   </p>
 
   <h2 style="margin-top:30px; font-weight: lighter; margin-bottom:16px;">SECTION 3 – Returns</h2>
   <p>
-    All return requests should be sent by email to <a href="mailto:info@legion-gen.com">info@legion-gen.com</a>. Returns may be initiated at any time upon product receipt and before 30 days have elapsed after said product receipt by the purchaser. All returns requested are subject to a restocking fee as well as transaction fees.
+    All return requests should be sent by email to <a href="mailto:info@brantley-global.com">info@brantley-global.com</a>. Returns may be initiated at any time upon product receipt and before 30 days have elapsed after said product receipt by the purchaser. All returns requested are subject to a restocking fee as well as transaction fees.
   </p>
 
   <p>
@@ -50,12 +50,12 @@
     <li>Check your bank account again.</li>
     <li>Contact your credit card company; it may take some time before your refund is officially posted.</li>
     <li>Contact your bank. There is often some processing time before a refund is posted.</li>
-    <li>If all of the above has been completed and the purchaser has not received a refund, submit an inquiry to <a href="mailto:info@legion-gen.com">info@legion-gen.com</a>.</li>
+    <li>If all of the above has been completed and the purchaser has not received a refund, submit an inquiry to <a href="mailto:info@brantley-global.com">info@brantley-global.com</a>.</li>
   </ul>
 
   <h2 style="margin-top:30px; font-weight: lighter; margin-bottom:16px;">SECTION 4 – Shipping</h2>
   <p>
-    To return your product, please email <a href="mailto:info@legion-gen.com">info@legion-gen.com</a>.
+    To return your product, please email <a href="mailto:info@brantley-global.com">info@brantley-global.com</a>.
   </p>
 
   <p>

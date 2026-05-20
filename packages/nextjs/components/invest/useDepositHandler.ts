@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { parseUnits, Interface, Contract } from "ethers";
+import { parseUnits, Interface, Contract, ethers } from "ethers";
 import smartVaultAbi from "~~/lib/contracts/abi/SmartVault.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import type { Token } from "~~/components/constants/tokens";
@@ -146,7 +146,8 @@ export function useDeposit(): UseDepositResult {
         const startQuarterIndex = generateTermCode();
 
         const vaultContract = new Contract(deployments.SmartVault, smartVaultAbi.abi, signer);
-        const now = new Date(Date.now()).toISOString();
+        const ts = Date.now();
+        const now = ts.toString();
 
         let dTxHash;
         let receipt2;
@@ -155,14 +156,14 @@ export function useDeposit(): UseDepositResult {
         if (token.symbol == "GBDo") {
           try  {
             dTxHash = await vaultContract.deposit!(
-              now,
+              ts,
               holdingWalletAddress,
               token, 
               parsedValue,
               committedQuarters,
               startQuarterIndex,
               rate,
-              0,
+              ethers.ZeroHash,
               {
                 value: parsedValue,
                 gasLimit: 1_000_000

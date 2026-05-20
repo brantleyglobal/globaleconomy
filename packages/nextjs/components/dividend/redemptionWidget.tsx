@@ -12,10 +12,11 @@ import { toast } from "react-hot-toast";
 import deployments from "~~/lib/contracts/deployments.json";
 import SelectionStep from "~~/components/dividend/steps/selectionStep";
 import AddressStep from "~~/components/dividend/steps/NewAddressStep";
+import TokenStep from "~~/components/dividend/steps/NewTokenStep";
 import RedemptionStep from "~~/components/dividend/steps/RedemptionStep";
 import HelpStep from "~~/components/dividend/steps/helpStep";
 import { useRedemptionHandler } from "~~/components/invest/useRedemptionHandler";
-import { sendInvestmentConfirmation } from "~~/components/email/sendInvestmentEmail";
+import { sendInvestmentConfirmation } from "~~/components/email/sendRedemptionEmail";
 import { DoneStep } from "../xchange/steps/doneStep";
 
 type FaucetProps = {
@@ -35,7 +36,7 @@ enum ModalStep {
   AddressStep = 1,
   TokenStep = 2,
   RedemptionStep = 3,
-  Complete = 3,
+  Complete = 4,
 }
 
 export const DividendRedeemModal = ({ isOpen, onClose, openWalletModal }: FaucetProps) => {
@@ -106,17 +107,6 @@ export const DividendRedeemModal = ({ isOpen, onClose, openWalletModal }: Faucet
     () => walletTokens.find((t) => t.symbol === selectedTokenSymbol),
     [walletTokens, selectedTokenSymbol]
   );
-
-  /*const { send } = useRedemptionHandler({
-    sender: address,
-    chainId,
-    selectedToken,
-    available,
-    signature: "",
-    openWalletModal,
-    newAddress,
-    autoPay,   // ← add this
-  });*/
 
   const isNewAddressDisabled =
     !newAddress
@@ -196,57 +186,6 @@ export const DividendRedeemModal = ({ isOpen, onClose, openWalletModal }: Faucet
     setSummary({ unlockLabel, eligibilityLabel, multiplier });
   }, [amount, committedQuarters]);
 
-  // Handle send click and after redemption successfully send investment confirmation email
-  /*const handleSendClick = async () => {
-    if (!address) {
-      toast.error("Missing required fields.");
-      return;
-    }
-    setIsProcessing(true);
-    const toastId = toast.loading("Processing claim...");
-    try {
-      const result = await send();
-      if (!result?.success) {
-        toast.error(`Transfer failed: ${result?.error || "Unknown error"}`, { id: toastId });
-      } else {
-        toast.success("Transfer successful!", { id: toastId });
-
-        const receipt = result?.txHash || "";
-        if (!summary) {
-          toast.error("Summary info not available.");
-          return;
-        }
-
-        const { unlockLabel, eligibilityLabel, multiplier } = summary;
-
-        // Call investment email confirmation after successful redemption
-        if (selectedToken) {
-          await sendInvestmentConfirmation({
-            templateType: "redemption",
-            userFirstName,
-            userLastName,
-            userEmail,
-            connectedWallet: address,
-            tokenSymbol: selectedToken.symbol,
-            tokenSymbol2: "",
-            amount,
-            committedQuarters,
-            unlockLabel,
-            eligibilityLabel,
-            multiplier,
-            receipt,
-            promo,
-          });
-          toast.success("Investment confirmation email sent.");
-        }
-      }
-    } catch (error: any) {
-      toast.error(`Transfer failed: ${error?.message || "Unknown error"}`, { id: toastId });
-    } finally {
-      setIsProcessing(false);
-    }
-  };*/
-
   const stepLabels = ["Redemption Process", "Wallet Address Change", "Payout Token Change", "Done"];
 
   return (
@@ -309,11 +248,13 @@ export const DividendRedeemModal = ({ isOpen, onClose, openWalletModal }: Faucet
           )}
 
           {userAction === "tokenChange" && step === ModalStep.TokenStep && (
-            <AddressStep
+            <TokenStep
               newAddress={newAddress ?? ""}
               setNewAddress={setNewAddress}
               selectedTokenSymbol={selectedTokenSymbol}
               setSelectedTokenSymbol={setSelectedTokenSymbol}
+              selectedTokenSymbol2={selectedTokenSymbol2}
+              setSelectedTokenSymbol2={setSelectedTokenSymbol2}
               userFirstName={userFirstName}
               setUserFirstName={setUserFirstName}
               userLastName={userLastName}

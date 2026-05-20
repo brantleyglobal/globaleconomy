@@ -11,7 +11,7 @@ import smartVaultabi from "~~/lib/contracts/abi/SmartVault.json";
 import { toast } from "react-hot-toast";
 import deployments from "~~/lib/contracts/deployments.json";
 import { useRedemptionHandler } from "~~/components/invest/useRedemptionHandler";
-import { sendInvestmentConfirmation } from "~~/components/email/sendInvestmentEmail";
+import { sendInvestmentConfirmation } from "~~/components/email/sendRedemptionEmail";
 
 type FaucetProps = {
   openWalletModal?: () => void;

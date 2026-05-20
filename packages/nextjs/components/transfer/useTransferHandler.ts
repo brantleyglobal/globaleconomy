@@ -185,7 +185,7 @@ export function useTransferHandler(config: TransferHandlerProps) {
         retrycount: 0,
         receipthash: receipt2?.toString() || "",
         notes: noteStatus,
-        timestamp: new Date(Date.now()).toISOString(),
+        timestamp: Date.now().toString(),
       };
 
       try {

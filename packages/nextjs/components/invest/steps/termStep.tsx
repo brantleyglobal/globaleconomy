@@ -120,7 +120,7 @@ export const TermStep: React.FC<Props> = ({
             <option value="" disabled>Select Deposit Method</option>
             {supportedTokens
               .filter(t => rpcUp || t.chain !== "global")   // Chain Status to Remove Native Transfers
-              .filter(t => !["GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(t.symbol))
+              .filter(t => !["GBDx", "ETH", "UNI", "LINK", "MATIC", "BNB", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(t.symbol))
               .map(t => (
                 <option key={t.symbol} value={t.symbol}>
                   {t.symbol} • {t.name}
@@ -128,7 +128,7 @@ export const TermStep: React.FC<Props> = ({
               ))}
           </select>
           <p className="text-xs text-justify text-white mt-">
-            Includes routing fee of 0.25%. Non-Stablecoin purchases are not based live conversion rates in an effort to protect products on this platform from volatility. Users are encouraged to convert to Stablecoin for investment and energy related product purchases on this platform.
+            Includes routing fee of 0.25%.
           </p>
           <button
               type="button"
@@ -232,7 +232,7 @@ export const TermStep: React.FC<Props> = ({
         <div className="overflow-hidden max-h-[40vh] rounded-t-xl">
             <div className="overflow-y-auto max-h-[calc(40vh-20px)] px-6 py-4 space-y-4 text-sm text-gray-300">
             {supportedTokens
-                .filter(({ symbol }) => !["GBDo", "BTC", "ETH", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(symbol))
+                .filter(({ symbol }) => !["GBDo", "BNB", "MATIC", "UNI", "LINK", "ETH", "GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(symbol))
                 .map(({ name, symbol, address }) => (
                 <div key={symbol} className="bg-white/5 backdrop-blur-md p-4 rounded-md shadow-sm">
                     <div className="flex justify-between items-center">

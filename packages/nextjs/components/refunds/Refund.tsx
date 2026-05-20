@@ -330,29 +330,27 @@ export const Refund = ({ openWalletModal }: { openWalletModal?: () => void }) =>
                   )}
                 </div>
 
-                <div className="flex flex-col sm:flex-row relative justify-between items-center gap-4 mt-10 pt-4 border-t w-full">
-                  <div className="flex flex-col items-start sm:flex-row sm:items-center w-full sm:gap-2">
+                {/* Wallet connect section and buttons */}
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 py-4 border-t bg-transparent w-full">
+                  <div className="w-full sm:w-auto flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
                     <WalletConnectButton />
                     {!address && (
-                      <>
+                      <div className="relative inline-block">
                         <button
                           onClick={() => setShowWalletNotice(true)}
-                          className="w-6 h-6 rounded-full bg-white/40 hover:bg-red-200 flex items-center justify-center ml-2"
+                          className="w-6 h-6 rounded-full bg-white/30 hover:bg-red-200 flex items-center justify-center"
                           title="Wallet Required"
                         >
                           <ExclamationCircleIcon className="w-4 h-4 text-red-600" />
                         </button>
                         {showWalletNotice && (
-                          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/70 border-t border-red-300 shadow-lg p-4 max-h-[40vh] overflow-y-auto animate-slide-up">
+                          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/70 border-t border-red-300 shadow-lg px-4 max-h-[40vh] overflow-y-auto animate-slide-up">
                             <div className="flex items-center gap-2 mb-4">
                               <WalletIcon className="w-6 h-6 text-red-500" />
-                              <h2 className="text-lg mt-2 font-semibold text-red-600">
-                                WALLET REQUIRED
-                              </h2>
+                              <h2 className="text-lg mt-2 font-semibold text-red-600">WALLET REQUIRED</h2>
                             </div>
                             <p className="text-sm text-black mb-2">
-                              Connect your wallet to continue. This ensures secure
-                              and personalized access.
+                              Connect your wallet to continue. This ensures secure and personalized access.
                             </p>
                             <div className="flex justify-end">
                               <button
@@ -364,9 +362,11 @@ export const Refund = ({ openWalletModal }: { openWalletModal?: () => void }) =>
                             </div>
                           </div>
                         )}
-                      </>
+                      </div>
                     )}
                   </div>
+                  {/* Footer Buttons */}
+                  <div className="w-full sm:w-auto flex flex-col sm:flex-row justify-center sm:justify-end items-center gap-2"></div>
 
                   <button
                     className="btn bg-primary/15 hover:bg-secondary/30 btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-50 px-6 w-full sm:w-auto"

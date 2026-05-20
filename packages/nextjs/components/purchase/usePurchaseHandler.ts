@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Interface } from "@ethersproject/abi";
 import { toast } from "react-hot-toast";
-import { parseUnits, formatUnits, Contract } from "ethers";
+import { parseUnits, formatUnits, Contract, ethers } from "ethers";
 import assetPurchaseAbi from "~~/lib/contracts/abi/AssetPurchase.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
@@ -486,7 +486,8 @@ async function handleCryptoPurchase(params: InitiateParams) {
     const totalTokenAmountNumber = parseFloat(formatUnits(totalTokenAmountF, precision));
 
     const totalTokenAmountDisplay = totalTokenAmountNumber.toFixed(2);
-    const timeStamp = new Date(Date.now());
+    const ts = Date.now();
+    const now = ts.toString();
 
     let dTxHash;
     let receipt2;
@@ -508,7 +509,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
       BigInt(quantity),
       exchangeRate,
       region,
-      timeStamp,
+      ts,
     ]);
 
     const purchaseMade = {
@@ -612,8 +613,8 @@ async function handleCryptoPurchase(params: InitiateParams) {
           affiliateAddress,
           commmissionTotal,
           region,
-          0,
-          timeStamp,
+          ethers.ZeroHash,
+          ts,
           {
             value: totalTokenAmount,
             gasLimit: 1_500_000
@@ -664,9 +665,9 @@ async function handleCryptoPurchase(params: InitiateParams) {
       refundhash: "",
       status: "accepted",
       chainstatus: chainStatus,
-      queuedat: new Date(Date.now()).toISOString(),
-      processedat: new Date(Date.now()).toISOString(),
-      timestamp: timeStamp.toISOString(),
+      queuedat: now,
+      processedat: now,
+      timestamp: now,
       priority: 0,
       retrycount: 0,
       notes: "Purchase Submitted",
