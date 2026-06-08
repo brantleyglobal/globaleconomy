@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { parseUnits, formatUnits, Contract } from "ethers";
+import { Contract } from "ethers";
 import { useBalance } from "wagmi";
 import { Interface } from "@ethersproject/abi";
 import assetPurchaseAbi from "~~/lib/contracts/abi/AssetPurchase.json";

@@ -8,7 +8,6 @@ import { toast } from "react-hot-toast";
 import { useTokenBalance } from "~~/components/invest/useTokenBalance";
 import { useDeposit } from "~~/components/invest/useDepositHandler";
 import { useInfra } from "~~/components/invest/useInfraHandler";
-import type { Props as InputStepProps  } from "~~/components/invest/steps/termStep";
 import SelectionStep from "~~/components/invest/steps/selectionStep";
 import { TermStep } from "~~/components/invest/steps/termStep";
 import { RegionStep } from "~~/components/invest/steps/regionStep";

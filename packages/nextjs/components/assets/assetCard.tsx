@@ -94,14 +94,14 @@ const galleryMap: Record<"eseries" | "xseries", {
   hover: string 
 }> = {
   eseries: {
-    pool: ["/LegionE1.png", "/LegionE2.png", "/LegionE3.png", "/LegionE4.png", "/LegionE5.png"],
+    pool: ["/LegionE1.png", "/LegionE2.png", "/LegionE3.png", "/LegionE4.png", "/LegionE5.png", "LegionE6.png"],
     main: "/LegionE1.png",
-    hover: "/LegionEAlt.png"
+    hover: "/LegionE6.png"
   },
   xseries: {
-    pool: ["/LegionX1.png", "/LegionX2.png", "/LegionX3.png",  "/LegionX4.png", "/LegionX5.png"],
+    pool: ["/LegionX1.png", "/LegionX2.png", "/LegionX3.png",  "/LegionX4.png", "/LegionX5.png", "LegionX6.png"],
     main: "/LegionX2.png",
-    hover: "/LegionXAlt.png"
+    hover: "/LegionX6.png"
   }
 };
 

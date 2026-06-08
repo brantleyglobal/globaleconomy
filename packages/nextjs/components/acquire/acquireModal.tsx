@@ -5,7 +5,6 @@ import { Modal } from "~~/components/common/modal";
 import { Token, supportedTokens } from "~~/components/constants/tokens";
 import { useAccount } from "wagmi";
 import { toast } from "react-hot-toast";
-import { useTokenBalance } from "~~/components/invest/useTokenBalance";
 import { useDeposit } from "~~/components/acquire/useAcquisitionHandler";
 import SelectionStep from  "~~/components/acquire/steps/selectionStep";
 import { OnStep } from "~~/components/acquire/steps/onStep";

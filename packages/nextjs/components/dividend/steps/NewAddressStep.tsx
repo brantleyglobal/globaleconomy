@@ -6,15 +6,11 @@ import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { BanknotesIcon, WalletIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { Token, dividendTokens, supportedTokens } from "~~/components/constants/tokens";
-import { ethers, Contract, BrowserProvider } from "ethers";
-import smartVaultabi from "~~/lib/contracts/abi/SmartVault.json";
 import { toast } from "react-hot-toast";
-import deployments from "~~/lib/contracts/deployments.json";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { useRedemptionHandler } from "~~/components/invest/useRedemptionHandler";
 import { sendInvestmentConfirmation } from "~~/components/email/sendRedemptionEmail";
 import { AddressInput } from "~~/components/globalEco";
-import type { Address } from "viem";
 import { getAddress } from "viem";
 
 type FaucetProps = {
@@ -198,7 +194,7 @@ export default function AddressStep({
     signature: "",
     openWalletModal,
     newAddress,
-    autoPay,   // ← add this
+    autoPay,
   });
 
   // Handle send click and after redemption successfully send investment confirmation email

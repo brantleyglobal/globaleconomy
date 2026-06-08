@@ -1,15 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Contract, parseUnits, formatUnits, Interface, BrowserProvider, isAddress, TransactionResponse, TransactionReceipt } from "ethers";
+import { Contract, parseUnits, formatUnits, Interface, BrowserProvider, TransactionResponse } from "ethers";
 import GlobalSwapabi from "~~/lib/contracts/abi/GlobalSwap.json";
 import GlobalSwapFactoryabi from "~~/lib/contracts/abi/GlobalSwapFactory.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import { supportedTokens, Token } from "~~/components/constants/tokens";
 import { Address as AddressType } from "viem";
 import { getExchangeRates } from "~~/lib/exchangeRates";
-import { sendTransferOnTargetChain, CHAINS, ensureGlobalChain  } from "~~/utils/targetChain"
-import { deposit } from "viem/zksync";
+import { sendTransferOnTargetChain, CHAINS, switchOrAddChain  } from "~~/utils/targetChain"
 
 interface TransferHandlerProps {
   sender?: string;

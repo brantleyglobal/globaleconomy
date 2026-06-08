@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { parseUnits, Interface, Contract, ethers } from "ethers";
 import smartVaultAbi from "~~/lib/contracts/abi/SmartVault.json";
 import deployments from "~~/lib/contracts/deployments.json";
@@ -7,22 +7,38 @@ import { logVaultCommit } from "./logVaultCommit";
 import { sendTransferOnTargetChain, ensureGlobalChain } from "~~/utils/targetChain";
 
 // Helper to generate term code (YYQDD)
-function generateTermCode(): number {
+function generateTermCode() {
   const now = new Date();
   const year = now.getFullYear();
-  const quarter = Math.floor(now.getMonth() / 3) + 1;
   const day = now.getDate();
 
-  const currentQuarterIndex = year * 4 + quarter;
-  let startQuarterIndex = year * 4 + quarter;
+  // JS months: 0–11 → convert to 1–12
+  let month = now.getMonth() + 1;
 
-  // Grace period rule: after day 15, roll to next quarter
+  // Quarter: 1–4
+  const quarter = Math.floor((month - 1) / 3);
+
+  const currentQuarterIndex = year * 4 + quarter;
+  let startQuarterIndex = currentQuarterIndex;
+
+  // 15‑day grace: apply to month
   if (day > 15) {
+    const wasLastMonthOfQuarter = month % 3 === 0;
+
+    // move to next month (with wrap)
+    month = (month % 12) + 1;
+
+    // if we were in the last month of the quarter, use next quarter index
+    if (wasLastMonthOfQuarter) {
       startQuarterIndex += 1;
+    }
   }
 
+  // return both, preserving your index logic
   return startQuarterIndex;
 }
+
+
 
 type TxResult = {
   txHash: string;
@@ -146,7 +162,7 @@ export function useDeposit(): UseDepositResult {
         const startQuarterIndex = generateTermCode();
 
         const vaultContract = new Contract(deployments.SmartVault, smartVaultAbi.abi, signer);
-        const ts = Date.now();
+        const ts = Math.floor(Date.now() / 1000);
         const now = ts.toString();
 
         let dTxHash;
@@ -161,7 +177,6 @@ export function useDeposit(): UseDepositResult {
               token, 
               parsedValue,
               committedQuarters,
-              startQuarterIndex,
               rate,
               ethers.ZeroHash,
               {

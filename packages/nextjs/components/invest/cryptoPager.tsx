@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Token } from "~~/components/constants/tokens";  
 
 export const CryptoCardPager = () => {
   const cryptoPairs: Record<string, string> = {

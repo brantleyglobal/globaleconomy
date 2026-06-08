@@ -20,7 +20,7 @@ const deploymentsTyped = deployments as Deployments;
 export const generateDividendTokens = (): Token[] => {
   const tokens: Token[] = [];
   for (let middle = 2; middle <= 8; middle++) {
-    const maxDigit = middle + 2;
+    const maxDigit = middle + 8;
     for (let fl = 1; fl <= maxDigit; fl++) {
       const name = `Dividend${fl}${middle}${fl}`;
       const symbol = `GBD${fl}${middle}${fl}`;
@@ -52,14 +52,14 @@ export const supportedTokens: Token[] = [
     isNative: true,
     chain: "global",
   },
-  {
+  /*{
     name: "Global DollarX",
     symbol: "GBDx",
     address: deployments.GlobalDollarX,
     decimals: 18,
     isNative: false,
     chain: "global",
-  },
+  },*/
   {
     name: "Copian",
     symbol: "COPx",
@@ -273,7 +273,7 @@ export const dividendTokens = [
   {
     name: "TRANS-GREENTECH REFINERY & DEPOT MX",
     symbol: "TGMX",
-    address: deployments.TGMX,
+    address: deployments.TGMxRenewable,
     decimals: 18,
     isNative: false,
     chain: "global",
@@ -281,7 +281,7 @@ export const dividendTokens = [
   {
     name: "TRANS-GREENTECH REFINERY & DEPOT US",
     symbol: "TGUSA",
-    address: deployments.TGUSA,
+    address: deployments.TGUsRenewable,
     decimals: 18,
     isNative: false,
     chain: "global",
@@ -289,7 +289,7 @@ export const dividendTokens = [
   {
     name: "BG CLEAN REAL ESTATE",
     symbol: "CREs",
-    address: deployments.BGFFS,
+    address: deployments.BGSellRE,
     decimals: 18,
     isNative: false,
     chain: "global",
@@ -297,7 +297,7 @@ export const dividendTokens = [
   {
     name: "BG CLEAN REAL ESTATE",
     symbol: "CREh",
-    address: deployments.BGFRS,
+    address: deployments.BGHoldRE,
     decimals: 18,
     isNative: false,
     chain: "global",
@@ -305,7 +305,7 @@ export const dividendTokens = [
   {
     name: "BG CLEAN GRID",
     symbol: "CGRi",
-    address: deployments.BGGRID,
+    address: deployments.BGGrid,
     decimals: 18,
     isNative: false,
     chain: "global",

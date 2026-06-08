@@ -6,10 +6,7 @@ import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { BanknotesIcon, WalletIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { Token, dividendTokens, supportedTokens } from "~~/components/constants/tokens";
-import { ethers, Contract, BrowserProvider } from "ethers";
-import smartVaultabi from "~~/lib/contracts/abi/SmartVault.json";
 import { toast } from "react-hot-toast";
-import deployments from "~~/lib/contracts/deployments.json";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { useRedemptionHandler } from "~~/components/invest/useRedemptionHandler";
 import { sendInvestmentConfirmation } from "~~/components/email/sendRedemptionEmail";
@@ -352,7 +349,7 @@ export default function RedemptionStep({
         {/* AutoPay Seelection */}
         <div className="flex items-center justify-between mt-6 mb-4 px-1">
           <span className="text-xs font-light text-white/80 tracking-wide">
-            ENABLE AUTO‑PAY FOR FUTURE WITHDRAWALS
+            ENABLE/DISABLE AUTO‑PAY FOR FUTURE WITHDRAWALS
           </span>
 
           <label className="inline-flex items-center cursor-pointer">

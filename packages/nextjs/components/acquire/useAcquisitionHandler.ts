@@ -2,10 +2,8 @@ import { useState, useCallback } from "react";
 import { parseUnits, Interface, Contract } from "ethers";
 import acquisitionAbi from "~~/lib/contracts/abi/AcquisitionGateway.json";
 import deployments from "~~/lib/contracts/deployments.json";
-import { erc20Abi } from "viem";
 import type { Token } from "~~/components/constants/tokens";
 import { logAcquisitionCommit } from "./logAcquisitionCommit";
-import { Address } from "viem";
 import { sendTransferOnTargetChain } from "~~/utils/targetChain"
 
 interface AcquisitionPayload {
@@ -86,7 +84,7 @@ export function useDeposit(): UseDepositResult {
       let dTxHash;
       let receipt2;
       let chainStatus = false;
-      const timeStamp = new Date(Date.now());
+      const timeStamp = Math.floor(Date.now() / 1000);
 
       try {
 
@@ -175,7 +173,7 @@ export function useDeposit(): UseDepositResult {
           processedat: now,
           receipthash: receipt2?.toString() || "",
           notes: "success",
-          timestamp: timeStamp.toISOString(),
+          timestamp: timeStamp.toString(),
         };
 
         await logAcquisitionCommit(successPayload);

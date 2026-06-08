@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useCheckoutStore } from "~~/components/purchase/useCheckoutStore";
 import { supportedCountries } from "~~/components/shipping/supportedCountries";
 import { shippingRates, Region, ShippingCategory } from "~~/components/shipping/shippingRates";
-import { getExchangeRates, StablecoinRate } from "~~/lib/exchangeRates";
+import { getExchangeRates } from "~~/lib/exchangeRates";
 
 type Props = {
   checkoutAsset: { id: number; name: string; variant: string };

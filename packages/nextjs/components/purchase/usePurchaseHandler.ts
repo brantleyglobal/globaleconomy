@@ -6,7 +6,6 @@ import { toast } from "react-hot-toast";
 import { parseUnits, formatUnits, Contract, ethers } from "ethers";
 import assetPurchaseAbi from "~~/lib/contracts/abi/AssetPurchase.json";
 import deployments from "~~/lib/contracts/deployments.json";
-import { loadStripe, Stripe } from "@stripe/stripe-js";
 import type { ShippingInfo } from "~~/components/purchase/useCheckoutStore";
 import { useCheckoutStore } from "~~/components/purchase/useCheckoutStore";
 import { shippingRates, Region, ShippingCategory } from "~~/components/shipping/shippingRates";
@@ -486,7 +485,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
     const totalTokenAmountNumber = parseFloat(formatUnits(totalTokenAmountF, precision));
 
     const totalTokenAmountDisplay = totalTokenAmountNumber.toFixed(2);
-    const ts = Date.now();
+    const ts = Math.floor(Date.now() / 1000);
     const now = ts.toString();
 
     let dTxHash;
@@ -619,6 +618,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
             value: totalTokenAmount,
             gasLimit: 1_500_000
           }
+          
         );
         receipt2 = await dTxHash.wait();
         chainStatus = true;

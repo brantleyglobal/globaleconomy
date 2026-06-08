@@ -40,11 +40,11 @@ async function fetchProjectData(userAddress: string): Promise<ProjectData[]> {
 
   const projectsConfig = [
     { name: "THE GLOBE", symbol: "GLB", termLength: 12, address: deployments.Globe, projectedValue: 100000000 },
-    { name: "BG CLEAN REAL ESTATE (SELL)", symbol: "CREs", termLength: 4, address: deployments.BGFFS, projectedValue: 5000000 },
-    { name: "BG CLEAN REAL ESTATE (HOLD)", symbol: "CREh", termLength: 4, address: deployments.BGFRS, projectedValue: 5000000 },
-    { name: "CLEAN GRID", symbol: "CGRi", termLength: 12, address: deployments.BGGRID, projectedValue: 10000000 },
-    { name: "TRANS-GREENTECH REFINERY & DEPOT US", symbol: "TGUSA", termLength: 12, address: deployments.TGUSA, projectedValue: 500000000 },
-    { name: "TRANS-GREENTECH REFINERY & DEPOT MX", symbol: "TGMX", termLength: 12, address: deployments.TGMX, projectedValue: 500000000 },
+    { name: "BG CLEAN REAL ESTATE (SELL)", symbol: "CREs", termLength: 4, address: deployments.BGSellRE, projectedValue: 5000000 },
+    { name: "BG CLEAN REAL ESTATE (HOLD)", symbol: "CREh", termLength: 4, address: deployments.BGHoldRE, projectedValue: 5000000 },
+    { name: "CLEAN GRID", symbol: "CGRi", termLength: 12, address: deployments.BGGrid, projectedValue: 10000000 },
+    { name: "TRANS-GREENTECH REFINERY & DEPOT US", symbol: "TGUSA", termLength: 12, address: deployments.TGUsRenewable, projectedValue: 500000000 },
+    { name: "TRANS-GREENTECH REFINERY & DEPOT MX", symbol: "TGMX", termLength: 12, address: deployments.TGMxRenewable, projectedValue: 500000000 },
   ];
 
   const projects: ProjectData[] = [];

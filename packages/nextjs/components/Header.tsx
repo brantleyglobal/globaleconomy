@@ -16,7 +16,6 @@ import { InvestmentModal } from "~~/components/invest/investmentModal";
 import { AcquireModal } from "~~/components/acquire/acquireModal";
 import MirrorModeToggle from "~~/components/common/mirrorToggle";
 import { useAccount } from "wagmi";
-import dynamic from "next/dynamic";
 import { useAutoAddTokens } from "~~/lib/symbolHelper";
 
 // Hook to detect mobile viewport

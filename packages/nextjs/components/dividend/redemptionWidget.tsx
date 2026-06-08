@@ -1,12 +1,10 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Address as AddressType, getContract, erc20Abi } from "viem";
+import { Address as AddressType, erc20Abi } from "viem";
 import { useAccount, useWalletClient, usePublicClient } from "wagmi";
-import { BanknotesIcon, WalletIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
-import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
-import { Token, dividendTokens } from "~~/components/constants/tokens";
-import { ethers, Contract, BrowserProvider } from "ethers";
+import { Token } from "~~/components/constants/tokens";
+import { Contract, BrowserProvider } from "ethers";
 import smartVaultabi from "~~/lib/contracts/abi/SmartVault.json";
 import { toast } from "react-hot-toast";
 import deployments from "~~/lib/contracts/deployments.json";
@@ -15,8 +13,6 @@ import AddressStep from "~~/components/dividend/steps/NewAddressStep";
 import TokenStep from "~~/components/dividend/steps/NewTokenStep";
 import RedemptionStep from "~~/components/dividend/steps/RedemptionStep";
 import HelpStep from "~~/components/dividend/steps/helpStep";
-import { useRedemptionHandler } from "~~/components/invest/useRedemptionHandler";
-import { sendInvestmentConfirmation } from "~~/components/email/sendRedemptionEmail";
 import { DoneStep } from "../xchange/steps/doneStep";
 
 type FaucetProps = {

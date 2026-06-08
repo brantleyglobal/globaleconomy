@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useCheckoutStore } from "~~/components/purchase/useCheckoutStore";
 import { supportedTokens } from "~~/components/constants/tokens";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";

@@ -17,7 +17,6 @@ import { hardhat } from "viem/chains";
 import { useTargetNetwork } from "~~/hooks/globalEco/useTargetNetwork";
 import { useGlobalState } from "~~/services/store/store";
 import { AssetCard } from "~~/components/assets/assetCard";
-import { supportedTokens, Token } from "~~/components/constants/tokens";
 import { Banner } from "~~/components/banner/storeFrontBanner";
 import { Footer } from "~~/components/banner/Footer";
 import dynamic from "next/dynamic";

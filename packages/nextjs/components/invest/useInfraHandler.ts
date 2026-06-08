@@ -1,6 +1,6 @@
 
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { Interface, parseUnits, Contract, ethers } from "ethers";
 import infraAbi from "~~/lib/contracts/abi/RegionInfrastructure.json";
 import deployments from "~~/lib/contracts/deployments.json";
@@ -141,7 +141,7 @@ export function useInfra(): UseDepositResult {
         const startQuarterIndex = generateTermCode();
 
         const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
-        const ts = Date.now();
+        const ts = Math.floor(Date.now() / 1000);
         const now = ts.toString();
 
         let dTxHash;
@@ -157,7 +157,6 @@ export function useInfra(): UseDepositResult {
               token2,
               parsedValue,
               committedQuarters,
-              startQuarterIndex,
               rate,
               ethers.ZeroHash,
               {

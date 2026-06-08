@@ -5,7 +5,7 @@ import { ethers, Contract, BrowserProvider, parseUnits,  } from "ethers";
 import smartVaultabi from "~~/lib/contracts/abi/SmartVault.json";
 import infraAbi from "~~/lib/contracts/abi/RegionInfrastructure.json";
 import deployments from "~~/lib/contracts/deployments.json";
-import { erc20Abi, Address } from "viem";
+import { erc20Abi } from "viem";
 import { getExchangeRates } from "~~/lib/exchangeRates";
 
 interface TokenType {
@@ -107,7 +107,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
       const year = now.getFullYear();
       const quarter = Math.floor(now.getMonth() / 3) + 1;
 
-      const ts = Date.now();
+      const ts = Math.floor(Date.now() / 1000);
 
       const termCodeStr = year * 4 + quarter;
 
@@ -130,12 +130,13 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
       if (newAddress) {
         const vaultContract = new Contract(deployments.SmartVault, smartVaultabi.abi, signer);
         const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
+        const stat = false;
 
         if (!["GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(selectedToken.symbol!)) {
-          tokenTx = await vaultContract.changePayoutAddress(signerAddress, newAddress, selectedToken.address, termCodeStr);
+          tokenTx = await vaultContract.updateUser(signerAddress, newAddress, selectedToken.address, stat);
           receipt = await tokenTx.wait(); 
         } else {
-          tokenTx = await infraContract.changePayoutAddress(signerAddress, newAddress, selectedToken.address, termCodeStr);
+          tokenTx = await infraContract.updateUser(signerAddress, newAddress, selectedToken.address, stat);
           receipt = await tokenTx.wait();
         }
 
@@ -143,11 +144,13 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         const vaultContract = new Contract(deployments.SmartVault, smartVaultabi.abi, signer);
         const infraContract = new Contract(deployments.RegionInfrastructure, infraAbi.abi, signer);
 
+        const stat = true;
+
         if (!["GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(selectedToken.symbol!)) {
-          tokenTx = await vaultContract.changePayoutToken(signerAddress, newToken, selectedToken.address, selectedToken2.address, termCodeStr);
+          tokenTx = await vaultContract.updateUser(signerAddress, newToken, selectedToken.address, stat);
           receipt = await tokenTx.wait(); 
         } else {
-          tokenTx = await infraContract.changePayoutToken(signerAddress, newToken, selectedToken.address, selectedToken2.address, termCodeStr);
+          tokenTx = await infraContract.updateUser(signerAddress, newToken, selectedToken.address, stat);
           receipt = await tokenTx.wait();
         }
 
@@ -188,7 +191,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
 
           if (autoPay && receipt.status === 1) {
             try {
-              const autoTx = await vaultContract.autoPay();
+              const autoTx = await vaultContract.autoPay(autoPay);
               await autoTx.wait();
             } catch (err) {
               console.error("AutoPay failed:", err);
@@ -214,7 +217,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
 
           if (autoPay && receipt.status === 1) {
             try {
-              const autoTx = await infraContract.autoPay();
+              const autoTx = await infraContract.autoPay(autoPay);
               await autoTx.wait();
             } catch (err) {
               console.error("AutoPay failed:", err);
@@ -231,12 +234,13 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         let notes;
         let mod;
         if (newAddress) {
+          mod = newAddress;
           notes = "Address Change Requested";
         } else if (newToken) {
           mod = selectedToken2.address;
           notes = "Token Change Requested";
         } else {
-          mod = newAddress;
+          mod = selectedToken2;
           notes = "Redemption Requested";
         }
 

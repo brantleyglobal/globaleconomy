@@ -5,7 +5,6 @@ import { useAccount, useWriteContract } from "wagmi";
 import { createPublicClient, http } from "viem";
 import React, { useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import { useCheckoutStore } from "~~/components/purchase/useCheckoutStore";
-import { ethers, BrowserProvider } from "ethers";
 import { supportedTokens } from "../constants/tokens";
 import { StablecoinRate, getExchangeRates } from "~~/lib/exchangeRates";
 import { GLOBALCHAIN } from "~~/utils/globalEco/customChains";
