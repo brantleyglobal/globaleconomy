@@ -144,6 +144,7 @@ export function useDeposit(): UseDepositResult {
         } else if (useraction === "liquidate") {
 
           dTxHash = await purchaseContract.liquidate!(
+            token.address,
             parsedValue,
             timeStamp,
             {
@@ -157,7 +158,7 @@ export function useDeposit(): UseDepositResult {
 
         console.log("after try/catch")
 
-        const ts = Date.now();
+        const ts = Math.floor(Date.now() / 1000);
         const now = ts.toString();
 
         const successPayload: AcquisitionPayload = {

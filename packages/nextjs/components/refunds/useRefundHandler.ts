@@ -141,18 +141,9 @@ export function useRefundHandler(config: TransferHandlerProps) {
 
       const signer = await provider.getSigner();
 
-      let iface;
-      let contract;
       let receipt2;
-
-      if (contractAddress == deployments.AssetPurchase) {
-        iface = new Interface(assetPurchaseAbi.abi);
-        contract = new Contract(deployments.AssetPurchase, assetPurchaseAbi.abi, signer);
-      } else if(contract == deployments.AcquisitionGateway) {
-        iface = new Interface(acquisitionAbi.abi);
-        contract = new Contract(deployments.AcquisitionGateway, acquisitionAbi.abi, signer);
-      }
-        
+      
+      const contract = new Contract(deployments.AssetPurchase, assetPurchaseAbi.abi, signer);
 
       try {
         const dTxHash = await contract?.refund!(
