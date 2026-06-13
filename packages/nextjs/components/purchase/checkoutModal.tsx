@@ -18,6 +18,7 @@ import { CheckoutReviewStep } from "~~/components/purchase/steps/checkoutReview"
 import { PurchaseSummaryStep } from "~~/components/purchase/steps/purchaseSummary";
 import { handleStripeReturn } from "~~/components/purchase/usePurchaseHandler";
 import { ShippingInfoStep } from "~~/components/purchase/steps/shippingInfo";
+import { buildCompactConfigBytes32 } from "~~/components/purchase/configurationPacker";
 
 export function getContractAddress(contractName: keyof typeof deployments): string {
   return deployments[contractName] ?? "";
@@ -391,6 +392,33 @@ const CheckoutModalBase = (
         quantity
       );
 
+      // BUILD THE DYNAMIC TEXT AND ON-CHAIN BYTES FIRST
+      const isEseries = "epanel" in selectedVariations;
+      const panelKey = isEseries ? "epanel" : "xpanel";
+
+      let formattedConfigText: string;
+
+      if (customizeGroupKey === panelKey && selectedVariations[panelKey]?.label === "Customize") {
+        const voltage = selectedVoltage ? `${selectedVoltage}V` : null;
+        const frequency = selectedFrequency; // e.g., "60Hz"
+        const phase = selectedPhase;         // e.g., "3-Phase"
+        
+        // Only include Reactor if it's X-Series and not set to None
+        const includeReactor = !isEseries && selectedReactor === "Line Reactor(s)";
+        const reactor = includeReactor ? "Line Reactor(s)" : null;
+
+        formattedConfigText = [voltage, frequency, phase, reactor]
+          .filter(Boolean)
+          .map(String)
+          .join(" / ");
+      } else {
+        formattedConfigText = Object.values(selectedVariations)
+          .map(v => (v as { label: string }).label)
+          .filter(Boolean)
+          .join(" / ");
+      }
+
+      // RUN YOUR EXISTING BIGINT SANITIZATION LOGIC
       function sanitizeBigInts(obj: Record<string, any>) {
         const result: Record<string, any> = {};
         for (const [key, value] of Object.entries(obj)) {
@@ -401,7 +429,7 @@ const CheckoutModalBase = (
               typeof item === 'bigint' ? item.toString() : item
             );
           } else if (typeof value === 'object' && value !== null) {
-            result[key] = sanitizeBigInts(value); // Recursively sanitize nested objects
+            result[key] = sanitizeBigInts(value); 
           } else {
             result[key] = value;
           }
@@ -409,6 +437,7 @@ const CheckoutModalBase = (
         return result;
       }
 
+      // Build your complete off-chain metadata object
       const configuration = {
         system: sanitizeBigInts({
           selectedVariations,
@@ -419,9 +448,14 @@ const CheckoutModalBase = (
           selectedFrequency,
           selectedPhase,
           isRestrictedCombo,
+          // Add the missing reactor selection into your off-chain state tracking too!
+          selectedReactor, 
         }),
+        // Inject the clean human-readable text block straight into the object payload!
+        formattedSummary: formattedConfigText 
       };
 
+      // Ready for off-chain storage/logs
       const serializedConfig = JSON.stringify(configuration);
 
       const tokenRate = exchangeData.rates.find(r => r.symbol === "GBDo")?.rate ?? 1;
@@ -443,6 +477,14 @@ const CheckoutModalBase = (
         throw new Error("Shipping info is missing.");
       }
 
+      const bytes32ConfigString = buildCompactConfigBytes32({
+        selectedVariations,
+        selectedVoltage,
+        selectedFrequency,
+        selectedPhase,
+        selectedReactor,
+      });
+
       const purchaseCompleted = await initiatePurchase({
         currentStep: 6,
         paymentMethod,
@@ -450,6 +492,7 @@ const CheckoutModalBase = (
         estimatedTotal: finalPrice.toFixed(2),
         tokenSymbol,
         customizations: variationTotal.toString(),
+        bytes32Config: bytes32ConfigString,
         quantity,
         tokenRate,
         configuration: serializedConfig,

@@ -2,9 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { formatUnits } from "viem";
 import { useDisplayUsdMode } from "~~/hooks/globalEco/useDisplayUsdMode";
-import { getContract } from "viem";
 import { BrowserProvider, ethers } from "ethers";
-import { supportedTokens, dividendTokens } from "~~/components/constants/tokens";
 
 
 type TokenBalanceRowProps = {

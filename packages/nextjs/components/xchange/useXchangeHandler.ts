@@ -507,7 +507,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         }
 
         xchangePayload = {
-          txhash: receipt,
+          txhash: dTxHash,
           contractaddress: swapAddress || "",
           useraddress: signerAddress,
           initiator: recipient || "",

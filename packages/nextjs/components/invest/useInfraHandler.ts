@@ -187,7 +187,7 @@ export function useInfra(): UseDepositResult {
         }
 
         const successPayload: VaultPayload = {
-          txhash: receipt2?.toString() ?? "",
+          txhash: dTxHash?.toString() ?? "",
           contractaddress: deployments.RegionInfrastructure,
           useraddress: userAddress,
           exchangerate: rate,
@@ -211,7 +211,7 @@ export function useInfra(): UseDepositResult {
 
         await logInfraCommit(successPayload);
 
-        return receipt2.toString() ?? "";
+        return dTxHash.toString() ?? "";
       } catch (err: any) {
         setError(err);
         console.error("Venture Deposit error:", err);

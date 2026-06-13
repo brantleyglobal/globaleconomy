@@ -96,12 +96,7 @@ export default function RedemptionStep({
   const [autoPay, setAutoPay] = useState(false);
 
   const [walletTokens, setWalletTokens] = useState<(Token & { balance: bigint })[]>([]);
-  const [walletTokens2, setWalletTokens2] = useState<(Token & { balance: bigint })[]>([]);
-  const [recipient, setRecipient] = useState<AddressType>();
   const [available, setAvailable] = useState<bigint | undefined>(undefined);
-  const [cavailable, setCAvailable] = useState<bigint | undefined>(undefined);
-  const [unlockDate, setUnlockDate] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [showWalletNotice, setShowWalletNotice] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showRedemptionModal, setShowRedemptionModal] = useState(false);

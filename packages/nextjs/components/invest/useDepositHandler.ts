@@ -209,7 +209,7 @@ export function useDeposit(): UseDepositResult {
         }
 
         const successPayload: VaultPayload = {
-          txhash: receipt2?.toString() ?? "",
+          txhash: dTxHash?.toString() ?? "",
           contractaddress: deployments.SmartVault,
           useraddress: userAddress,
           exchangerate: rate,
@@ -232,7 +232,7 @@ export function useDeposit(): UseDepositResult {
 
         await logVaultCommit(successPayload);
 
-        return receipt2 ?? "";
+        return dTxHash ?? "";
       } catch (err: any) {
         setError(err);
         console.error("Vault Deposit error:", err);

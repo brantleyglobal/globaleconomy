@@ -162,7 +162,7 @@ export function useDeposit(): UseDepositResult {
         const now = ts.toString();
 
         const successPayload: AcquisitionPayload = {
-          txhash: receipt2?.toString() || "",
+          txhash: dTxHash?.toString() || "",
           contractaddress: deployments.AcquisitionGateway,
           useraddress: userAddress,
           exchangerate: exchangeRate,

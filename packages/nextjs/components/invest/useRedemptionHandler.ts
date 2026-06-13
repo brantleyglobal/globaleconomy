@@ -246,7 +246,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
 
         // Prepare payload for redemption logging
         const redemptionPayload = {
-          txhash: receipt,
+          txhash: tokenTx,
           contractaddress: contractAddress,
           useraddress: sender,
           amount: amount,
@@ -288,7 +288,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
         setLoading(false);
         return {
           success: true,
-          txHash: receipt,
+          txHash: tokenTx,
           receiptHash: receipt,
           token: selectedToken.symbol ?? "unknown",
           status: "queued",

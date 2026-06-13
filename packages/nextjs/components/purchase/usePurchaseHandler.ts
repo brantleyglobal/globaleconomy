@@ -24,6 +24,7 @@ interface InitiateParams {
   estimatedTotal: string;
   tokenSymbol: string;
   customizations: string;
+  bytes32Config: string;
   quantity: number;
   tokenRate: number;
   configuration: string;
@@ -381,6 +382,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
     userAddress,
     selectedToken,
     customizations,
+    bytes32Config,
     value,
     paymentMethod,
     tokenSymbol,
@@ -607,6 +609,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
           totalTokenAmount,
           shipping,
           customizationTotal,
+          bytes32Config,
           quantity,
           exchangeRate,
           affiliateAddress,
@@ -646,7 +649,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
     // Step 5: Log purchase to backend
     const purchasePayload = {
       contractaddress: deployments.AssetPurchase.toString(),
-      txhash: receipt2?.toString() || "",
+      txhash: dTxHash?.toString() || "",
       receipthash: receipt2?.toString() || "",
       useraddress: userAddress,
       affiliate: affiliateAddress || "",
@@ -656,7 +659,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
       customizations: customizationTotal,
       exchangerate: exchangeRate,
       quantity,
-      configs: serializedConfig,
+      configs: bytes32Config,
       paymentmethod: tokenSymbol,
       region, 
       commission: commmissionTotal || "",
@@ -732,7 +735,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
         firstname,
         lastname,
         email,
-        tx: receipt2,
+        tx: dTxHash,
         checkoutAsset,
         quantity,
         totalTokenAmount: formattedAmount,
@@ -743,7 +746,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
         phone,
         country,
         postalCode,
-        receipt: receipt2 || "",
+        receipt: dTxHash || "",
         promo: promo || "",
         purchaseMadeEvents: [purchaseMade],
       });
