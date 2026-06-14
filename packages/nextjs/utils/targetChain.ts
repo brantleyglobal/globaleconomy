@@ -1,4 +1,3 @@
-import { useSwitchChain, useAccount } from 'wagmi';
 import { erc20Abi } from 'viem';
 import Web3 from "web3";
 
@@ -18,14 +17,14 @@ export const CHAINS: Record<string, ChainInfo> = {
   ethereum: {
     chainId: 1,
     chainName: "Ethereum Mainnet",
-    rpcUrls: [], // built-in, no need to add
+    rpcUrls: ["https://cloudflare-eth.com"], 
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
     blockExplorerUrls: ["https://etherscan.io"],
   },
   polygon: {
     chainId: 137,
     chainName: "Polygon Mainnet",
-    rpcUrls: [], // built-in, no need to add
+    rpcUrls: ["https://polygon-rpc.com"], 
     nativeCurrency: { name: "MATIC", symbol: "MATIC", decimals: 18 },
     blockExplorerUrls: ["https://polygonscan.com"],
   },
@@ -44,32 +43,11 @@ export const CHAINS: Record<string, ChainInfo> = {
   },
 };
 
-async function waitForChainChanged(provider: any, expectedChainIdHex: string, timeoutMs = 15000): Promise<void> {
-  return new Promise((resolve, reject) => {
-    let timer: any;
-
-    function handler(chainId: string) {
-      if (chainId === expectedChainIdHex) {
-        clearTimeout(timer);
-        provider.removeListener?.("chainChanged", handler);
-        resolve();
-      }
-    }
-
-    timer = setTimeout(() => {
-      provider.removeListener?.("chainChanged", handler);
-      reject(new Error("Timeout waiting for chain switch"));
-    }, timeoutMs);
-
-    provider.on?.("chainChanged", handler);
-  });
-}
-
 export function normalizeChainId(chainId: number | string): string {
   if (typeof chainId === "number") return "0x" + chainId.toString(16);
   if (typeof chainId === "string") {
     return chainId.startsWith("0x")
-      ? "0x" + parseInt(chainId, 16).toString(16) // normalize hex
+      ? "0x" + parseInt(chainId, 16).toString(16)
       : "0x" + parseInt(chainId, 10).toString(16);
   }
   throw new Error("Invalid chainId");
@@ -77,8 +55,8 @@ export function normalizeChainId(chainId: number | string): string {
 
 export async function switchOrAddChain(provider: any, chain: ChainInfo): Promise<void> {
   const targetHex = normalizeChainId(chain.chainId);
-
   const currentChainId = normalizeChainId(await provider.request({ method: "eth_chainId" }));
+  
   if (currentChainId === targetHex) return;
 
   try {
@@ -87,25 +65,28 @@ export async function switchOrAddChain(provider: any, chain: ChainInfo): Promise
       params: [{ chainId: targetHex }],
     });
   } catch (err: any) {
+    // Error code 4902 means the chain hasn't been added to the wallet yet
     if (err.code === 4902) {
       await provider.request({
         method: "wallet_addEthereumChain",
-        params: [chain],
-      });
-      await provider.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: targetHex }],
+        params: [{
+          chainId: targetHex,
+          chainName: chain.chainName,
+          nativeCurrency: chain.nativeCurrency,
+          rpcUrls: chain.rpcUrls.length > 0 ? chain.rpcUrls : ["https://cloudflare-eth.com"],
+          blockExplorerUrls: chain.blockExplorerUrls,
+        }],
       });
     } else {
       throw err;
     }
   }
 
-  // Wait for chainChanged event before resolving
+  // Await consensus mapping acknowledgment from the provider loop
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
       provider.removeListener?.("chainChanged", handler);
-      reject(new Error("Timeout waiting for chainChanged"));
+      reject(new Error("Timeout waiting for chainChanged confirmation"));
     }, 15000);
 
     function handler(chainId: string) {
@@ -125,54 +106,45 @@ function rescaleAmount(amount: bigint, fromDecimals: number, toDecimals: number)
 
   if (fromDecimals > toDecimals) {
     const factor = BigInt(10) ** BigInt(fromDecimals - toDecimals);
-    return (amount / factor).toString(); // downscale
+    return (amount / factor).toString();
   } else {
     const factor = BigInt(10) ** BigInt(toDecimals - fromDecimals);
-    return (amount * factor).toString(); // upscale
+    return (amount * factor).toString();
   }
 }
 
 export async function sendTransferOnTargetChain(
   recipient: string,
-  tamount: bigint, // always scaled to 18 decimals
+  tamount: bigint, // input assumes base scale notation
   selectedToken: { address?: string; decimals?: number; symbol?: string; chain?: keyof typeof CHAINS },
   btcWallet?: BitcoinWallet,
   provider?: any
 ) {
-
   let receipt2;
   let dTxHash;
 
-  if (!selectedToken.address) throw new Error("Token address required");
-
-  const activeProvider = provider || window.ethereum;
+  const activeProvider = provider || (typeof window !== "undefined" ? (window as any).ethereum : null);
   if (!activeProvider) throw new Error("No wallet provider available");
 
   const chainInfo = CHAINS[selectedToken.chain!];
   if (!chainInfo) throw new Error(`Unknown chain: ${selectedToken.chain}`);
 
-  // Bitcoin branch
+  // 1. Bitcoin routing optimization path
   if (selectedToken.chain === "bitcoin") {
     if (!btcWallet) throw new Error("Bitcoin wallet not connected");
-    const sats = tamount * 100_000_000n; // BTC → satoshis
+    // tamount assumes 18 decimals entry format, scale down to Satoshi units (8 decimals)
+    const sats = rescaleAmount(tamount, 18, 8);
     const txid = await btcWallet.sendTransaction(recipient, Number(sats));
     return { dTxHash: txid, receipt2: null };
   }
 
-  const hexChainId = "0x" + chainInfo.chainId.toString(16);
+  if (!selectedToken.address) throw new Error("Token address required");
 
-  // Ethereum‑style chains
+  // 2. EVM Network targeting layer
   await switchOrAddChain(activeProvider, chainInfo);
 
-  // Instead of waiting on raw hex, normalize
-  //await waitForChainChanged(activeProvider, normalizeChainId(chainInfo.chainId));
-
-  const verifiedChainId = normalizeChainId(
-    await activeProvider.request({ method: "eth_chainId" })
-  );
-
+  const verifiedChainId = normalizeChainId(await activeProvider.request({ method: "eth_chainId" }));
   if (verifiedChainId !== normalizeChainId(chainInfo.chainId)) {
-    console.error(`Wallet not on target chain ${chainInfo.chainName}, aborting transaction`);
     throw new Error(`Wallet not on target chain ${chainInfo.chainName}, aborting transaction`);
   }
 
@@ -180,32 +152,34 @@ export async function sendTransferOnTargetChain(
   const accounts = await web3.eth.getAccounts();
   const from = accounts[0];
 
+  // 3. Execution payload delivery
   if (selectedToken.symbol === "GBDo") {
-    // Native transfer: input is already 18 decimals, chain uses 18 → no rescale
     const value = rescaleAmount(tamount, 18, chainInfo.nativeCurrency.decimals);
     
     receipt2 = await web3.eth.sendTransaction({
       from,
       to: recipient,
-      value,
+      value: value,
       gas: "80000",
     });
+    dTxHash = receipt2.transactionHash;
 
   } else {
-
-    // ERC20 transfer: rescale from 18 → token.decimals
     const decimals = selectedToken.decimals ?? 18;
     const value = rescaleAmount(tamount, 18, decimals);
-    const tokenContract = new web3.eth.Contract(erc20Abi, selectedToken.address);
-    receipt2 = await tokenContract.methods
-      .transfer(recipient, value)
+    
+    // Pass standard JSON ABI mapping directly to the Web3 contract interpreter
+    const tokenContract = new web3.eth.Contract(erc20Abi as any, selectedToken.address);
+    
+    receipt2 = await (tokenContract.methods.transfer as any)(recipient, value)
       .send({ from, gas: "80000" });
+    dTxHash = receipt2.transactionHash;
   }
 
-  // Reset back to GlobalChain if required
+  // 4. Return user environment securely back to base chain layout rules
   await switchOrAddChain(activeProvider, CHAINS.global);
 
-  return { dTxHash: dTxHash, receipt2 };
+  return { dTxHash, receipt2 };
 }
 
 export async function ensureGlobalChain(provider: any) {

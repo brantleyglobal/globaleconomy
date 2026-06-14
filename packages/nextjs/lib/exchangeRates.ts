@@ -85,7 +85,7 @@ const rateGuards: Record<string, { min: number; max: number; fallback?: number }
   FDUSD:{ min: 0.98, max: 1.02, fallback: 1.00 },
   FRAX: { min: 0.97, max: 1.03, fallback: 1.00 },
   PYUSD: { min: 0.98, max: 1.02, fallback: 1.00 },
-  GBDo: { min: 1.00, max: 1.00, fallback: 1.03 },
+  GBDo: { min: 1.03, max: 1.07, fallback: 1.05 },
   JPYC: { min: 0.0065, max: 0.0073, fallback: 0.0069 },
   EURC: { min: 1.08, max: 1.12, fallback: 1.10 },
   EURe: { min: 1.08, max: 1.12, fallback: 1.10 },
@@ -153,30 +153,78 @@ let cachedGBDoRate: number | null = null;
 let lastUpdated = 0
 //let lastUpdated: number | null = null;
 
-const stablecoins: StablecoinMeta[] = supportedTokens.map(token => ({
-  symbol: token.symbol,
-  currency: currencyMap[token.symbol] ?? "USD",
-  network: networkMap[token.symbol] ?? "ethereum",
-  chainlinkFeed: chainlinkFeeds[token.symbol],
-  pythFeed: pythFeeds[token.symbol],
-  redstoneFeed: redstoneFeeds[token.symbol],
-}));
+const stablecoins: StablecoinMeta[] = supportedTokens.map(token => {
+  const meta: StablecoinMeta = {
+    symbol: token.symbol,
+    currency: currencyMap[token.symbol] ?? "USD",
+    network: networkMap[token.symbol] ?? "ethereum",
+  };
+
+  const chainlink = chainlinkFeeds[token.symbol];
+  if (chainlink) meta.chainlinkFeed = chainlink;
+
+  const pyth = pythFeeds[token.symbol];
+  if (pyth) meta.pythFeed = pyth;
+
+  const redstone = redstoneFeeds[token.symbol];
+  if (redstone) meta.redstoneFeed = redstone;
+
+  return meta;
+});
+
+
+const failedRpcUrls = new Map<string, number>();
+
+// A quick mapping of your networks to their Chain IDs for Ethers static routing
+const chainIdMap: Record<string, number> = {
+  ethereum: 1,
+  arbitrum: 42161,
+  optimism: 10,
+  polygon: 137,
+  base: 8453,
+  avalanche: 43114,
+  bsc: 56,
+  gnosis: 100
+};
 
 async function getSafeProvider(network: string): Promise<JsonRpcProvider | null> {
   const urls = rpcFallbacks[network];
-  if (!urls) return null;
+  if (!urls?.length) return null;
+
+  const now = Date.now();
+  const chainId = chainIdMap[network] || 1;
 
   for (const url of urls) {
+    const failedAt = failedRpcUrls.get(url);
+    if (failedAt && now - failedAt < 30000) {
+      continue;
+    }
+
     try {
-      const provider = new JsonRpcProvider(url);
-      await provider.getBlockNumber(); // lightweight test
+      // Passing the network configuration statically stops Ethers from calling eth_chainId automatically
+      const provider = new JsonRpcProvider(url, {
+        chainId: chainId,
+        name: network
+      }, {
+        staticNetwork: true // Crucial Ethers v6 flag to prevent automatic handshakes
+      });
+
+      // Quick, lightweight sanity check using Promise.race
+      await Promise.race([
+        provider.getBlockNumber(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("RPC timeout")), 3000)
+        ),
+      ]);
+
+      failedRpcUrls.delete(url);
       return provider;
-    } catch {
-      continue; // try next RPC
+    } catch (e) {
+      failedRpcUrls.set(url, Date.now());
     }
   }
 
-  return null; // all RPCs failed
+  return null;
 }
 
 async function fetchChainlinkRate(
@@ -190,7 +238,7 @@ async function fetchChainlinkRate(
     }
 
     const feed = new ethers.Contract(coin.chainlinkFeed, aggregatorAbi, provider);
-    const result = await feed.latestRoundData();
+    const result = await feed.latestRoundData!();
 
     if (!result || result[1] == null || result[3] == null) {
       //console.warn(`[Chainlink] Invalid response for ${coin.symbol}`, result);
@@ -277,10 +325,7 @@ async function fetchRedStoneRate(coin: StablecoinMeta): Promise<StablecoinRate |
 }
 
 async function fetchRate(coin: StablecoinMeta): Promise<StablecoinRate | null> {
-  if (!coin.symbol || !coin.network) {
-    //console.warn(`[FetchRate] Missing symbol or network:`, coin);
-    return null;
-  }
+  if (!coin.symbol || !coin.network) return null;
 
   if (coin.symbol === "GBDo") {
     const gbdoRate = cachedGBDoRate ?? calculateGBDoRate(Array.from(rateCache.values()));
@@ -294,79 +339,76 @@ async function fetchRate(coin: StablecoinMeta): Promise<StablecoinRate | null> {
     };
   }
 
-  const rpcUrl = rpcFallbacks[coin.network];
-  if (!rpcUrl) {
-    //console.warn(`[FetchRate] Missing RPC URL for ${coin.symbol} on ${coin.network}`);
-    return null;
-  }
-
   const cacheKey = `${coin.symbol}-${coin.network}`;
   const cached = rateCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < RATE_EXPIRY_MS) {
-    //console.log(`[Cache] Using cached rate for ${coin.symbol}`);
     return cached;
   }
 
   const provider = await getSafeProvider(coin.network);
-  if (!provider) {
-    console.warn(`All RPCs failed for ${coin.network}`);
-    return null;
-  }
   let rate: StablecoinRate | null = null;
 
-  // Try Chainlink first
-  if (coin.chainlinkFeed) {
+  if (provider && coin.chainlinkFeed) {
     rate = await fetchChainlinkRate(coin, provider);
   }
 
-  // Fallback to Pyth if Chainlink fails
   if (!rate && coin.pythFeed) {
     rate = await fetchPythRate(coin);
   }
 
-  // Fallback to RedStone if Pyth fails
   if (!rate && coin.redstoneFeed) {
     rate = await fetchRedStoneRate(coin);
   }
 
   if (!rate) {
-    //console.warn(`[FetchRate] Failed to resolve rate for ${coin.symbol}`);
-  } else {
-    rateCache.set(cacheKey, rate);
+    const guard = rateGuards[coin.symbol];
+    const fallbackVal = guard?.fallback ?? ((guard?.min ?? 1) + (guard?.max ?? 1)) / 2;
+
+    rate = {
+      symbol: coin.symbol,
+      currency: coin.currency,
+      rate: fallbackVal,
+      network: coin.network,
+      healthy: false,
+      timestamp: Date.now()
+    };
   }
 
+  rateCache.set(cacheKey, rate);
   return rate;
 }
 
 async function fetchStablecoinRates(): Promise<StablecoinRate[]> {
-  const results: StablecoinRate[] = [];
-
-  for (const coin of stablecoins) {
-    if (!coin) {
-      console.warn("SKIPPED: coin is null");
-      continue;
+  const promises = stablecoins.map(async (coin) => {
+    if (!coin || coin.disabled || !trustedNetworks.includes(coin.network)) {
+      return null;
     }
-    if (coin.disabled) {
-      console.warn("SKIPPED DISABLED:", coin.symbol);
-      continue;
+
+    let rate = await fetchRate(coin);
+    
+    // Direct, strict lookup using your exact configuration keys
+    const guard = rateGuards[coin.symbol]!;
+
+    // If a network rate exists, check it against your hardcoded bounds
+    const isOutOfBounds = rate && guard && (rate.rate < guard.min || rate.rate > guard.max);
+
+    // If the network request failed OR the rate is unsafe, use your explicit fallback
+    if (!rate || isOutOfBounds) {
+      rate = {
+        symbol: coin.symbol,
+        currency: coin.currency,
+        // No hardcoded 1, no undefined. It strictly grabs your configured fallback.
+        rate: guard.fallback!, 
+        network: coin.network,
+        healthy: false, // Flagged unhealthy because we are relying on your static fallback
+        timestamp: Date.now()
+      };
     }
-    if (!trustedNetworks.includes(coin.network)) {
-      console.warn("SKIPPED UNTRUSTED NETWORK:", coin.symbol, coin.network);
-      continue;
-    }
-  }
+    return rate;
+  });
 
-  //console.log("Stablecoins:", stablecoins);
-
-  /*console.table(results.map(r => ({
-    symbol: r.symbol,
-    rate: r.rate.toFixed(4),
-    healthy: r.healthy,
-    network: r.network,
-    rpcUrl: rpcUrls[r.network] ?? "missing"
-  })));*/
-
-  return results;
+  const resolvedResults = await Promise.all(promises);
+  return resolvedResults.filter((r): r is StablecoinRate => r !== null);
 }
 
 function applyGuard(symbol: string, rate: number): number {
@@ -402,7 +444,7 @@ function shouldUpdateGBDo(): boolean {
 function generateFallbackRates(): StablecoinRate[] {
   return Object.keys(rateGuards).map(symbol => {
     const guard = rateGuards[symbol];
-    const fallback = guard.fallback ?? (guard.min + guard.max) / 2;
+    const fallback = guard!.fallback ?? (guard!.min + guard!.max) / 2;
 
     return {
       symbol,
@@ -429,7 +471,6 @@ export async function getExchangeRates(): Promise<{
 }> {
   const now = Date.now();
 
-  // Early return if within interval and we have cachedRates
   if (now - lastUpdated < UPDATE_INTERVAL_MS && cachedRates) {
     return {
       rates: cachedRates,
@@ -438,7 +479,6 @@ export async function getExchangeRates(): Promise<{
     };
   }
 
-  // Dedupe concurrent fetches
   if (inFlightFetch) {
     return inFlightFetch;
   }
@@ -447,14 +487,10 @@ export async function getExchangeRates(): Promise<{
     try {
       const stablecoinRatesRaw = await fetchStablecoinRates();
 
-      // Validate fetched data
       if (!stablecoinRatesRaw || stablecoinRatesRaw.length === 0) {
-        console.warn("No stablecoin rates fetched — using fallback");
         const fallbackRates = generateFallbackRates();
         cachedRates = fallbackRates;
-        cachedGBDoRate = 1.03; // explicit fallback
-        // Do NOT update lastUpdated so we can retry sooner if desired
-        inFlightFetch = null;
+        cachedGBDoRate = 1.05;
         return {
           rates: fallbackRates,
           gbdoRate: cachedGBDoRate,
@@ -462,49 +498,33 @@ export async function getExchangeRates(): Promise<{
         };
       }
 
-      // Apply guards
       const stablecoinRates = stablecoinRatesRaw.map(r => ({
         ...r,
         rate: applyGuard(r.symbol, r.rate),
       }));
 
-      // Compute raw GBDo rate and validate
       const rawGBDo = calculateGBDoRate(stablecoinRates);
       const validRawGBDo = isValidRate(rawGBDo) ? rawGBDo : null;
 
-      let gbdoRateToUse: number;
-
-      if (shouldUpdateGBDo() && validRawGBDo) {
-        // If we have a previous cachedGBDoRate, smooth; otherwise use raw
+      if (validRawGBDo) {
         if (isValidRate(cachedGBDoRate)) {
-          const smoothed = smoothRate(validRawGBDo, cachedGBDoRate!);
-          cachedGBDoRate = isValidRate(smoothed) ? smoothed : cachedGBDoRate;
+          cachedGBDoRate = smoothRate(validRawGBDo, cachedGBDoRate!);
         } else {
-          // No previous cached value — initialize from raw (do not force 1.03)
           cachedGBDoRate = validRawGBDo;
         }
-        // Only mark successful update time after we have a valid cachedGBDoRate
         lastUpdated = now;
+      } else if (!isValidRate(cachedGBDoRate)) {
+        cachedGBDoRate = 1.05;
       }
 
-      // Final gbdoRate: prefer cached if valid, else raw if valid, else fallback
-      if (isValidRate(cachedGBDoRate)) {
-        gbdoRateToUse = cachedGBDoRate!;
-      } else if (validRawGBDo) {
-        gbdoRateToUse = validRawGBDo;
-        cachedGBDoRate = validRawGBDo;
-        lastUpdated = now;
-      } else {
-        // Last resort fallback
-        gbdoRateToUse = 1.03;
-        cachedGBDoRate = gbdoRateToUse;
-        // Do NOT update lastUpdated so we can retry later
-      }
+      const gbdoRateToUse = isValidRate(cachedGBDoRate) ? cachedGBDoRate! : 1.05;
 
-      // Derive ratesAgainstGBDo
       const ratesWithGBDo = stablecoinRates.map(r => {
         const scaledRate = r.symbol === "GBDo" ? gbdoRateToUse : r.rate;
-        const relativeRate = r.symbol === "GBDo" ? 1 : (gbdoRateToUse > 0 ? scaledRate / gbdoRateToUse : 0);
+        const relativeRate = r.symbol === "GBDo"
+          ? 1
+          : (gbdoRateToUse > 0 ? scaledRate / gbdoRateToUse : 0);
+
         return {
           ...r,
           rate: Number(scaledRate.toFixed(6)),
@@ -512,10 +532,7 @@ export async function getExchangeRates(): Promise<{
         };
       });
 
-      // Cache full result
       cachedRates = ratesWithGBDo;
-
-      inFlightFetch = null;
 
       return {
         rates: ratesWithGBDo,
@@ -524,19 +541,18 @@ export async function getExchangeRates(): Promise<{
       };
     } catch (err) {
       console.error("getExchangeRates fetch error:", err);
-      // On error, do not update lastUpdated so we can retry next call
       const fallbackRates = generateFallbackRates();
       cachedRates = fallbackRates;
-      cachedGBDoRate = 1.03;
-      inFlightFetch = null;
+      cachedGBDoRate = 1.05;
       return {
         rates: fallbackRates,
-        gbdoRate: 1.03,
+        gbdoRate: 1.05,
         lastUpdated,
       };
+    } finally {
+      inFlightFetch = null;
     }
   })();
 
   return inFlightFetch;
 }
-
