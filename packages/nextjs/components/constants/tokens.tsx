@@ -20,7 +20,7 @@ const deploymentsTyped = deployments as Deployments;
 export const generateDividendTokens = (): Token[] => {
   const tokens: Token[] = [];
   for (let middle = 2; middle <= 8; middle++) {
-    const maxDigit = middle + 8;
+    const maxDigit = (middle * 3) + 24;
     for (let fl = 1; fl <= maxDigit; fl++) {
       const name = `Dividend${fl}${middle}${fl}`;
       const symbol = `GBD${fl}${middle}${fl}`;
