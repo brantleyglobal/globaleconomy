@@ -395,6 +395,15 @@ function ResourcesDropdown({ pathname }: { pathname: string | null }) {
                 PLANNED DEVELOPMENTS
               </Link>
             </li>
+            <li>
+              <Link
+                href="/downloads"
+                className="block px-4 py-2 text-white hover:text-primary hover:bg-white/5 transition"
+                role="menuitem"
+              >
+                DOWNLOADS
+              </Link>
+            </li>
           </ul>
         </div>
       )}

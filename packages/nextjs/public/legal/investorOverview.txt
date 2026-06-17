@@ -1,5 +1,5 @@
-<div style="font-family:Segoe UI, Arial, sans-serif; color:#e0e0e0; font-size:14px; margin:auto; line-height:1.8;">
-  <h2 style="font-size:18px; font-weight:lighter; style="margin-top:5px; margin-bottom:16px;">Global Ecosystem</h2>
+<div style="font-family:Segoe UI, Arial, sans-serif; color:#222222; font-size:14px; margin:auto; line-height:1.8; max-width:800px; padding:20px;">
+  <h2 style="font-size:20px; font-weight:600; margin-top:5px; margin-bottom:16px;">Global Ecosystem</h2>
 
   <p>Brantley Global (BG Company) operates an asset-backed ecosystem in which investments are directly tied to products and services within the platform. By investing in Brantley Global, participants are supporting the underlying economy of the ecosystem.</p>
 
