@@ -36,6 +36,7 @@ const menuLinks = [
   { label: "PLANNED DEVELOPMENTS", href: "/developments" },
   { label: "WHITEPAPER", href: "/whitepaper" },
   { label: "VERIFCATIONS", href: "/verification" },
+  { label: "DOWNLOADS", href: "/downloads" },
   { label: "HELP", href: "/help" },
 ];
 
