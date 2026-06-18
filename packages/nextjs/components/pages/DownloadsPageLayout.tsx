@@ -198,7 +198,7 @@ function DownloadCard({ title, description, fileType, downloadUrl, osTargets }: 
           <a
             href={downloadUrl}
             download
-            className="flex items-center gap-2 text-xs font-light text-secondary hover:text-white transition-colors"
+            className="flex items-center gap-2 text-xs font-light text-primary hover:text-white transition-colors"
           >
             <span>Download</span>
             <svg
