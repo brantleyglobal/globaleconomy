@@ -1,8 +1,11 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   devIndicators: false,
+  // Moved to the top-level where it belongs in modern Next.js
+  outputFileTracingRoot: path.resolve("."),
   typescript: {
     ignoreBuildErrors: process.env.NEXT_PUBLIC_IGNORE_BUILD_ERROR === "true",
   },
@@ -26,4 +29,4 @@ if (isIpfs) {
   };
 }
 
-module.exports = nextConfig;
+export default nextConfig;

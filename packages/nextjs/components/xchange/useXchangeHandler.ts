@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Contract, parseUnits, formatUnits, Interface, BrowserProvider, TransactionResponse } from "ethers";
 import GlobalSwapabi from "~~/lib/contracts/abi/GlobalSwap.json";
-import GlobalSwapFactoryabi from "~~/lib/contracts/abi/GlobalSwapFactory.json";
+import GlobalSwapRegistryAbi from "~~/lib/contracts/abi/GlobalSwapRegistry.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import { supportedTokens, Token } from "~~/components/constants/tokens";
 import { Address as AddressType } from "viem";
@@ -173,10 +173,10 @@ export function useXchangeHandler(config: TransferHandlerProps) {
       if (signerAddress === recipient || signerAddress === recipient2 && isNewContractSelected!) {
         console.log("Creating AssetXchange Contract");
 
-        const xchangeFactory = new Contract(deployments.GlobalSwapFactory, GlobalSwapFactoryabi.abi, signer);
+        const xchangeFactory = new Contract(deployments.GlobalSwapRegistry, GlobalSwapRegistryAbi.abi, signer);
 
-        const iface = new Interface(GlobalSwapFactoryabi.abi);
-        const iface2 = new Interface(GlobalSwapabi.abi);
+        const iface = new Interface(GlobalSwapRegistryAbi.abi);
+        //const iface2 = new Interface(GlobalSwapabi.abi);
         parsedValue = parseUnits(amount, 18);   // bigint
         parsedValue2 = parseUnits(amount2, 18); // bigint
 
@@ -230,6 +230,8 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           hash2 = receipt2;
         }
 
+        const ts = Math.floor(Date.now() / 1000);
+
         try {
           // Step 3: Send transaction directly to contract
           const tokenTx = await xchangeFactory.createSwap(
@@ -241,6 +243,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
             callAddress2,
             parsedValue2,
             hash2,
+            ts,
             { gasLimit: 600_000 }
           );
           txhash = tokenTx.hash;
@@ -342,10 +345,12 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         );
 
         const xchange = new Contract(xchangeId, GlobalSwapabi.abi, signer);
+        const xchangeFactory = new Contract(deployments.GlobalSwapRegistry, GlobalSwapRegistryAbi.abi, signer);
 
         try {
           // Step 3: Send transaction directly to contract
-          const tokenTx = await xchange.deposit(
+          const tokenTx = await xchangeFactory.deposit(
+            signerAddress,
             signerAddress,
             dTxHash,
             { gasLimit: 600_000 },
@@ -377,10 +382,11 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
       } else if (xchangeId! && isRefundSelected!) {
         //console.log("Refunding from Contract: ", xchangeId);
-        const iface = new Interface(GlobalSwapabi.abi);
+        const iface = new Interface(GlobalSwapRegistryAbi.abi);
 
         // Deposit existing swap
         const xchange = new Contract(xchangeId, GlobalSwapabi.abi, signer);
+        const xchangeFactory = new Contract(deployments.GlobalSwapRegistry, GlobalSwapRegistryAbi.abi, signer);
 
         try {
           // Step 3: Send transaction directly to contract
@@ -417,14 +423,14 @@ export function useXchangeHandler(config: TransferHandlerProps) {
       } else if (signerAddress !== recipient || signerAddress !== recipient2 && isNewContractSelected!) {
         console.log("Initiating Contract");
 
-        const xchangeFactory = new Contract(deployments.GlobalSwapFactory, GlobalSwapFactoryabi.abi, signer);
+        const xchangeFactory = new Contract(deployments.GlobalSwapFactory, GlobalSwapRegistryAbi.abi, signer);
 
         // New swap xchange fallback
         const parsedValue = parseUnits(amount, 18);
         const parsedValue2 = parseUnits(amount2, 18);
 
 
-        const iface = new Interface(GlobalSwapFactoryabi.abi);
+        const iface = new Interface(GlobalSwapRegistryAbi.abi);
 
         let callAddress;
         if (selectedToken.symbol === "ETH") {

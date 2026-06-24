@@ -1,11 +1,16 @@
 import { ethers } from "ethers";
-import { supportedTokens } from "~~/components/constants/tokens";
 import { JsonRpcProvider } from "ethers";
+import { supportedTokens } from "~~/components/constants/tokens";
 
 // Chainlink Aggregator ABI
 const aggregatorAbi = [
   "function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)"
 ];
+
+interface RawToken {
+  symbol: string;
+  [key: string]: any; 
+}
 
 // Interfaces
 interface StablecoinMeta {
@@ -153,7 +158,9 @@ let cachedGBDoRate: number | null = null;
 let lastUpdated = 0
 //let lastUpdated: number | null = null;
 
-const stablecoins: StablecoinMeta[] = supportedTokens.map(token => {
+const typedSupportedTokens = supportedTokens as RawToken[];
+
+const stablecoins: StablecoinMeta[] = typedSupportedTokens.map((token) => {
   const meta: StablecoinMeta = {
     symbol: token.symbol,
     currency: currencyMap[token.symbol] ?? "USD",
@@ -328,7 +335,10 @@ async function fetchRate(coin: StablecoinMeta): Promise<StablecoinRate | null> {
   if (!coin.symbol || !coin.network) return null;
 
   if (coin.symbol === "GBDo") {
-    const gbdoRate = cachedGBDoRate ?? calculateGBDoRate(Array.from(rateCache.values()));
+    // If the cache map is empty, calculate the starting baseline using your token list
+    const fallbackList = generateFallbackRates();
+    const gbdoRate = cachedGBDoRate ?? calculateGBDoRate(rateCache.size > 0 ? Array.from(rateCache.values()) : fallbackList);
+    
     return {
       symbol: "GBDo",
       currency: "GBDo",
@@ -423,11 +433,30 @@ function applyGuard(symbol: string, rate: number): number {
 
 function calculateGBDoRate(rates: StablecoinRate[]): number {
   const healthyRates = rates.filter(r => r.healthy);
-  if (healthyRates.length === 0) return 1;
 
-  const avg = healthyRates.reduce((sum, r) => sum + r.rate, 0) / healthyRates.length;
-  //console.log(`[GBDo] Healthy tokens: ${healthyRates.map(r => r.symbol).join(", ")}`);
-  return avg * PRIME_FACTOR;
+  if (healthyRates.length > 0) {
+    const avg = healthyRates.reduce((sum, r) => sum + r.rate, 0) / healthyRates.length;
+    return avg * PRIME_FACTOR;
+  }
+
+  // Find all configured symbols EXCEPT GBDo itself
+  const configuredSymbols = Object.keys(rateGuards).filter(sym => sym !== "GBDo");
+  let runningFallbackSum = 0;
+  let validAssetCount = 0;
+
+  for (const symbol of configuredSymbols) {
+    const guard = rateGuards[symbol];
+    if (guard) {
+      // Pulls your precise fallback asset configuration value directly
+      const activeFallback = guard.fallback ?? ((guard.min + guard.max) / 2);
+      runningFallbackSum += activeFallback;
+      validAssetCount++;
+    }
+  }
+
+  // Return the true configuration baseline scaled by your multiplier factor
+  const dynamicConfigBaseline = (runningFallbackSum / validAssetCount) * PRIME_FACTOR;
+  return dynamicConfigBaseline;
 }
 
 function smoothRate(current: number, previous: number): number {
@@ -489,12 +518,17 @@ export async function getExchangeRates(): Promise<{
 
       if (!stablecoinRatesRaw || stablecoinRatesRaw.length === 0) {
         const fallbackRates = generateFallbackRates();
+        
+        // Calculate the baseline rate strictly using your configuration fallback settings
+        const dynamicFallbackRate = calculateGBDoRate(fallbackRates);
+        
         cachedRates = fallbackRates;
-        cachedGBDoRate = 1.05;
-        return {
-          rates: fallbackRates,
-          gbdoRate: cachedGBDoRate,
-          lastUpdated,
+        cachedGBDoRate = dynamicFallbackRate; 
+        
+        return { 
+          rates: fallbackRates, 
+          gbdoRate: dynamicFallbackRate, 
+          lastUpdated 
         };
       }
 
@@ -506,6 +540,12 @@ export async function getExchangeRates(): Promise<{
       const rawGBDo = calculateGBDoRate(stablecoinRates);
       const validRawGBDo = isValidRate(rawGBDo) ? rawGBDo : null;
 
+      // 1. Resolve a dynamic fallback baseline strictly from your config dictionary
+      const gbdoConfigGuard = rateGuards["GBDo"];
+      const dynamicConfigGBDoFallback = gbdoConfigGuard 
+        ? (gbdoConfigGuard.fallback ?? ((gbdoConfigGuard.min + gbdoConfigGuard.max) / 2))
+        : 1.05; // Strict system-level backup ONLY if the GBDo key is completely deleted from the config map
+
       if (validRawGBDo) {
         if (isValidRate(cachedGBDoRate)) {
           cachedGBDoRate = smoothRate(validRawGBDo, cachedGBDoRate!);
@@ -514,10 +554,11 @@ export async function getExchangeRates(): Promise<{
         }
         lastUpdated = now;
       } else if (!isValidRate(cachedGBDoRate)) {
-        cachedGBDoRate = 1.05;
+        
+        cachedGBDoRate = dynamicConfigGBDoFallback;
       }
 
-      const gbdoRateToUse = isValidRate(cachedGBDoRate) ? cachedGBDoRate! : 1.05;
+      const gbdoRateToUse = isValidRate(cachedGBDoRate) ? cachedGBDoRate! : dynamicConfigGBDoFallback;
 
       const ratesWithGBDo = stablecoinRates.map(r => {
         const scaledRate = r.symbol === "GBDo" ? gbdoRateToUse : r.rate;
@@ -540,13 +581,17 @@ export async function getExchangeRates(): Promise<{
         lastUpdated,
       };
     } catch (err) {
-      console.error("getExchangeRates fetch error:", err);
+      console.error("getExchangeRates critical fetch error, executing full fallback route:", err);
+      
       const fallbackRates = generateFallbackRates();
+      const dynamicConfigGBDo = calculateGBDoRate(fallbackRates);
+
       cachedRates = fallbackRates;
-      cachedGBDoRate = 1.05;
+      cachedGBDoRate = dynamicConfigGBDo; 
+
       return {
         rates: fallbackRates,
-        gbdoRate: 1.05,
+        gbdoRate: dynamicConfigGBDo, 
         lastUpdated,
       };
     } finally {
