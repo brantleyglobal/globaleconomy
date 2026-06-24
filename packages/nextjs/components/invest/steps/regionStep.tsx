@@ -143,7 +143,7 @@ export const RegionStep: React.FC<Props> = ({
                 Select Venture
               </option>
               {dividendTokens
-                .filter(t => ["GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(t.symbol))
+                .filter(t => ["GLB", "TGUSA", "TGMX", "CREs", "CREh"].includes(t.symbol))
                 .map(t => (
                   <option key={t.symbol} value={t.symbol}>
                     {t.symbol} | {t.name}
