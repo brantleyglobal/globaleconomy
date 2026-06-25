@@ -71,9 +71,9 @@ const STARTING_RESOURCES: ResourceCategory[] = [
         // ◄ Removed top-level fileSize
         osTargets: [
           { os: "macOS", size: "52.4 MB", url: "https://github.com/brantleyglobal/globalsync-partner/releases/download/v1.0.0/GlobalSync-1.0.0-arm64.dmg" },
-          { os: "Windows", size: "45.1 MB", url: "https://github.com/brantleyglobal/globalsync-partner/releases/download/v1.0.0/GlobalSync-1.0.0.Setup.exe" },
-          { os: "Linux", size: "38.7 MB", url: "https://github.com/brantleyglobal/globalsync-partner/releases/download/v1.0.0/globalsync_1.0.0_amd64.deb" },
-          { os: "RHEL / Fedora", size: "39.2 MB", url: "https://github.com/brantleyglobal/globalsync-partner/releases/download/v1.0.0/GlobalSync-1.0.0-1.x86_64.rpm" }
+          { os: "Windows", size: "45.1 MB", url: "https://github.com/brantleyglobal/globalsync-partner/releases/download/v1.0.0/GlobalSync-Setup-1.0.0.exe" },
+          { os: "Linux", size: "38.7 MB", url: "https://github.com/brantleyglobal/globalsync-partner/releases/download/v1.0.0/GlobalSync_1.0.0_amd64.deb" },
+          { os: "RHEL / Fedora", size: "39.2 MB", url: "https://github.com/brantleyglobal/globalsync-partner/releases/download/v1.0.0/GlobalSync-1.0.0.x86_64.rpm" }
         ]
       },
     ],
