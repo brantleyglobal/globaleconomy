@@ -20,23 +20,23 @@ export const ShippingInfoStep: React.FC<{ currentStep: number; setCurrentStep: (
   const [userPromo, setUserPromo] = useState(shippingInfo?.promo || "");
   const [emailError, setEmailError] = useState("");
     
-    // Basic email validation regex
-    const validateEmail = (email: string): boolean => {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      return emailRegex.test(email);
-    };
+  // Basic email validation regex
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
-    // Handle input change with validation
-    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const email = e.target.value;
-      setUserEmail(email);
+  // Handle input change with validation
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const email = e.target.value;
+    setUserEmail(email);
 
-      if (email === "" || validateEmail(email)) {
-        setEmailError(""); // Clear error if empty or valid
-      } else {
-        setEmailError("Please enter a valid email address");
-      }
-    };
+    if (email === "" || validateEmail(email)) {
+      setEmailError(""); // Clear error if empty or valid
+    } else {
+      setEmailError("Please enter a valid email address");
+    }
+  };
 
   // Sync formData to checkout store
   useEffect(() => {

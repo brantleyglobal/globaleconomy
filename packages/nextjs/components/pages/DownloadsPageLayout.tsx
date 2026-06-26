@@ -72,7 +72,7 @@ const STARTING_RESOURCES: ResourceCategory[] = [
         osTargets: [
           { os: "macOS", size: "52.4 MB", url: "https://github.com/brantleyglobal/globalsync-partner/releases/download/v1.0.0/GlobalSync-1.0.0-arm64.dmg" },
           { os: "Windows", size: "45.1 MB", url: "https://github.com/brantleyglobal/globalsync-partner/releases/download/v1.0.0/GlobalSync-Setup-1.0.0.exe" },
-          { os: "Linux", size: "38.7 MB", url: "https://github.com/brantleyglobal/globalsync-partner/releases/download/v1.0.0/GlobalSync_1.0.0_amd64.deb" },
+          { os: "Linux", size: "38.7 MB", url: "https://github.com/brantleyglobal/globalsync-partner/releases/download/v1.0.0/GlobalSync-1.0.0.AppImage" },
           { os: "RHEL / Fedora", size: "39.2 MB", url: "https://github.com/brantleyglobal/globalsync-partner/releases/download/v1.0.0/GlobalSync-1.0.0.x86_64.rpm" }
         ]
       },

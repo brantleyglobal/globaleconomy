@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Token } from "~~/components/constants/tokens";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
-import { parseUnits } from "ethers";
 import { WalletIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { getExchangeRates } from "~~/lib/exchangeRates";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { useRpcStatus } from "~~/hooks/globalEco/statusRpc";
-import { formatAmount } from "~~/components/dashboard/transactions/transactions";
 
 export type Props = {
   supportedTokens: Token[];
