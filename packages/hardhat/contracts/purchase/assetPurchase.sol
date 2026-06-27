@@ -1,41 +1,42 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../proxies/globalLedgerProxy.sol";
+import "../interfaces/IGlobalLedger.sol";
 
 
 contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
-    GlobalLedgerProxy public ledgerProxy;
+    IGlobalLedger public ledgerProxy;
 
     struct Purchase {
         address user;
         address token;
         address purchaseSetter;
         address refundSetter;
-        uint8 region;
-        uint32 purchaseIndex;
-        uint32 quantity;
-        uint64 id;
+        uint256 region;
+        uint256 purchaseIndex;
+        uint256 quantity;
+        uint256 id;
         uint256 timestamp;
-        uint256[22] amount;
+        uint256 amount;
         uint256 shipping;
         uint256 customizations;
         uint256 rate;
         bool refund;
         bytes32 purchaseTxHash;
         bytes32 refundHash;
+        bytes32 configs;
     }
 
     struct Refund {
         address user;
-        uint32 purchaseIndex;
+        uint256 purchaseIndex;
         uint256 adjustedAmount;
     }
 
@@ -43,9 +44,10 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         address user;
         address affiliate;
         address commissionSetter;
-        uint32 purchaseIndex;
+        uint256 purchaseIndex;
         uint256 commission;
         bytes32 commissionHash;
+        bytes32 buyerAffiliateCreditHash;
     }
 
     struct RateRange {
@@ -55,10 +57,48 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
 
     struct PurchaseRef {
         address user;
-        uint32 purchaseIndex;
+        uint256 purchaseIndex;
     }
 
+    struct PurchaseHandle {
+        address buyer;
+        address stable;
+        address affiliate;
+        uint256 productId;
+        uint256 total;
+        uint256 shipping;
+        uint256 customizations;
+        bytes32 configs;
+        uint256 quantity;
+        uint256 rate;
+        uint256 fee;
+        uint256 commission;
+        uint256 region;
+        uint256 ts;
+        bytes32 depositHash;
+    }
+
+    error NotAuthorized();
+    error InvalidPaymentReceived();
+    error SpendNotApproved();
+    error UserAffiliateCreditFailed();
+    error FeeOutofBounds();
+    error InvalidAddress();
+    error UnapprovedToken();
+    error HashDuplicated();
+    error TimestampDuplicated();
+    error InvalidHash();
+    error InvalidTerm();
+    error InvalidParameters();
+    error InvalidQuantity();
+    error InvalidRate();
+    error RefundInProcess();
+    error PayoutMade();
+    error RefundWindowExpired();
+
+
     uint256 public processTimestamp;
+    uint256 private systemTimestamp;
     uint256 public feeBasisPoints;
     uint256 public totalWithdrawn;
     uint256 internal constant MAX_BPS = 10000;
@@ -66,42 +106,46 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
 
     address public feeRecipient;
     address public payoutAddress;
-    address public poolManagerAddress;
-    address[] public stablecoins;
-    address[] public affiliates;
-    address[] public admins;
+    address[] public stables;
+    address[] private admins;
+    address[] private affiliates;
 
     mapping(address => bool) private adminWhitelistMap;
     mapping(address => bool) private stablecoinWhitelistMap;
     mapping(address => bool) private affiliateWhitelistMap;
     // Mapping from user address => productId => quantity
-    mapping(address => mapping(uint64 => mapping(uint8 => uint32))) private userAssetQuantities;
-    mapping(uint32 => mapping(uint8 => uint256)) public accumBase;
+    mapping(address => mapping(uint256 => mapping(uint256 => uint256))) private userAssetQuantities;
+    mapping(uint256 => mapping(uint256 => uint256)) public accumBase;
     mapping(uint256 => PurchaseRef) public purchasesByTimestamp;
     mapping(bytes32 => PurchaseRef) public purchasesByHash;
     mapping(address => Purchase[]) public purchasesByUser;
-    mapping(address => mapping(uint32 => Affiliate)) public affiliateByUserIndex;
-    mapping(address => mapping(uint32 => Refund)) public refundsByUserIndex;
+    mapping(address => mapping(uint256 => uint256)) public purchaseCredits;
+    mapping(address => mapping(uint256 => Affiliate)) public affiliateByUserIndex;
+    mapping(address => Affiliate[]) public affiliateRecords;
+    mapping(address => mapping(uint256 => bool)) public affiliateIndexSettled;
+    mapping(address => mapping(uint256 => Refund)) public refundsByUserIndex;
     mapping(bytes32 => bool) public processedHashes;
     mapping(uint256 => bool) public processedPurchase;
-    mapping(address => uint8) stablecoinIndex;
-    mapping(uint8 => RateRange) public rateRange;
+    mapping(address => uint256) stablecoinIndex;
+    mapping(address => uint256) adminIndex;
+    mapping(address => uint256) affiliateIndex;
+    mapping(uint256 => RateRange) public rateRange;
+    mapping(address => mapping(uint256 => uint256[])) purchasePayouts;
 
     // --- Events ---
-    event AssetAdded(uint64 indexed id);
+    event AssetAdded(uint256 indexed id);
     event PayoutAddressUpdated(address indexed oldAddress, address indexed newAddress);
-    event FundsWithdrawn(address indexed token, address indexed to, uint256 amount);
-    event PurchaseMade(address indexed buyer, uint64 assetId, uint32 quantity, uint256 rate, uint256 baseAmount, uint256 fee);
-    event DebugPurchase(uint32 productId, uint256 base);
+    event PurchaseMade(address indexed buyer, uint256 assetId, uint256 quantity, uint256 rate, uint256 baseAmount, uint256 fee);
     event PurchaseTimestamp(
         address indexed user,
         address token,
-        uint64 id,
-        uint32 quantity,
-        uint32 purchaseIndex,
-        uint256[22] amount,
+        uint256 id,
+        uint256 quantity,
+        uint256 purchaseIndex,
+        uint256 amount,
+        uint256[] stableOut,
         uint256 shipping,
-        uint8 region,
+        uint256 region,
         uint256 customizations,
         uint256 rate,
         address affiliate,
@@ -109,13 +153,12 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         address purchaseSetter,
         bool refund,
         bytes32 refundHash
-        );
+    );
     event PayoutTxHashCorrected(address user, bytes32 oldUserHash, bytes32 newUserHash, address payoutSetter);
-    event UnexpectedPayoutTxHash(address indexed user, bytes32 existingHash, address existingSetter, uint256 amount, address attemptedSetter);
-    event RefundPayment(bool txType, address user, uint256[] amount);
+    event RefundPayment(address user, uint256[] amount);
 
     uint256 constant DECIMALS = 1e18;
-    uint256 constant GBDr = 1030000000000000000;
+    uint256 constant GBDr = 1050000000000000000;
     uint256 constant RATE_098 = 980000000000000000;   // 0.98 * 1e18
     uint256 constant RATE_102 = 1020000000000000000;  // 1.02 * 1e18
     uint256 constant RATE_065 = 65000000000000000;    // 0.065 * 1e18
@@ -143,16 +186,9 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
     uint256 constant RATE_16000 = 3000000000000000000000;   // 3_000 * 1e18 (adjust if needed)
     uint256 constant RATE_600 = 900000000000000000000;   // 900 * 1e18 (adjust if needed)
 
-    modifier onlyPoolManager() {
-        require(msg.sender == poolManagerAddress, "Not authorized");
-        _;
-    }
-
     // --- Initializer ---
     function initialize(
         address _owner,
-        address[] memory initialStables,
-        address[] memory adminList,
         address ledgerProxyAddress
     ) public initializer {
         __Ownable_init();
@@ -160,45 +196,20 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         __ReentrancyGuard_init();
         _transferOwnership(_owner);
 
-        
         feeBasisPoints = 25;
         feeRecipient = _owner;
-        ledgerProxy = GlobalLedgerProxy(ledgerProxyAddress);
-
-        // Initialize whitelist and store in map and array for iteration
-        for (uint256 i = 0; i < initialStables.length; i++) {
-            address sc = initialStables[i];
-            //require(sc != address(0), "Zero address not allowed");
-
-            stablecoinWhitelistMap[sc] = true;
-            stablecoins.push(sc);
-
-            stablecoinIndex[sc] = uint8(i);
-        }
-
-        // Initialize whitelist and store in map and array for iteration
-        for (uint256 i = 0; i < adminList.length; i++) {
-            address a = adminList[i];
-            require(a != address(0), "Zero address not allowed");
-
-            adminWhitelistMap[a] = true;
-            admins.push(a);
-        }
+        ledgerProxy = IGlobalLedger(ledgerProxyAddress);
     }
 
     // --- Admin ---
     function setPayoutAddress(address newAddress) external onlyOwner {
-        require(newAddress != address(0), "Invalid address");
+        if(newAddress == address(0)) revert InvalidAddress();
         emit PayoutAddressUpdated(payoutAddress, newAddress);
         payoutAddress = newAddress;
     }
 
-    function setPoolManager(address newManager) external onlyOwner {
-        poolManagerAddress = newManager;
-    }
-
     function setFeeBasisPoints(uint256 newBps) external onlyOwner {
-        require(newBps <= 5000, "Fee too high");
+        if(newBps > 5000) revert FeeOutofBounds();
         feeBasisPoints = newBps;
     }
 
@@ -210,188 +221,263 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         return adminWhitelistMap[admin];
     }
 
-    function _isAffiliate(address admin) internal view returns (bool) {
-        return affiliateWhitelistMap[admin];
+    function _isAffiliate(address affiliate) public view returns (bool) {
+        return affiliateWhitelistMap[affiliate];
     }
 
     // --- Purchase Entry ---
     function purchase(
         address buyer,
         address stable,
-        uint32 productId,
+        uint256 productId,
         uint256 amount,
         uint256 shipping,
         uint256 customizations,
-        uint32 quantity,
+        bytes32 configs,
+        uint256 quantity,
         uint256 rate,
         address affiliate,
         uint256 commission,
-        uint8 region,
+        uint256 region,
         bytes32 depositHash,
         uint256 purchaseTimeStamp
     ) external payable nonReentrant {
-        require(quantity > 0, "Invalid quantity: must be >0");
-        require(rate > 0, "Missing rate: must be >0");
-        require(!processedPurchase[purchaseTimeStamp], "Duplicate Timestamp");
+        if(quantity == 0) revert InvalidQuantity();
+        if(rate == 0) revert InvalidRate();
+        
+        // Replay Protection Gate
+        if(processedPurchase[purchaseTimeStamp]) revert TimestampDuplicated();
         processedPurchase[purchaseTimeStamp] = true;
         
-        // Add asset and emit event
+        // Direct internal balance track adjustments
         userAssetQuantities[buyer][productId][region] += quantity;
-        uint256 baseAmount = accumBase[productId][region] * quantity; // unscaled integer
-        uint256 ts = purchaseTimeStamp;
-
-        if (baseAmount == 0 ){
+        
+        // Read product baseline once
+        uint256 productBase = accumBase[productId][region];
+        if (productBase == 0) {
             initializeAccumBase();
+            productBase = accumBase[productId][region]; // Refresh cached pointer
         }
 
+        uint256 baseAmount = productBase * quantity;
         uint256 total;
         uint256 fee;
 
         if (stable == address(0)) {
-
+            // Native Asset Path Security Check
             uint256 nativeAmount = msg.value - customizations;
-            
-            require (nativeAmount == baseAmount, "Transferred amount does not match Product base amount");
+            if(nativeAmount != baseAmount) revert InvalidPaymentReceived();
 
-            total = nativeAmount * quantity;
-
-            // Calculate total payment, fee, and net amount
+            // Removed the duplicate quantity multiplier compounding error
+            total = nativeAmount; 
             fee = 0;
 
         } else {
-            require(_isWhitelisted(stable), "Token not whitelisted");
-            require (_isAdmin(msg.sender), "Permission Denied");
-            require(!processedHashes[depositHash], "Duplicate Hash");
+            if(!_isWhitelisted(stable)) revert UnapprovedToken();
+            if(!_isAdmin(msg.sender)) revert NotAuthorized();
+            if(processedHashes[depositHash]) revert HashDuplicated();
             processedHashes[depositHash] = true;
 
             total = amount * quantity;
 
-            uint8 i = stablecoinIndex[stable];
+            uint256 i = stablecoinIndex[stable];
             RateRange memory r = rateRange[i];
 
-            uint256 minRate = (((baseAmount * DECIMALS) / GBDr) * r.min) / DECIMALS;
-            uint256 maxRate = (((baseAmount * DECIMALS) / GBDr) * r.max) / DECIMALS;
+            uint256 decimalsCached = DECIMALS;
+            uint256 minRate = (((baseAmount * decimalsCached) * r.min) / GBDr) / decimalsCached;
+            uint256 maxRate = (((baseAmount * decimalsCached) * r.max) / GBDr) / decimalsCached;
 
             if (baseAmount < minRate || baseAmount > maxRate) {
                 total = minRate;
             }
-            // Calculate total payment, fee, and net amount
+            
             fee = (total * feeBasisPoints) / MAX_BPS;
+
+            // Secure payment extraction barrier line item
+            //SafeERC20.safeTransferFrom(IERC20(stable), buyer, address(this), total);
         }
+
         _savePurchase(
-            buyer,
-            stable,
-            productId,
-            total,
-            shipping,
-            customizations,
-            quantity,
-            rate,
-            affiliate,
-            commission,
-            region,
-            depositHash,
-            ts
-        );
+            PurchaseHandle({
+                buyer: buyer,
+                stable: stable,
+                affiliate: affiliate,
+                productId: productId,
+                total: total,
+                shipping: shipping,
+                customizations: customizations,
+                configs: configs,
+                quantity: quantity,
+                rate: rate,
+                fee: fee,
+                commission: commission,
+                region: region,
+                depositHash: depositHash,
+                ts: purchaseTimeStamp
+            })
+        ); 
+        emit PurchaseMade(buyer, productId, quantity, rate, total, fee);
     }
 
-    // helper: write a Purchase into storage for a given buyer/index
     function _savePurchase(
-        address buyer,
-        address stable,
-        uint32 productId,
-        uint256 total,
-        uint256 shipping,
-        uint256 customizations,
-        uint32 quantity,
-        uint256 rate,
-        address affiliate,
-        uint256 commission,
-        uint8 region,
-        bytes32 depositHash,
-        uint256 ts
+        PurchaseHandle memory h
     ) internal {
-        // allocate new slot and get storage pointer
-        purchasesByUser[buyer].push();
-        uint256 index = purchasesByUser[buyer].length - 1;
-        Purchase storage p = purchasesByUser[buyer][index];
-        uint8 coinIndex = stablecoinIndex[stable];
-        
+        // Direct push allocation storage assignment pattern win
+        Purchase storage p = purchasesByUser[h.buyer].push();
+        uint256 index;
+        unchecked { index = purchasesByUser[h.buyer].length - 1; }
+        address activeAffiliate = _isAffiliate(h.affiliate) ? h.affiliate : address(0);
+        uint256 total = h.total;
+        if(activeAffiliate != address(0)) { unchecked { purchaseCredits[h.buyer][index] += (300 * 1e18); } }
 
-        // set fields individually (avoid copying whole struct at once)
-        p.user = buyer;
-        p.token = stable;
-        p.id = productId;
-        p.purchaseIndex = uint32(index);
-        p.quantity = quantity;
-        p.amount[coinIndex] = total;
-        p.region = region;
-        p.shipping = shipping;
-        p.customizations = customizations;
-        p.rate = rate;
-        p.purchaseTxHash = depositHash;
+        p.user = h.buyer;
+        p.token = h.stable;
+        p.id = h.productId;
+        p.purchaseIndex = index;
+        p.quantity = h.quantity;
+        p.amount = total;
+        p.region = h.region;
+        p.shipping = h.shipping;
+        p.customizations = h.customizations;
+        p.rate = h.rate;
+        p.purchaseTxHash = h.depositHash;
         p.purchaseSetter = msg.sender;
+        p.configs = h.configs;
         
-        purchaseTimestamps.push(ts);
+        purchaseTimestamps.push(h.ts);
 
-        require(purchasesByTimestamp[ts].user == address(0), "Timestamp already used");
-        purchasesByTimestamp[ts] = PurchaseRef({ user: buyer, purchaseIndex: uint32(index) });
+        if(purchasesByTimestamp[h.ts].user != address(0)) revert TimestampDuplicated();
+        purchasesByTimestamp[h.ts] = PurchaseRef({ user: h.buyer, purchaseIndex: index });
 
-        if (_isAffiliate(affiliate) == true) {
-            affiliateByUserIndex[buyer][uint32(index)] = Affiliate({
-                user: buyer,
-                affiliate: affiliate,
-                commissionSetter: msg.sender,
-                purchaseIndex: uint32(index),
-                commission: commission,
-                commissionHash: bytes32(0)
-            });
-        } else {
-            affiliateByUserIndex[buyer][uint32(index)] = Affiliate({
-                user: buyer,
-                affiliate: address(0),
-                commissionSetter: msg.sender,
-                purchaseIndex: uint32(index),
-                commission: commission,
-                commissionHash: bytes32(0)
-            });
-        }
-
-        refundsByUserIndex[buyer][uint32(index)] = Refund({
-            user: buyer,
-            purchaseIndex: uint32(index),
-            adjustedAmount: total
+        // Optimized Inline conditional structure mappings
+        affiliateByUserIndex[h.buyer][index] = Affiliate({
+            user: h.buyer,
+            affiliate: activeAffiliate,
+            commissionSetter: msg.sender,
+            purchaseIndex: index,
+            commission: h.commission,
+            commissionHash: bytes32(0),
+            buyerAffiliateCreditHash: bytes32(0)
         });
+
+        refundsByUserIndex[h.buyer][index] = Refund({
+            user: h.buyer,
+            purchaseIndex: index,
+            adjustedAmount: 0
+        });
+
+        _recordPurchase(p, h.ts);
+
+        emit AssetAdded(h.productId);
+    }
+
+    function _recordPurchase(Purchase storage p, uint256 ts) internal {
 
         uint256 nativeAmount = 0;
         uint256 stableAmount = 0;
-        if (stable == address(0)) {
-            nativeAmount = total;
+        if (p.token == address(0)) {
+            nativeAmount = p.amount;
         } else {
-            stableAmount = total;
+            stableAmount = p.amount;
         }
 
-        ledgerProxy.recordPurchase(buyer, stable, ts,  nativeAmount, stableAmount, rate, depositHash);
+        IGlobalLedger.LedgerPurchaseHandle memory purchaseData = IGlobalLedger.LedgerPurchaseHandle({
+            user: p.user,
+            token: p.token,
+            nativeAmount: nativeAmount,
+            stableAmount: stableAmount,
+            exchangeRate: p.rate,
+            timeStamp: ts,
+            purchaseHash: p.purchaseTxHash
+        });
 
-        emit PurchaseMade(buyer, productId, quantity, rate, total, 0); // fee passed in earlier if needed
-        emit AssetAdded(productId);
+        ledgerProxy.recordPurchase(purchaseData);
     }
 
-    function getUserProductQuantity(address user, uint64 productId, uint8 region) external view returns (uint32) {
+    function refund(bytes32 purchaseHash) external nonReentrant {
+        // Ensure purchase track hash exists
+        if(!processedHashes[purchaseHash]) revert InvalidHash();
+        
+        PurchaseRef storage r = purchasesByHash[purchaseHash];
+        Purchase storage u = purchasesByUser[r.user][r.purchaseIndex];
+        Refund storage x = refundsByUserIndex[r.user][r.purchaseIndex];
+
+        // Unified permission gate allowing both the true user AND admins to act
+        if(!_isAdmin(msg.sender) || msg.sender != r.user) revert NotAuthorized();
+
+        // Core Status Validation Gates
+        if(u.refundHash != bytes32(0)) revert PayoutMade();
+        if(u.refund) revert RefundInProcess();
+
+        u.refund = true;
+
+        // Enforce time strictly using the internal system clock state variable
+        uint256 currentTxTime = systemTimestamp;
+        uint256 purchaseTime = u.timestamp;
+        uint256 purchaseAmount = u.amount;
+
+        // GUARDRAIL: Ensure the system clock makes logical sense relative to creation time
+        if(currentTxTime <= purchaseTime) revert InvalidParameters();
+
+        // Swapped to additive inequalities to guarantee underflow protection
+        if (currentTxTime <= purchaseTime + 15 days) {
+            
+            // --- Tier 1: 0 to 15 Days -> 90% Refund ---
+            x.adjustedAmount += (purchaseAmount * 90) / 100;
+            u.timestamp = currentTxTime;
+
+        } else if (currentTxTime <= purchaseTime + 45 days) {
+            
+            // --- Tier 2: 15 to 45 Days -> 70% Refund ---
+            x.adjustedAmount += (purchaseAmount * 70) / 100;
+            u.timestamp = currentTxTime;
+
+        } else if (currentTxTime <= purchaseTime + 120 days) {
+            
+            // --- Tier 3: 45 to 120 Days -> 50% Refund ---
+            x.adjustedAmount += (purchaseAmount * 50) / 100;
+            u.timestamp = currentTxTime;
+
+        } else {
+            // Hard fallback limit rule protection
+            revert RefundWindowExpired();
+        }
+        
+        _recordRefund(u, x); 
+    }
+
+    function _recordRefund(Purchase storage u, Refund storage x) internal {
+
+        uint256 nativeAmount = 0;
+        uint256 stableAmount = 0;
+        if (u.token == address(0)) {
+            nativeAmount = x.adjustedAmount;
+        } else {
+            stableAmount = x.adjustedAmount;
+        }
+
+        IGlobalLedger.LedgerPurchaseHandle memory refundData = IGlobalLedger.LedgerPurchaseHandle({
+            user: u.user,
+            token: u.token,
+            nativeAmount: nativeAmount,
+            stableAmount: stableAmount,
+            exchangeRate: 0,
+            timeStamp: 0,
+            purchaseHash: u.purchaseTxHash
+        });
+        (uint256[] memory stableOuts) = ledgerProxy.refundPurchase(
+            refundData
+        );
+
+        purchasePayouts[x.user][x.purchaseIndex] = stableOuts;
+
+        uint256[] storage src = purchasePayouts[x.user][x.purchaseIndex];
+
+        emit RefundPayment(u.user, src);
+    }
+
+    function getUserProductQuantity(address user, uint256 productId, uint256 region) external view returns (uint256) {
         return userAssetQuantities[user][productId][region];
-    }
-
-    function batchWithdraw() external onlyOwner {
-        require(payoutAddress != address(0), "Payout address not set");
-        for (uint256 i = 0; i < stablecoins.length; i++) {
-            address token = stablecoins[i];
-            if (!stablecoinWhitelistMap[token]) continue;
-            uint256 tokenBalance = IERC20(token).balanceOf(address(this));
-            if (tokenBalance > 0) {
-                totalWithdrawn += tokenBalance;
-                emit FundsWithdrawn(token, payoutAddress, tokenBalance);
-            }
-        }
     }
 
     function initializeAccumBase() public {
@@ -488,8 +574,48 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         _setBaseAmount(1207600, 8, 99000 + 900);
     }
 
+    function _populateGlobals() external {
+        if(msg.sender != owner()) revert NotAuthorized();
+
+        rateRange[0]  = RateRange(RATE_100, RATE_100);
+        rateRange[1]  = RateRange(RATE_102, RATE_098);
+        rateRange[3]  = RateRange(RATE_102, RATE_098);
+        rateRange[5]  = RateRange(RATE_102, RATE_098);
+        rateRange[9]  = RateRange(RATE_102, RATE_098);
+        rateRange[11] = RateRange(RATE_102, RATE_098);
+        rateRange[12] = RateRange(RATE_102, RATE_098);
+        rateRange[13] = RateRange(RATE_102, RATE_098);
+
+        rateRange[14] = RateRange(RATE_069, RATE_065);
+
+        rateRange[2]  = RateRange(RATE_076, RATE_072);
+
+        rateRange[4]  = RateRange(RATE_112, RATE_108);
+        rateRange[19] = RateRange(RATE_112, RATE_108);
+
+        rateRange[6]  = RateRange(RATE_100, RATE_097);
+
+        rateRange[7]  = RateRange(RATE_0073, RATE_0065);
+
+        rateRange[8]  = RateRange(RATE_062, RATE_058);
+
+        rateRange[10] = RateRange(RATE_076, RATE_074);
+
+        rateRange[15] = RateRange(RATE_064, RATE_054);
+
+        rateRange[16] = RateRange(RATE_021, RATE_019);
+
+        rateRange[17] = RateRange(RATE_130, RATE_120);
+
+        rateRange[18] = RateRange(RATE_033, RATE_030);
+
+        rateRange[20] = RateRange(RATE_100, RATE_100);
+        rateRange[21] = RateRange(RATE_100, RATE_100);
+
+    }
+
     // Helper to set mapping
-    function _setBaseAmount(uint32 productId, uint8 region, uint256 baseAmount) internal {
+    function _setBaseAmount(uint256 productId, uint256 region, uint256 baseAmount) internal {
         accumBase[productId][region] = baseAmount;
     }
 
@@ -497,7 +623,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         return purchasesByUser[user].length;
     }
 
-    function getUserTerm(address user, uint32 index)
+    function getUserTerm(address user, uint256 index)
         external
         view
         returns (Purchase memory)
@@ -510,61 +636,129 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         view
         returns (Purchase[] memory)
     {
+        if (!_isAdmin(msg.sender) || msg.sender != user) revert NotAuthorized();
         return purchasesByUser[user];
+    }
+
+    function setPurchaseCredit(
+        address user, 
+        uint256 purchaseIndex, 
+        uint256 creditAmount
+    ) external onlyOwner {
+        // Guard to ensure we are referencing a valid, pre-existing purchase execution
+        require(purchaseIndex < purchasesByUser[user].length, "IndexOutOfBounds");
+        
+        purchaseCredits[user][purchaseIndex] += creditAmount;
+    }
+
+    function getUserPurchasesWithCredits(address user) 
+        external 
+        view 
+        returns (Purchase[] memory terms, uint256[] memory credits) 
+    {
+        uint256 count = purchasesByUser[user].length;
+        terms = purchasesByUser[user];
+        credits = new uint256[](count);
+        
+        for (uint256 i = 0; i < count; i++) {
+            credits[i] = purchaseCredits[user][i];
+        }
+    }
+
+    function recordAffiliateCommission(
+        address user,
+        address affiliate,
+        uint256 purchaseIndex,
+        uint256 commission,
+        bytes32 commissionHash,
+        bytes32 buyerAffiliateCreditHash
+    ) external onlyOwner {
+        // Safety verification: The customer must have a valid purchase on record
+        require(purchaseIndex < purchasesByUser[user].length, "InvalidPurchaseIndex");
+        // Prevent double-allocation of standard partner cuts for a single order index
+        require(!affiliateIndexSettled[user][purchaseIndex], "AffiliateCommissionAlreadySettled");
+
+        affiliateRecords[affiliate].push(Affiliate({
+            user: user,
+            affiliate: affiliate,
+            commissionSetter: msg.sender,
+            purchaseIndex: purchaseIndex,
+            commission: commission,
+            commissionHash: commissionHash,
+            buyerAffiliateCreditHash: buyerAffiliateCreditHash
+        }));
+
+        affiliateIndexSettled[user][purchaseIndex] = true;
+    }
+
+    function getAffiliateHistory(address affiliate) 
+        external 
+        view 
+        returns (Affiliate[] memory) 
+    {
+        return affiliateRecords[affiliate];
     }
 
     function correctPayoutTxHash(
         address user,
-        uint32 termIndex,
+        uint256 termIndex,
         bytes32 newTxHash,
         bytes32 partnerHash,
+        bytes32 creditHash,
         bytes32 refundHash
     ) external onlyOwner {
         // Validate term index
-        require(termIndex < purchasesByUser[user].length, "Invalid term index");
+        if(termIndex > purchasesByUser[user].length) revert InvalidTerm();
 
         // Load the correct term record (use storage so changes persist)
         Purchase storage u = purchasesByUser[user][termIndex];
         Affiliate storage a = affiliateByUserIndex[user][termIndex];
 
-        // A payout must exist for this stage before correcting a hash
-        uint8 cid = stablecoinIndex[u.token];
-        require(u.amount[cid] != 0, "Payout not yet computed");
+        // A payout before correcting a hash
+        if(u.amount == 0) revert SpendNotApproved();
 
         // Old hashes for event
         bytes32 oldHash;
         
         // At least one of the supplied hashes must be non-zero
         if (newTxHash == bytes32(0) && refundHash == bytes32(0) && partnerHash == bytes32(0)) {
-            revert("No Hash Included In The Transaction Call");
+            revert InvalidHash();
         }
 
         // Check duplicates only for non-zero incoming hashes
         bytes32 newHash;
 
         if (newTxHash != bytes32(0)) {
-            require(!processedHashes[newTxHash], "Duplicate Purchase Hash");
+            if(processedHashes[newTxHash]) revert HashDuplicated();
             processedHashes[newTxHash] = true;
+            oldHash = u.purchaseTxHash;
             u.purchaseTxHash = newTxHash;
             u.purchaseSetter = msg.sender;
             newHash = newTxHash;
-            oldHash = u.purchaseTxHash;
         }
         if (refundHash != bytes32(0)) {
-            require(!processedHashes[refundHash], "Duplicate Refund Hash");
+            if(processedHashes[refundHash]) revert HashDuplicated();
             processedHashes[refundHash] = true;
+            oldHash = u.refundHash;
             u.refundHash = refundHash;
             u.refundSetter = msg.sender;
             newHash = refundHash;
-            oldHash = u.refundHash;
         }
         if (partnerHash != bytes32(0)) {
-            require(!processedHashes[partnerHash], "Duplicate Commission Hash");
+            if(!processedHashes[partnerHash]) revert HashDuplicated();
             processedHashes[partnerHash] = true;
+            oldHash = a.commissionHash;
             a.commissionHash = partnerHash;
             a.commissionSetter = msg.sender;
             newHash = partnerHash;
-            oldHash = a.commissionHash;
+        }
+        if (creditHash != bytes32(0)) {
+            if(!processedHashes[creditHash]) revert HashDuplicated();
+            processedHashes[creditHash] = true;
+            oldHash = a.buyerAffiliateCreditHash;
+            a.buyerAffiliateCreditHash = creditHash;
+            a.commissionSetter = msg.sender;
+            newHash = creditHash;
         }
 
         emit PayoutTxHashCorrected(user, oldHash, newHash, msg.sender);
@@ -575,6 +769,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         PurchaseRef memory r = purchasesByTimestamp[timestamp];
         Purchase memory w = purchasesByUser[r.user][r.purchaseIndex];
         Affiliate memory a = affiliateByUserIndex[w.user][w.purchaseIndex];
+        uint256[] memory src = purchasePayouts[r.user][r.purchaseIndex];
 
         if (msg.sender == owner()) {
 
@@ -585,6 +780,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
                 w.quantity,
                 w.purchaseIndex,
                 w.amount,
+                src,
                 w.shipping,
                 w.region,
                 w.customizations,
@@ -598,7 +794,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
 
         } else {
 
-            require(_isAdmin(msg.sender), "Permission Denied");
+            if(!_isAdmin(msg.sender)) revert NotAuthorized();
 
             emit PurchaseTimestamp(
                 w.user,
@@ -607,6 +803,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
                 w.quantity,
                 w.purchaseIndex,
                 w.amount,
+                src,
                 w.shipping,
                 w.region,
                 w.customizations,
@@ -621,165 +818,213 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         }
     }
 
-    function getPurchasesInRange(uint256 startTs, uint256 endTs, bool process) public {
+    function getPurchasesInRange(uint256 startTs, uint256 endTs, uint256 ts, bool process) public {
 
-        if (process == true){
+        if (process) {
 
-            require (msg.sender == owner(), "Only Owner Required for off-chain deposits");
-            for (uint256 i = 0; i < purchaseTimestamps.length; i++) {
-                uint256 ts = purchaseTimestamps[i];
-                if (ts >= processTimestamp && ts <= endTs) {
-                    PurchaseRef memory r = purchasesByTimestamp[ts];
-                    Purchase memory w = purchasesByUser[r.user][r.purchaseIndex];
-                    Affiliate memory a = affiliateByUserIndex[r.user][r.purchaseIndex];
-                    emit PurchaseTimestamp(
-                        w.user,
-                        w.token,
-                        w.id,
-                        w.quantity,
-                        w.purchaseIndex,
-                        w.amount,
-                        w.shipping,
-                        w.region,
-                        w.customizations,
-                        w.rate,
-                        a.affiliate,
-                        a.commission,
-                        w.purchaseSetter,
-                        w.refund,
-                        w.refundHash
-                    );
-                }
-            }
+            if(msg.sender != owner()) revert NotAuthorized();
+            uint256 effectiveStamp = processTimestamp - 120 days;
+            _emitPurchase(effectiveStamp, endTs);
+
             processTimestamp = endTs;
+            systemTimestamp = ts;
 
         } else {
 
-            require(_isAdmin(msg.sender), "Permission Denied");
+            if(!_isAdmin(msg.sender)) revert NotAuthorized();
 
-            for (uint256 i = 0; i < purchaseTimestamps.length; i++) {
-                uint256 ts = purchaseTimestamps[i];
-                if (ts >= startTs && ts <= endTs) {
-                    PurchaseRef memory r = purchasesByTimestamp[ts];
-                    Purchase memory w = purchasesByUser[r.user][r.purchaseIndex];
-                    Affiliate memory a = affiliateByUserIndex[w.user][w.purchaseIndex];
-                    emit PurchaseTimestamp(
-                        w.user,
-                        w.token,
-                        w.id,
-                        w.quantity,
-                        w.purchaseIndex,
-                        w.amount,
-                        w.shipping,
-                        w.region,
-                        w.customizations,
-                        w.rate,
-                        a.affiliate,
-                        a.commission,
-                        w.purchaseSetter,
-                        w.refund,
-                        w.refundHash
-                    );
-                }
-            }
+            systemTimestamp = ts;
+
+            _emitPurchase(startTs, endTs);
         }
     }
 
-    function refund (bytes32 purchaseHash, uint256 timeStamp) public {
+    function _emitPurchase(uint256 startTs, uint256 endTs) internal {
 
-        PurchaseRef memory r = purchasesByHash[purchaseHash];
-        Purchase storage u = purchasesByUser[r.user][r.purchaseIndex];
-        Refund storage x = refundsByUserIndex[r.user][r.purchaseIndex];
+        // Cache array length to memory to prevent continuous storage reads (SLOAD)
+        uint256 len = purchaseTimestamps.length;
 
-        require(_isAdmin(msg.sender) || msg.sender == r.user, "Permission Denied");
+        for (uint256 i = 0; i < len;) {
+            uint256 ts = purchaseTimestamps[i];
+            
+            if (ts >= startTs && ts <= endTs) {
+                // Read pointers to storage instead of copying the whole struct to memory
+                PurchaseRef storage r = purchasesByTimestamp[ts];
+                Purchase storage w = purchasesByUser[r.user][r.purchaseIndex];
+                Affiliate storage a = affiliateByUserIndex[w.user][w.purchaseIndex];
+                
+                emit PurchaseTimestamp(
+                    w.user,
+                    w.token,
+                    w.id,
+                    w.quantity,
+                    w.purchaseIndex,
+                    w.amount,
+                    purchasePayouts[r.user][r.purchaseIndex],
+                    w.shipping,
+                    w.region,
+                    w.customizations,
+                    w.rate,
+                    a.affiliate,
+                    a.commission,
+                    w.purchaseSetter,
+                    w.refund,
+                    w.refundHash
+                );
+            }
+
+            // Use unchecked increments for the loop counter to bypass safety checks
+            unchecked { i++; }
+        }
+    }
+
+    function _additionHelper(address[] memory addresses, bool stc, bool aff, bool adn) internal {
+        uint256 len = addresses.length;
         
-        uint256 ts = timeStamp;
-        uint grace = 15 days;
-        uint grace2 = 45 days;
-        uint grace3 = 120 days;
-        require(processedHashes[purchaseHash], "Hash Not Found");
+        for (uint256 i = 0; i < len;) {
+            address sc = addresses[i];
 
-        require(u.refundHash == bytes32(0), "Refund Payout Made");
-
-        require(u.refund != true, "Refund In Process");
-        require (msg.sender == r.user, "Only Transacting User Can Request Refund");
-
-        u.refund = true;
-
-        uint8 coinIndex = stablecoinIndex[u.token];
-
-        if ((ts - grace) <= u.timestamp) {
-
-            // --- ADJUSTED PER TERMS & CONDITIONS --- //
-            x.adjustedAmount = (u.amount[coinIndex] * 90) / 100;
-            u.timestamp = ts;
-
-        } else if ((ts - grace2) <= u.timestamp && (ts - grace) > u.timestamp) {
-
-            // --- ADJUSTED PER TERMS & CONDITIONS --- //
-            x.adjustedAmount = (u.amount[coinIndex] * 70) / 100;
-            u.timestamp = ts;
-
-        } else if ((ts - grace3) <= u.timestamp) {
-
-            // --- ADJUSTED PER TERMS & CONDITIONS --- //
-            x.adjustedAmount = (u.amount[coinIndex] * 50) / 100;
-            u.timestamp = ts;
-
-        } else {
-            revert("Not Eligibable For Refund. Refund Request Period Has Expired");
-        }
-
-        uint256 nativeAmount = 0;
-        uint256 stableAmount = 0;
-        if (u.token == address(0)) {
-            nativeAmount = x.adjustedAmount;
-        } else {
-            stableAmount = x.adjustedAmount;
-        }
-
-        (uint256[22] memory stableOuts) = ledgerProxy.refundPurchase( u.user, u.token, timeStamp,  nativeAmount, stableAmount, u.rate, purchaseHash);
-
-        // Store per-currency outputs
-        for (uint256 i = 0; i < 22; i++) {
-            //uint8 cid = cids[i];
-            uint256 amt = stableOuts[i];
-
-            u.amount[i] = amt;
-
-            // Effective rate for THIS currency only
-            // (native consumed for this currency) / (stable returned)
-            // You can also have repayNative return this directly.
-            // --- Rates applied in Ledger
-        }
-    }
-
-    function addAdmin (address admin) external onlyOwner {
-        admins.push(admin);
-    }
-
-    function removeAdmin (address admin) external onlyOwner {
-        for (uint i = 0; i < admins.length; i++) {
-            if (admins[i] == admin) {
-                admins[i] = admins[admins.length - 1];
-                admins.pop();
-                break;
+            // Skip if ALREADY added to prevent array bloating
+            if (stc && !stablecoinWhitelistMap[sc]) {
+                stablecoinIndex[sc] = stables.length; // FIXED: Tracks actual state array position
+                stables.push(sc);
+                stablecoinWhitelistMap[sc] = true;
             }
+            if (aff && !affiliateWhitelistMap[sc]) {
+                affiliateIndex[sc] = affiliates.length;
+                affiliates.push(sc);
+                affiliateWhitelistMap[sc] = true;
+            }
+            if (adn && !adminWhitelistMap[sc]) {
+                adminIndex[sc] = admins.length;
+                admins.push(sc);
+                adminWhitelistMap[sc] = true;
+            }
+            
+            unchecked { i++; }
         }
-    }
+    } 
 
-    function addAdffiliate (address affiliate) external onlyOwner {
-        affiliates.push(affiliate);
-    }
+    function _removalHelper(address[] memory addresses, bool stc, bool aff, bool adn) internal {
+        uint256 len = addresses.length;
 
-    function removeAffiliate (address affiliate) external onlyOwner {
-        for (uint i = 0; i < affiliates.length; i++) {
-            if (affiliates[i] == affiliate) {
-                affiliates[i] = affiliates[affiliates.length - 1];
+        for (uint256 i = 0; i < len;) {
+            address sc = addresses[i];
+
+            // Process individual types using isolated indexes to prevent state pollution
+            if (stc && stablecoinWhitelistMap[sc]) {
+                uint256 index = stablecoinIndex[sc];
+                uint256 lastIndex = stables.length - 1;
+
+                if (index != lastIndex) {
+                    address lastAddr = stables[lastIndex];
+                    stables[index] = lastAddr;
+                    stablecoinIndex[lastAddr] = index;
+                }
+                stables.pop();
+                stablecoinWhitelistMap[sc] = false;
+                delete stablecoinIndex[sc];
+            }
+
+            if (aff && affiliateWhitelistMap[sc]) {
+                uint256 index = affiliateIndex[sc];
+                uint256 lastIndex = affiliates.length - 1;
+
+                if (index != lastIndex) {
+                    address lastAddr = affiliates[lastIndex];
+                    affiliates[index] = lastAddr;
+                    affiliateIndex[lastAddr] = index;
+                }
                 affiliates.pop();
-                break;
+                affiliateWhitelistMap[sc] = false;
+                delete affiliateIndex[sc];
             }
+
+            if (adn && adminWhitelistMap[sc]) {
+                uint256 index = adminIndex[sc];
+                uint256 lastIndex = admins.length - 1;
+
+                if (index != lastIndex) {
+                    address lastAddr = admins[lastIndex];
+                    admins[index] = lastAddr;
+                    adminIndex[lastAddr] = index;
+                }
+                admins.pop();
+                adminWhitelistMap[sc] = false;
+                delete adminIndex[sc];
+            }
+
+            unchecked { i++; }
         }
+    }
+
+    function addToStableWhitelist(address[] memory stableAddress) external onlyOwner {
+
+        bool stc = true;
+        bool aff = false;
+        bool adn = false;
+
+        _additionHelper(stableAddress, stc, aff, adn);
+    }
+
+    function stableIndex() external view onlyOwner returns(address[] memory stable) {
+        
+        return stables;
+    }
+
+    function removeFromStableWhitelist(address[] memory stableAddress) external onlyOwner {
+
+        bool stc = true;
+        bool aff = false;
+        bool adn = false;
+
+        _removalHelper(stableAddress, stc, aff, adn);
+    }
+
+    function addToAffiliateWhitelist(address[] memory affiliateAddress) external onlyOwner {
+
+        bool stc = false;
+        bool aff = true;
+        bool adn = false;
+        
+        _additionHelper(affiliateAddress, stc, aff, adn);
+    }
+
+    function affiliatesIndex() external view onlyOwner returns(address[] memory stakes) {
+        
+        return affiliates;
+    }
+
+    function removeFromAffiliateWhitelist(address[] memory affiliate) external onlyOwner {
+
+        bool stc = false;
+        bool aff = true;
+        bool adn = false;
+
+        _removalHelper(affiliate, stc, aff, adn);
+    }
+
+    function addToAdminWhitelist(address[] memory adminToAdd) external onlyOwner {
+
+        bool stc = false;
+        bool aff = false;
+        bool adn = true;
+       
+        _additionHelper(adminToAdd, stc, aff, adn);
+    }
+
+    function adminsIndex() external view onlyOwner returns(address[] memory admin) {
+        
+        return admins;
+    }
+
+    function removeFromAdminWhitelist(address[] memory adminToRemove) external onlyOwner {
+
+        bool stc = false;
+        bool aff = false;
+        bool adn = true;
+
+        _removalHelper(adminToRemove, stc, aff, adn);
     }
 
     // --- Upgrade Authorization ---

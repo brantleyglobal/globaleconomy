@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
@@ -25,22 +25,16 @@ contract GlobalSwapFactory is Initializable, AccessControl {
         address tokenB, 
         uint256 amountB,
         bytes32 partyBDepositHash
-        );
+    );
 
     bytes32 public constant CREATOR_ROLE = keccak256("CREATOR_ROLE");
     
-    function initialize(address _owner, address[] memory initialStables) public initializer {
+    function initialize(address _owner) public initializer {
         implementation = address(new GlobalSwap());
         feeRecipient = _owner;
 
         _grantRole(DEFAULT_ADMIN_ROLE, _owner);
         _grantRole(CREATOR_ROLE, _owner);
-
-        for (uint256 i = 0; i < initialStables.length; i++) {
-            //require(initialStables[i] != address(0), "Zero address not allowed");
-            stablecoinWhitelistMap[initialStables[i]] = true;
-            stablecoins.push(initialStables[i]);
-        }
     }
 
     function _isWhitelisted(address token) internal view returns (bool) {

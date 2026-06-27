@@ -49,22 +49,17 @@
     "solidity-coverage": "^0.8.13",
     "ts-node": "^10.9.2",
     "typechain": "^8.3.2",
-    "typescript": "^5.8.3"
+    "typescript": "^6.0.3"
   },
   "dependencies": {
-    "@cloudflare/d1": "^1.4.1",
     "@eslint/eslintrc": "^3.3.1",
     "@inquirer/password": "^4.0.2",
-    "@openzeppelin/contracts": "^5.4.0",
-    "@openzeppelin/contracts-upgradeable": "^4.9.6",
-    "@types/readline-sync": "^1.4.4",
-    "csv-writer": "^1.6.0",
     "dotenv": "^16.4.5",
     "envfile": "^7.1.0",
-    "erc721a": "^4.3.0",
+    "ethers": "^6.17.0",
     "globals": "^16.3.0",
     "qrcode": "^1.5.4",
-    "readline-sync": "^1.4.10"
+    "web3.storage": "^4.5.5"
   },
   "main": "hardhat.config.js",
   "directories": {

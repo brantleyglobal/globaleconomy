@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -11,17 +11,21 @@ contract Globe is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUP
     using SafeERC20 for IERC20;
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
+    error NotAuthorized();
+
     address payable public _admin;
+    address private _vault;
 
     /// @notice If locked is true, users are not allowed to withdraw funds
     bool public locked;
 
-    uint16 public unlockQuarter;
-    uint16 public comingQuarter;
-    uint8 public gracePeriod;
-    uint8 public committedQuarters;
-    uint8 public redeemPeriod;
-    uint16 public previousComingQuarter;
+    uint256 public startQuarter;
+    uint256 public unlockQuarter;
+    uint256 public comingQuarter;
+    uint256 public gracePeriod;
+    uint256 public committedQuarters;
+    uint256 public redeemPeriod;
+    uint256 public previousComingQuarter;
     uint256 public credit;
     uint256 private _supply;
 
@@ -35,7 +39,8 @@ contract Globe is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUP
     }
 
     function initialize(
-        address admin
+        address admin,
+        address vault
     ) public initializer {
         __ERC20_init("Globe", "GLB"); 
         __AccessControl_init();
@@ -43,6 +48,8 @@ contract Globe is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUP
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MINTER_ROLE, admin);
+        _grantRole(MINTER_ROLE, vault);
+        _vault = vault;
     }
 
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
@@ -68,19 +75,22 @@ contract Globe is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUP
     }
 
     function supply(uint256 amount) public {
+        if (msg.sender != _vault) revert NotAuthorized();
         _supply = amount;
     }
 
-    function update(uint16 currentQuarter) public {
+    function update(uint256 currentQuarter) public {
+        if(msg.sender != _vault) revert NotAuthorized();
         // First-time initialization: start from current quarter
         if (unlockQuarter == 0) {
             committedQuarters = 12;
             redeemPeriod = 60;
             gracePeriod = 4;
 
-            uint16 callQuarter = currentQuarter + committedQuarters;
-            uint16 newComing   = callQuarter + redeemPeriod;
+            uint256 callQuarter = currentQuarter + committedQuarters;
+            uint256 newComing   = callQuarter + redeemPeriod;
 
+            startQuarter = currentQuarter;
             unlockQuarter = callQuarter;
             comingQuarter = newComing;
             locked = true;
@@ -103,13 +113,13 @@ contract Globe is Initializable, ERC20Upgradeable, AccessControlUpgradeable, UUP
         }
 
         // Case 3: Past coming quarter → advance cycle
-        if (currentQuarter > comingQuarter && locked == false) {
+        if (currentQuarter >= comingQuarter && locked == false) {
             locked = true;
 
             previousComingQuarter = comingQuarter;
 
-            uint16 callQuarter = currentQuarter + committedQuarters;
-            uint16 newComing   = callQuarter + redeemPeriod;
+            uint256 callQuarter = currentQuarter + committedQuarters;
+            uint256 newComing   = callQuarter + redeemPeriod;
 
             unlockQuarter = callQuarter;
             comingQuarter = newComing;

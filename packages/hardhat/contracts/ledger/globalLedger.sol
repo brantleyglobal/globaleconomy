@@ -1,41 +1,43 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "../interfaces/IGlobalLedger.sol";
 
-contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable { 
+contract GlobalLedger is IGlobalLedger, Initializable, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable { 
 
     // -------------------------
     // DATA STRUCTURES
     // -------------------------
     struct Global {
-        uint256[22] balanceAmount;
-        uint256[22] liquidAmount;
-        uint256[22] depletedFIFO;
-        uint256[22] purchases;
-        uint256[22] vaultDepositAmount;
-        uint256[22] ventureDepositAmount;
-        uint256[22] venturePoolAmount;
-        uint256[22] vaultPoolAmount;
+        uint256[150] balanceAmount;
+        uint256[150] liquidAmount;
+        uint256[150] purchases;
+        uint256[150] vaultDepositAmount;
+        uint256[150] ventureDepositAmount;
+        uint256[150] venturePoolAmount;
+        uint256[150] vaultPoolAmount;
         uint256 timestamp;
     }
 
     struct User {
         address user;
-        uint256[22] balanceAmount;
-        uint256[22] liquidAmount;
-        uint256[22] purchases;
-        uint256[22] vaultDepositAmount;
-        uint256[22] ventureDepositAmount;
+        uint256[150] balanceAmount;
+        uint256[150] liquidAmount;
+        uint256[150] purchases;
+        uint256[150] vaultDepositAmount;
+        uint256[150] ventureDepositAmount;
+        uint256[150] vaultWithdrawAmount;
+        uint256[150] ventureWithdrawAmount;
         uint256 timestamp;
     }
 
     struct PurchaseLot {
       address user;
-      uint8 currencyID;
+      uint256 currencyID;
       uint256 stableAmount;
       uint256 nativeAmount;
       uint256 exchangeRate;
@@ -57,14 +59,12 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
 
     struct AcquisitionLot {
       address user;
-      uint8 currencyID;
+      uint256 currencyID;
       uint256 stableAmount;
       uint256 nativeAmount;
       uint256 remainingNative;
       uint256 remainingStable;
       uint256 exchangeRate;
-      uint256 nativeSnapShot;
-      uint256 stableSnapShot;
       uint256 timestamp;
       uint256 chapterHead;
       uint256 chapterEnd;
@@ -75,7 +75,7 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
 
     struct VaultLot {
       address user;
-      uint8 currencyID;
+      uint256 currencyID;
       uint256 stableAmount;
       uint256 nativeAmount;
       uint256 exchangeRate;
@@ -87,7 +87,7 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
 
     struct VentureLot {
       address user;
-      uint8 currencyID;
+      uint256 currencyID;
       uint256 stableAmount;
       uint256 nativeAmount;
       uint256 exchangeRate;
@@ -99,8 +99,8 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
 
     struct VaultWithdrawLot {
       address user;
-      uint8 currencyID;
-      uint8 vaultID;
+      uint256 currencyID;
+      uint256 vaultID;
       uint256 stableAmount;
       uint256 timestamp;
       bool credit;
@@ -108,8 +108,8 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
 
     struct VentureWithdrawLot {
       address user;
-      uint8 currencyID;
-      uint8 vaultID;
+      uint256 currencyID;
+      uint256 vaultID;
       uint256 stableAmount;
       uint256 timestamp;
       bool credit;
@@ -117,7 +117,7 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
 
     struct VaultPoolLot {
       address sourceContract;
-      uint8 currencyID;
+      uint256 currencyID;
       uint256 stableAmount;
       uint256 timestamp;
       bool credit;
@@ -127,24 +127,53 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
 
     struct VenturePoolLot {
       address sourceContract;
-      uint8 currencyID;
+      uint256 currencyID;
       uint256 stableAmount;
       uint256 timestamp;
       bool credit;
       bool status;
       bytes32 depositHash;
     }
- 
-    address[] public stablecoins;
-    address[] public stakeablecoins;
-    address[] public venturecoins;
-    address[] public users;
-    address[] public admins;
-    address[] public contracts;
+
+    struct FIFOConsumeParams {
+        address user;
+        uint256 currencyID;
+        uint256 vaultID;
+        uint256 remaining;
+        uint256 investmentAmount;
+        uint256 timeStamp;
+        bool initiationStatus;
+        bool vaultDraw;
+        bool ventureDraw;
+        bool purchase;
+    }
+
+    struct FIFOBalanceParams {
+        address user;
+        uint256 nativeAmount;
+        uint256 timeStamp;
+        bytes32 purchaseHash;
+    }
+
+    error NotAuthorized();
+    error InvalidUserAddress();
+    error InvalidPoolCurrency();
+    error InvalidHash();
+    error HashDuplicated();
+    error MintingFailed();
+    error InsufficientFIFOLots();
+
     uint256 public nextLotId;
     uint256 private globalHead;
-    uint8 private global;
-    uint8 private globalID;  
+    uint256 private globalID;
+
+    address[] public users;
+    address[] public stables;
+    address[] public stakeables;
+    address[] public ventures;
+    address[] public admins;
+    address[] public contractAddresses;
+    AcquisitionLot[] private globalQueue;
 
     mapping(address => Global[]) public globalView;
     mapping(address => User[]) public userView;
@@ -163,78 +192,45 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
     mapping(uint256 => VentureWithdrawLot) public ventureWithdrawLots;
     mapping(uint256 => VaultPoolLot) public vaultPoolLots;
     mapping(uint256 => VenturePoolLot) public venturePoolLots;
-    mapping(address => uint256[]) public userNativeQueue;
     mapping(address => uint256[]) public acquisitionChapter;
     mapping(address => bool) private stablecoinWhitelistMap;
-    mapping(address => bool) private stakeablecoinWhitelistMap;
+    mapping(address => bool) private stakeableWhitelistMap;
     mapping(address => bool) private venturecoinWhitelistMap;
-    mapping(address => uint8) stablecoinIndex;
-    mapping(address => uint8) stakeablecoinIndex;
-    mapping(address => uint8) venturecoinIndex;
-
+    mapping(address => uint256) stablecoinIndex;
+    mapping(address => uint256) stakeablecoinIndex;
+    mapping(address => uint256) venturecoinIndex;
+    mapping(address => uint256) adminIndex;
+    mapping(address => uint256) contractIndex;
+ 
     // -------------------------
     // EVENTS
     // -------------------------
-    event Deposit(uint256 lotId, address indexed user, uint8 currency, uint256 amount);
-    event Spend(uint256 lotId, address indexed user, uint8 currency, uint256 amount, address indexed caller);
-    event Refund(uint256 lotId, address indexed user, uint8 currency, uint256 amount,  address indexed caller);
-    event Withdrawal(uint256 lotId, address indexed user, uint8 currency, uint256 amount);
-
-    //Add mapping for native currency purchases
-    //Product purchases are treated as spend but only after day 15 and after day 30 that spend increases.  If paid in with native currency purchase will need to account for individual stable coin balance, being insufficient. Add time stamp to ledger.
+    event Deposit(uint256 lotId, address indexed user, uint256 currency, uint256 amount);
+    event Spend(uint256 lotId, address indexed user, uint256 currency, uint256 amount, address indexed caller);
+    event Refund(uint256 lotId, address indexed user, uint256 currency, uint256 amount,  address indexed caller);
+    event Withdrawal(uint256 lotId, address indexed user, uint256 currency, uint256 amount);
 
     // -------------------------
     // INITIALIZER
     // -------------------------
     function initialize(
-        address _owner,
-        address[] memory initialStables,
-        address[] memory initialStakeables
+        address _owner
     ) public initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
         _transferOwnership(_owner);
 
-        // Initialize whitelist and store in map and array for iteration
-        for (uint256 i = 0; i < initialStables.length; i++) {
-            address sc = initialStables[i];
-            //require(sc != address(0), "Zero address not allowed");
-
-            stablecoinWhitelistMap[sc] = true;
-            stablecoins.push(sc);
-
-            stablecoinIndex[sc] = uint8(i);
-        }
-
-        // Initialize whitelist and store in map and array for iteration
-        for (uint256 i = 0; i < initialStakeables.length; i++) {
-            address sk = initialStakeables[i];
-            require(sk != address(0), "Zero address not allowed");
-
-            stakeablecoinWhitelistMap[sk] = true;
-            stakeablecoins.push(sk);
-
-            stakeablecoinIndex[sk] = uint8(i);
-        }
     }
 
     modifier onlyContracts() {
-        require(_isContract(msg.sender), "Not authorized");
+        if(!_isContract(msg.sender)) revert NotAuthorized();
         _;
     }
 
     // Check token whitelist using map
     function _isWhitelisted(address token) internal view returns (bool) {
         return stablecoinWhitelistMap[token];
-    }
-
-    function _isXWhitelisted(address token) internal view returns (bool) {
-        return stakeablecoinWhitelistMap[token];
-    }
-
-    function _isVWhitelisted(address token) internal view returns (bool) {
-        return venturecoinWhitelistMap[token];
     }
 
     function _isAdmin(address admin) internal view returns (bool) {
@@ -248,581 +244,50 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function _initializeGlobal() internal {
-        global = 0;
-        globalID = 20;
-
+        globalID = 0;
+        
         globalView[owner()].push();
 
-        uint256 index = globalView[owner()].length - 1;
-        Global storage g = globalView[owner()][uint8(index)];
+        uint256 gL = globalView[owner()].length - 1;
+        Global storage g = globalView[owner()][gL];
 
-        g.balanceAmount[globalID] = 100000000000000000000000000000000000000000000000000000000000 * 1e18;
-        g.liquidAmount[globalID] = 100000000000000000000000000000000000000000000000000000000000 * 1e18;
+        g.balanceAmount[globalID] = 100000000000000000000000000000000000;
+        g.liquidAmount[globalID] = 100000000000000000000000000000000000;
+        activeGlobal[owner()] = true;
     }
 
     function _initializeNewUser(address user) internal {
+
         userView[user].push();
-        uint256 index = userView[user].length - 1;
-        User storage u = userView[user][uint8(index)];
+
+        uint256 uL = userView[user].length - 1;
+        User storage u = userView[user][uL];
 
         u.user = user;
-    }
-
-    // -------------------------
-    // WITHDRAW
-    // -------------------------
-    function vaultWithdraw(
-        address user,
-        address currency,
-        address vault,
-        uint256 amount,
-        uint256 investmentAmount,
-        uint256 timeStamp,
-        bool unlockStatus
-    ) external onlyContracts returns (uint256[22] memory stableOutByCurrency) {
-
-        uint8 currencyID = stablecoinIndex[currency];
-        uint8 vaultID = stakeablecoinIndex[vault];
-        uint256 remaining = investmentAmount;
-
-        uint256 stableAmount;
-
-        if (currencyID == globalID && unlockStatus ==  true) {
-            uint256[] storage queue = userNativeQueue[user];
-
-            for (uint256 i = globalHead; i < queue.length && remaining > 0; i++) {
-
-                AcquisitionLot storage lot = acquisitionLots[i];
-
-                uint256 take = remaining > lot.nativeSnapShot ? lot.nativeSnapShot : remaining;
-
-                uint256 stableDelta = take / lot.exchangeRate;
-
-                remaining -= take;
-
-                uint8 cid = lot.currencyID;
-
-                stableOutByCurrency[cid] += stableDelta;
-
-                // --- User accounting ---
-
-                User storage u = userView[user][global];
-                
-                if (unlockStatus ==  true) {
-                    u.vaultDepositAmount[cid] -= investmentAmount;
-                }
-                u.balanceAmount[cid] += stableDelta;
-                u.liquidAmount[cid] += stableDelta;
-
-                u.purchases[globalID] += take;
-                u.balanceAmount[globalID] += take;
-                u.liquidAmount[globalID] += take;
-
-                // --- Global accounting (example, adapt to your actual layout) ---
-                Global storage g = globalView[owner()][global];
-
-                g.balanceAmount[cid] -= stableDelta;
-                g.liquidAmount[cid] -= stableDelta;
-                g.purchases[cid] -= stableDelta;
-                g.depletedFIFO[cid] -= stableDelta;
-
-                // If you have a "global native" bucket:
-                g.balanceAmount[globalID] -= take;
-                g.liquidAmount[globalID] -= take;
-                g.purchases[globalID] -= take;
-
-                stableAmount += stableDelta;
-            }
-
-            require(remaining == 0, "Insufficient native in FIFO lots");
-
-            // Credit AcquisitionLot back to user (new FIFO lot)
-            uint256 acquisitionCreditLotId = nextLotId++;
-            acquisitionLots[acquisitionCreditLotId] = AcquisitionLot({
-                user:            user,
-                currencyID:      currencyID,
-                stableAmount:    stableAmount,
-                nativeAmount:    amount,
-                remainingNative: amount,
-                remainingStable: stableAmount,
-                nativeSnapShot:  0,
-                stableSnapShot:  0,
-                exchangeRate:    0,
-                timestamp:       timeStamp,
-                chapterHead:     0,
-                chapterEnd:      0,
-                credit:          true,        // credit to user
-                status:          true,
-                purchaseHash:    0
-            });
-
-            userNativeQueue[user].push(acquisitionCreditLotId);
-
-        } else if (currencyID != globalID && unlockStatus == true) {
-
-            User storage u = userView[user][global];
-            
-            u.vaultDepositAmount[currencyID] -= investmentAmount;
-            u.balanceAmount[currencyID] += stableAmount;
-            u.liquidAmount[currencyID] += stableAmount;
-
-            // --- Global accounting (example, adapt to your actual layout) ---
-            Global storage g = globalView[owner()][global];
-
-            // Update Global aggregates (opposite side)
-            g.balanceAmount[currencyID] -= amount;
-            g.liquidAmount[currencyID] -= amount;
-            g.vaultPoolAmount[currencyID] -= amount;
-            g.vaultDepositAmount[currencyID] -= investmentAmount;
-
-            stableOutByCurrency[currencyID] += investmentAmount;
-
-        } else {
-            revert ("Currency ID Not Valid");
-        }
-
-        // New DEBIT WithdrawalLot
-        uint256 vaultWithdrawLotId = nextLotId++;
-        vaultWithdrawLots[vaultWithdrawLotId] = VaultWithdrawLot({
-            user:         user,
-            currencyID:   currencyID,
-            vaultID:      vaultID,
-            stableAmount: amount,
-            timestamp:    timeStamp,
-            credit:       false           // debit to platform/escrow
-        });
-
-        uint256 dividendPortion = amount - investmentAmount;
-        uint256 converted = (dividendPortion * 107e16) / 1e18; 
-
-        stableOutByCurrency[1] += converted;
-    }
-
-    function ventureWithdraw(
-        address user,
-        address currency,
-        address vault,
-        uint256 amount,
-        uint256 principal,
-        uint256 timeStamp
-    ) external onlyContracts returns (uint256[] memory stableOutByCurrency) {
-
-        uint8 currencyID = stablecoinIndex[currency];
-        uint8 vaultID = venturecoinIndex[vault];
-        uint256 remaining = principal;
-
-        uint256 stableAmount;
-
-        if (currencyID == globalID) {
-
-            uint256[] storage queue = userNativeQueue[user];
-
-            for (uint256 i = globalHead; i < queue.length  && remaining > 0; i++) {
-
-                AcquisitionLot storage lot = acquisitionLots[i];
-
-                uint256 take = remaining > lot.nativeSnapShot ? lot.nativeSnapShot : remaining;
-
-                uint256 stableDelta = take / lot.exchangeRate;
-
-                remaining -= take;
-
-                uint8 cid = lot.currencyID;
-
-                stableOutByCurrency[cid] += stableDelta;
-
-                // --- User accounting ---
-
-                User storage u = userView[user][global];
-
-                u.ventureDepositAmount[cid] -= stableDelta;
-                u.balanceAmount[cid] += stableDelta;
-                u.liquidAmount[cid] += stableDelta;
-
-                u.ventureDepositAmount[globalID] += take;
-                u.balanceAmount[globalID] += take;
-                u.liquidAmount[globalID] += take;
-
-                // --- Global accounting (example, adapt to your actual layout) ---
-                Global storage g = globalView[owner()][global];
-
-                g.balanceAmount[cid] -= stableDelta;
-                g.liquidAmount[cid] -= stableDelta;
-                g.ventureDepositAmount[cid] -= stableDelta;
-                g.venturePoolAmount[cid] -= stableDelta;
-                g.depletedFIFO[cid] -= stableDelta;
-
-                // If you have a "global native" bucket:
-                g.balanceAmount[globalID] -= take;
-                g.liquidAmount[globalID] -= take;
-                g.ventureDepositAmount[globalID] -= take;
-                g.venturePoolAmount[globalID] -= take;
-
-                stableAmount += stableDelta;
-            }
-
-            require(remaining == 0, "Insufficient native in FIFO lots");
-
-            // Credit AcquisitionLot back to user (new FIFO lot)
-            uint256 acquisitionCreditLotId = nextLotId++;
-            acquisitionLots[acquisitionCreditLotId] = AcquisitionLot({
-                user:            user,
-                currencyID:      currencyID,
-                stableAmount:    stableAmount,
-                nativeAmount:    amount,
-                remainingNative: amount,
-                remainingStable: stableAmount,
-                nativeSnapShot:  0,
-                stableSnapShot:  0,
-                exchangeRate:    0,
-                timestamp:       timeStamp,
-                chapterHead:     0,
-                chapterEnd:      0,
-                credit:          true,        // credit to user
-                status:          true,
-                purchaseHash:    0
-            });
-
-            userNativeQueue[user].push(acquisitionCreditLotId);
-
-        } else if (currencyID != globalID) {
-
-            User storage u = userView[user][global];
-            
-            u.ventureDepositAmount[currencyID] -= principal;
-            u.balanceAmount[currencyID] += stableAmount;
-            u.liquidAmount[currencyID] += stableAmount;
-
-            // --- Global accounting (example, adapt to your actual layout) ---
-            Global storage g = globalView[owner()][global];
-
-            // Update Global aggregates (opposite side)
-            g.balanceAmount[currencyID] -= amount;
-            g.liquidAmount[currencyID] -= amount;
-            g.venturePoolAmount[currencyID] -= amount;
-            g.ventureDepositAmount[currencyID] -= principal;
-
-            stableOutByCurrency[currencyID] += principal;
-
-        } else {
-            revert ("Currency ID Not Valid");
-        }
-
-        // New DEBIT WithdrawalLot
-        uint256 ventureWithdrawLotId = nextLotId++;
-        ventureWithdrawLots[ventureWithdrawLotId] = VentureWithdrawLot({
-            user:         user,
-            currencyID:   currencyID,
-            vaultID:      vaultID,
-            stableAmount: amount,
-            timestamp:    timeStamp,
-            credit:       false           // debit to platform/escrow
-        });
-
-        uint256 interestPortion = amount - principal;
-        uint256 converted = (interestPortion * 107e16) / 1e18; 
-
-        stableOutByCurrency[1] += converted;
-
+        activeUsers[user] = true;
     }
 
     function recordAcquisition(
-        address user,
-        address currency,
-        uint256 timeStamp,
-        uint256 nativeAmount,
-        uint256 stableAmount,
-        uint256 exchangeRate,
-        bytes32 purchaseHash
-    ) external onlyContracts returns (uint256 lotId) {
+        LedgerAcquisitionHandle calldata d
+    ) external override onlyContracts {
 
-        lotId = nextLotId++;
-        uint8 currencyID = stablecoinIndex[currency]; 
+        address user = d.user;
+        address token = d.token;
+        uint256 stableAmount = d.stableAmount;
+        uint256 nativeAmount = d.nativeAmount;
+        uint256 exchangeRate = d.exchangeRate;
+        uint256 timeStamp = d.timeStamp;
+        bytes32 purchaseHash = d.purchaseHash;
 
-        acquisitionLots[lotId] = AcquisitionLot({
-            user:            user,
-            currencyID:      currencyID,
-            stableAmount:    stableAmount,
-            nativeAmount:    nativeAmount,
-            remainingNative: nativeAmount,
-            remainingStable: stableAmount,
-            exchangeRate:    exchangeRate,
-            nativeSnapShot:  0,
-            stableSnapShot:  0,
-            timestamp:       timeStamp,
-            chapterHead:     0,
-            chapterEnd:      0,
-            credit:          true,          // credit to user
-            status:          false,         // not fully consumed
-            purchaseHash:    purchaseHash
-        });
+        if(user == address(0)) revert InvalidUserAddress();
 
-        userNativeQueue[user].push(lotId);
+        uint256 lotId;
+        unchecked { lotId = nextLotId++; }
+        uint256 currencyID = stablecoinIndex[token]; 
 
-        // Update User aggregates
-        if (activeUsers[user] == false) {_initializeNewUser(user);}
-        User storage u = userView[user][global];
+        {
 
-        u.balanceAmount[globalID] += nativeAmount;
-        u.balanceAmount[currencyID] += stableAmount;
-
-        u.liquidAmount[globalID] += nativeAmount;
-        u.liquidAmount[currencyID] += stableAmount;
-
-        // Update Global aggregates (opposite side)
-        if (activeGlobal[owner()] == false) {_initializeGlobal();}
-        Global storage g = globalView[owner()][global];
-
-        // Stable amount is liquid but not realized until the user spends Native
-        g.balanceAmount[currencyID] += stableAmount;
-        //g.liquidAmount[currencyID] += stableAmount;
-
-        g.balanceAmount[globalID] -= nativeAmount;
-        g.liquidAmount[globalID] -= nativeAmount;
-    }
-
-    function _consumeAcquisitionFIFO(
-        address user,
-        uint256 nativeToUse
-    ) internal {
-        uint256 remaining = nativeToUse;
-        uint256[] storage queue = userNativeQueue[user];
-
-        for (uint256 i = globalHead; i < queue.length && remaining > 0; i++) {
-            uint256 lotId = queue[i];
-
-            AcquisitionLot storage lot = acquisitionLots[lotId];
-            if (lot.status) {
-                globalHead = i + 1;
-                continue;
-            } else if (lot.remainingNative == 0) {
-                globalHead = i;
-                continue;
-            }
-
-            uint256 take = 0;
-            
-            /*if (remaining > lot.remainingNative) {
-                take = lot.remainingNative;
-            } else {
-                take = remaining;
-            }*/
-
-            take = remaining > lot.remainingNative ? lot.remainingNative : remaining;
-
-            lot.remainingNative -= take;
-            lot.remainingStable -= (take / lot.exchangeRate);
-            uint256 stableDelta = (take / lot.exchangeRate);
-            remaining -= take;
-
-            if (lot.remainingNative == 0) {
-                lot.status = true; // fully consumed
-            }
-
-            if (activeUsers[user] == false) {_initializeNewUser(user);}
-            User storage u = userView[user][global];
-
-            u.balanceAmount[lot.currencyID] -= stableDelta;
-            u.liquidAmount[lot.currencyID] -= stableDelta;
-            u.balanceAmount[lot.currencyID] -= take;
-            u.liquidAmount[globalID] -= take;
-            
-            u.purchases[lot.currencyID] += stableDelta;
-            u.purchases[globalID] += take;
-
-            if (activeGlobal[owner()] == false) {_initializeGlobal();}
-            Global storage g = globalView[owner()][global];
-
-            g.balanceAmount[lot.currencyID] += stableDelta;
-            g.balanceAmount[globalID] += take;
-            g.purchases[lot.currencyID] += stableDelta;
-            g.depletedFIFO[lot.currencyID] += stableDelta;
-
-            g.purchases[globalID] += take;
-            g.liquidAmount[lot.currencyID] = stableDelta;
-            g.liquidAmount[globalID] = take;
-        }
-
-        require(remaining == 0, "Insufficient native in FIFO lots");
-
-    }
-
-    function previewLiquidateNative(
-        address user,
-        uint256 requestedNative
-    ) external view returns (uint256[] memory stableOutByCurrency) {
-        uint256 remaining = requestedNative;
-        uint256 nativeConsumed = 0;
-
-        stableOutByCurrency = new uint256[](22);
-
-        // If native is acquired via multiple stablecoins, you likely need a *global* native queue:
-        // mapping(address => uint256[]) public userNativeQueue;
-        uint256[] storage queue = userNativeQueue[user];
-        uint256 head = globalHead;
-
-        for (uint256 i = head; i < queue.length && remaining > 0; i++) {
-            uint256 lotId = queue[i];
-            AcquisitionLot memory lot = acquisitionLots[lotId];
-
-            // Skip fully consumed or closed lots
-            if (lot.status) {
-                head = i + 1;
-                continue;
-            } else if (lot.remainingNative == 0) {
-                head = i;
-                continue;
-            }
-
-            uint256 take = remaining > lot.remainingNative ? lot.remainingNative : remaining;
-
-            // Basic sanity: you probably want exchangeRate scaled (e.g. 1e18)
-            // stable = native * 1e18 / exchangeRate  OR  native / exchangeRate depending on your convention
-            uint256 stableDelta = take / lot.exchangeRate;
-
-            remaining -= take;
-            nativeConsumed += take;
-
-            uint8 cid = lot.currencyID;
-
-            stableOutByCurrency[cid] += stableDelta;
-        }
-
-        return (stableOutByCurrency);
-
-        // stableOut is what would be paid; availableNative is how much native can be consumed
-    }
-
-    // EXECUTE function: actually consume FIFO lots and pay out stable
-    function liquidateNative(
-        address user,
-        uint256 returningNative,
-        uint256 timeStamp
-    ) external onlyContracts returns (uint256[] memory stableOutByCurrency) {
-        uint256 remaining = returningNative;
-        uint256 nativeConsumed = 0;
-
-        // If native is acquired via multiple stablecoins, you likely need a *global* native queue:
-        // mapping(address => uint256[]) public userNativeQueue;
-        uint256[] storage queue = userNativeQueue[user];
-        uint256 head = globalHead;
-
-        require(globalHead <= queue.length, "Invalid head pointer");
-
-        stableOutByCurrency = new uint256[](22);
-
-        for (uint256 i = globalHead; i < queue.length && remaining > 0; i++) {
-            uint256 lotId = queue[i];
-            AcquisitionLot storage lot = acquisitionLots[lotId];
-
-            // Skip fully consumed or closed lots
-            if (lot.status) {
-                globalHead = i + 1;
-                continue;
-            } else if (lot.remainingNative == 0) {
-                globalHead = i;
-                continue;
-            }
-
-            uint256 take = remaining > lot.remainingNative ? lot.remainingNative : remaining;
-
-            // Basic sanity: you probably want exchangeRate scaled (e.g. 1e18)
-            // stable = native * 1e18 / exchangeRate  OR  native / exchangeRate depending on your convention
-            uint256 stableDelta = take / lot.exchangeRate;
-
-            lot.remainingNative -= take;
-            lot.remainingStable -= stableDelta;
-            remaining -= take;
-            nativeConsumed += take;
-
-            uint8 cid = lot.currencyID;
-
-            stableOutByCurrency[cid] += stableDelta;
-
-            // --- User accounting ---
-            if (activeUsers[user] == false) {_initializeNewUser(user);}
-            User storage u = userView[user][global];
-            u.balanceAmount[cid] -= stableDelta;
-            u.balanceAmount[globalID] -= take;
-            u.liquidAmount[cid] -= stableDelta;
-            u.liquidAmount[globalID] -= take;
-
-            // --- Global accounting (example, adapt to your actual layout) ---
-            Global storage g = globalView[owner()][global];
-
-            // Stable never realized at Native Purchase && should not be realized here
-            //g.balanceAmount[cid] -= stableDelta;
-            g.balanceAmount[cid] -= stableDelta;
-            g.liquidAmount[cid] -= stableDelta;
-            g.depletedFIFO[cid] -= stableDelta;
-
-            // If you have a "global native" bucket:
-            g.balanceAmount[globalID] += take;
-            g.liquidAmount[globalID] += take;
-
-            if (lot.remainingNative == 0) {
-                lot.status = true;
-                globalHead = i + 1;
-            }
-        }
-
-        require(remaining == 0, "Insufficient native in FIFO lots");
-
-        // --- New DEBIT AcquisitionLot (storyline entry)
-        uint256 acquisitionDebitLotId = nextLotId++;
-        acquisitionLots[acquisitionDebitLotId] = AcquisitionLot({
-            user:            user,
-            currencyID:      0,
-            stableAmount:    0,
-            nativeAmount:    returningNative,
-            remainingNative: returningNative,
-            remainingStable: 0,
-            exchangeRate:    0,
-            nativeSnapShot:  0,
-            stableSnapShot:  0,
-            timestamp:       timeStamp,
-            chapterHead:     head,
-            chapterEnd:      globalHead,
-            credit:          false,        // debit from user
-            status:          true,
-            purchaseHash:    bytes32(0)
-        });
-
-        // emit Repaid(user, nativeConsumed, currencyIDs, stableOutAmounts);*/
-
-        return (stableOutByCurrency);
-    }
-
-    function recordPurchase(
-        address user,
-        address currency,
-        uint256 timeStamp,
-        uint256 nativeAmount,
-        uint256 stableAmount,
-        uint256 exchangeRate,
-        bytes32 purchaseHash
-    ) external onlyContracts {
-
-        require(!acquisitionHashes[purchaseHash], "Duplicate Hash");
-
-        uint8 currencyID = stablecoinIndex[currency]; 
-        uint256 acquisitionDebitLotId;
-
-        if (currencyID == globalID) {
-
-            uint256 head = globalHead;
-
-            AcquisitionLot memory v = acquisitionLots[globalHead];
-
-            uint256 nativeSnapShot = v.remainingNative;
-            uint256 stableSnapShot = v.remainingStable;
-
-            // 1) Deplete FIFO AcquisitionLots
-            _consumeAcquisitionFIFO(user, nativeAmount);
-
-            // New DEBIT AcquisitionLot (storyline entry)
-            acquisitionDebitLotId = nextLotId++;
-            acquisitionLots[acquisitionDebitLotId] = AcquisitionLot({
+            acquisitionLots[lotId] = (AcquisitionLot({
                 user:            user,
                 currencyID:      currencyID,
                 stableAmount:    stableAmount,
@@ -830,40 +295,164 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
                 remainingNative: nativeAmount,
                 remainingStable: stableAmount,
                 exchangeRate:    exchangeRate,
-                nativeSnapShot:  nativeSnapShot,
-                stableSnapShot:  stableSnapShot,
                 timestamp:       timeStamp,
-                chapterHead:     head,
-                chapterEnd:      globalHead,
-                credit:          false,        // debit from user
-                status:          true,
+                chapterHead:     0,
+                chapterEnd:      0,
+                credit:          true,          // credit to user
+                status:          false,         // not fully consumed
                 purchaseHash:    purchaseHash
-            });
+            }));
 
-            acquisitionsByHash[purchaseHash] = AcquisitionRef({ user: user, refLot: acquisitionDebitLotId });
+            globalQueue.push(acquisitionLots[lotId]);
+        }
+
+        {
+            // Update User aggregates
+            if (activeUsers[user] == false) {_initializeNewUser(user);}
+            uint256 uL = userView[user].length - 1;
+            User storage u = userView[user][uL];
+
+            unchecked {
+                u.balanceAmount[globalID] += nativeAmount;
+                u.balanceAmount[currencyID] += stableAmount;
+
+                u.liquidAmount[globalID] += nativeAmount;
+                u.liquidAmount[currencyID] += stableAmount;
+            }
+        }
+
+        {
+            // Update Global aggregates (opposite side)
+            if (activeGlobal[owner()] == false) {_initializeGlobal();}
+            uint256 gL = globalView[owner()].length - 1;
+            Global storage g = globalView[owner()][gL];
+
+            // Stable amount is liquid but not realized until the user spends Native
+            unchecked {
+                g.balanceAmount[currencyID] += stableAmount;
+                //g.liquidAmount[currencyID] += stableAmount;
+
+                g.balanceAmount[globalID] -= nativeAmount;
+                g.liquidAmount[globalID] -= nativeAmount;
+            }
+        }
+    }
+
+    function liquidateNative(
+        address user,
+        uint256 returningNative,
+        uint256 timeStamp
+    ) external onlyContracts returns (uint256[] memory stableOutByCurrency) {
+
+        // If native is acquired via multiple stablecoins, use a *global* native queue:
+
+        (stableOutByCurrency) = _balanceLiquidationFIFO(
+            user,
+            returningNative,
+            timeStamp
+        );
+
+        return (stableOutByCurrency);
+    }
+
+    function recordPurchase(
+        LedgerPurchaseHandle calldata d
+    ) external override onlyContracts {
+        uint256[] memory stableOutByCurrency = new uint256[](150);
+
+        address user = d.user;
+        address token = d.token;
+        uint256 stableAmount = d.stableAmount;
+        uint256 nativeAmount = d.nativeAmount;
+        uint256 exchangeRate = d.exchangeRate;
+        uint256 timeStamp = d.timeStamp;
+        bytes32 purchaseHash = d.purchaseHash;
+
+        if(user == address(0)) revert InvalidUserAddress();
+        if(acquisitionHashes[purchaseHash]) revert HashDuplicated();
+        acquisitionHashes[purchaseHash] = true;
+
+        uint256 currencyID = stablecoinIndex[token];
+
+        if (currencyID == globalID) {
+
+            uint256 head = globalHead;
+            {
+
+                // 1) Deplete FIFO AcquisitionLots
+                _consumeAcquisitionFIFO(
+                    FIFOConsumeParams({
+                        user:             user,
+                        currencyID:       currencyID,
+                        vaultID:          0,
+                        remaining:        nativeAmount,
+                        investmentAmount: 0,
+                        timeStamp:        timeStamp,
+                        initiationStatus: false,
+                        vaultDraw:        false,
+                        ventureDraw:      false,
+                        purchase:         true
+                    }),
+                    stableOutByCurrency
+                );
+            }
+
+            {
+
+                uint256 lotId;
+                unchecked { lotId = nextLotId++; }
+
+                acquisitionLots[lotId] = AcquisitionLot({
+                    user:            user,
+                    currencyID:      currencyID,
+                    stableAmount:    stableAmount,
+                    nativeAmount:    nativeAmount,
+                    remainingNative: nativeAmount,
+                    remainingStable: stableAmount,
+                    exchangeRate:    exchangeRate,
+                    timestamp:       timeStamp,
+                    chapterHead:     head,
+                    chapterEnd:      globalHead,
+                    credit:          false,          // credit to user
+                    status:          true,         // not fully consumed
+                    purchaseHash:    purchaseHash
+                });
+
+                acquisitionsByHash[purchaseHash] = AcquisitionRef({ user: user, refLot: lotId });
+            }
 
         } else if (currencyID != globalID) {
 
-            if (activeUsers[user] == false) {_initializeNewUser(user);}
-            User storage u = userView[user][global];
+            {
+                if (activeGlobal[owner()] == false) {_initializeGlobal();}
+                uint256 gL = globalView[owner()].length - 1;
+                Global storage g = globalView[owner()][gL];
 
-            u.balanceAmount[currencyID] -= stableAmount;
-            
-            u.purchases[currencyID] -= stableAmount;
+                unchecked {
+                    g.balanceAmount[currencyID] += stableAmount;
+                    g.purchases[currencyID]     += stableAmount;
+                    g.liquidAmount[currencyID]  += stableAmount;
+                }
+            }
 
-            if (activeGlobal[owner()] == false) {_initializeGlobal();}
-            Global storage g = globalView[owner()][global];
+            {
+                if (activeUsers[d.user] == false) {_initializeNewUser(d.user);}
+                uint256 uL = userView[d.user].length - 1;
+                User storage u = userView[d.user][uL];
 
-            g.balanceAmount[currencyID] += stableAmount;
-            g.purchases[currencyID]     += stableAmount;
-            g.liquidAmount[currencyID]  += stableAmount;
+                unchecked {
+                    u.purchases[globalID] += nativeAmount;
+                    u.purchases[currencyID] += stableAmount;
+                }
+            }
 
         } else {
             revert ("Currency ID Not Valid");
         }
 
         // --- New Purchase Lot
-        uint256 purchaseLotId = nextLotId++;
+        uint256 purchaseLotId;
+        unchecked { purchaseLotId = nextLotId++; }
         purchaseLots[purchaseLotId] = PurchaseLot({
             user:         user,
             currencyID:   currencyID,
@@ -877,130 +466,80 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         });
 
         // Redundant because the purchase contract has values also, but for the sake of keeping the Ledger true....
-        purchasesByHash[purchaseHash] = PurchaseRef({ user: user, refLot: purchaseLotId });
+        purchasesByHash[purchaseHash] = PurchaseRef({ user: d.user, refLot: purchaseLotId });
+
     }
 
     function refundPurchase(
-        address user,
-        address currency,
-        uint256 timeStamp,
-        uint256 nativeAmount,
-        uint256 stableAmount,
-        uint256 exchangeRate,
-        bytes32 purchaseHash
-    ) external onlyContracts returns (uint256[] memory stableOutByCurrency) {
+        LedgerPurchaseHandle calldata d
+    ) external override onlyContracts returns (uint256[] memory stableOutByCurrency) {
 
-        uint8 currencyID = stablecoinIndex[currency];
-        uint256 remaining = nativeAmount;
+        address user = d.user;
+        address token = d.token;
+        uint256 stableAmount = d.stableAmount;
+        uint256 nativeAmount = d.nativeAmount;
+        uint256 exchangeRate = d.exchangeRate;
+        uint256 timeStamp = d.timeStamp;
+        bytes32 purchaseHash = d.purchaseHash;
 
-        stableOutByCurrency = new uint256[](22);        
+        if(user == address(0)) revert InvalidUserAddress();
 
-        PurchaseRef memory pr = purchasesByHash[purchaseHash];
-        PurchaseLot memory p = purchaseLots[pr.refLot];
+        uint256 currencyID = stablecoinIndex[token];        
 
         if (currencyID == globalID) {
 
-            require(nativeAmount == p.nativeAmount, "Purchase Amount Mismatch");
-            require(acquisitionHashes[purchaseHash], "Hash Not Found");
-
-            AcquisitionRef memory r = acquisitionsByHash[purchaseHash];
-            AcquisitionLot memory a = acquisitionLots[r.refLot];
+            if(!acquisitionHashes[purchaseHash]) revert InvalidHash();
             
-            
-            for (uint256 i = globalHead; i < a.chapterEnd && remaining > 0; i++) {
-
-                AcquisitionLot storage lot = acquisitionLots[i];
-
-                uint256 take = remaining > lot.nativeSnapShot ? lot.nativeSnapShot : remaining;
-
-                uint256 stableDelta = take / lot.exchangeRate;
-
-                remaining -= take;
-
-                uint8 cid = lot.currencyID;
-
-                stableOutByCurrency[cid] += stableDelta;
-
-                // --- User accounting ---
-
-                User storage u = userView[user][global];
-                
-                u.purchases[cid] += stableAmount;
-                u.balanceAmount[cid] += stableDelta;
-                u.liquidAmount[cid] += stableDelta;
-
-                u.purchases[globalID] += take;
-                u.balanceAmount[globalID] += take;
-                u.liquidAmount[globalID] += take;
-
-                // --- Global accounting (example, adapt to your actual layout) ---
-                Global storage g = globalView[owner()][global];
-
-                g.balanceAmount[cid] -= stableDelta;
-                g.liquidAmount[cid] -= stableDelta;
-                g.purchases[cid] -= stableDelta;
-                g.depletedFIFO[cid] -= stableDelta;
-
-                // If you have a "global native" bucket:
-                g.balanceAmount[globalID] -= take;
-                g.liquidAmount[globalID] -= take;
-                g.purchases[globalID] -= take;
-            }
-
-            require(remaining == 0, "Insufficient native in FIFO lots");
-
-            // Credit AcquisitionLot back to user (new FIFO lot)
-            uint256 acquisitionCreditLotId = nextLotId++;
-            acquisitionLots[acquisitionCreditLotId] = AcquisitionLot({
-                user:            user,
-                currencyID:      currencyID,
-                stableAmount:    stableAmount,
-                nativeAmount:    nativeAmount,
-                remainingNative: nativeAmount,
-                remainingStable: stableAmount,
-                nativeSnapShot:  0,
-                stableSnapShot:  0,
-                exchangeRate:    exchangeRate,
-                timestamp:       timeStamp,
-                chapterHead:     0,
-                chapterEnd:      0,
-                credit:          true,        // credit to user
-                status:          true,
-                purchaseHash:    purchaseHash
-            });
-
-            userNativeQueue[user].push(acquisitionCreditLotId);
+            (stableOutByCurrency) = _balanceRefundFIFO(
+                FIFOBalanceParams({
+                    user: user,
+                    nativeAmount: nativeAmount,
+                    timeStamp: timeStamp,
+                    purchaseHash: purchaseHash
+                })
+            );
 
         } else if (currencyID != globalID) {
 
-            User storage u = userView[user][global];
-            
-            u.purchases[currencyID] -= stableAmount;
-            u.balanceAmount[currencyID] += stableAmount;
-            u.liquidAmount[currencyID] += stableAmount;
+            {
+                uint256 uL = userView[d.user].length - 1;
+                User storage u = userView[d.user][uL];
 
-            // --- Global accounting (example, adapt to your actual layout) ---
-            Global storage g = globalView[owner()][global];
+                // --- User accounting ---
+                unchecked {
+                    u.purchases[currencyID] -= stableAmount;
+                    u.purchases[globalID] -= nativeAmount;
+                }
+            }
 
-            // Stable never realized at Native Purchase && should not be realized here
-            g.balanceAmount[currencyID] -= stableAmount;
-            g.liquidAmount[currencyID] -= stableAmount;
-            g.purchases[currencyID] -= stableAmount;
+            {
+                // --- Global accounting ---
+                uint256 gL = globalView[owner()].length - 1;
+                Global storage g = globalView[owner()][gL];
 
-            stableOutByCurrency[currencyID] += stableAmount;
+                // Stable never realized at Native Purchase && should not be realized here
+                unchecked {
+                    g.balanceAmount[currencyID] -= stableAmount;
+                    g.liquidAmount[currencyID] -= stableAmount;
+                    g.purchases[currencyID] -= stableAmount;
+
+                    stableOutByCurrency[currencyID] += stableAmount;
+                }
+            }
 
         } else {
             revert ("Currency ID Not Valid");
         }
 
         // Debit PurchaseLot (refund out)
-        uint256 purchaseRefundLotId = nextLotId++;
+        uint256 purchaseRefundLotId;
+        unchecked { purchaseRefundLotId = nextLotId++; }
         purchaseLots[purchaseRefundLotId] = PurchaseLot({
             user:         user,
             currencyID:   currencyID,
             stableAmount: stableAmount,
             nativeAmount: nativeAmount,
-            exchangeRate: exchangeRate, // or original if you store it
+            exchangeRate: exchangeRate,   // or original if you store it
             timestamp:    timeStamp,
             credit:       false,          // debit from platform
             status:       true,
@@ -1009,80 +548,144 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
     }
 
     function recordVaultDeposit(
-        address user,
-        address currency,
-        uint256 timeStamp,
-        uint256 nativeAmount,
-        uint256 stableAmount,
-        uint256 exchangeRate,
-        bytes32 depositHash
-    ) external onlyContracts {
+        LedgerDepositHandle calldata d
+    ) external override onlyContracts { 
 
-        require(!acquisitionHashes[depositHash], "Duplicate Hash");
+        address user = d.user;
+        address token = d.token;
+        address asset = d.asset;
+        uint256 stableAmount = d.stableAmount;
+        uint256 nativeAmount = d.nativeAmount;
+        uint256 exchangeRate = d.exchangeRate;
+        uint256 timeStamp = d.timeStamp;
+        bytes32 depositHash = d.depositHash;
 
-        uint8 currencyID = stablecoinIndex[currency]; 
-        uint256 acquisitionDebitLotId;
+        if(user == address(0)) revert InvalidUserAddress();
+        if(asset == address(0)) revert MintingFailed();
+        if(depositHash != bytes32(0)) { if(acquisitionHashes[depositHash]) revert HashDuplicated(); }
 
-        if (currencyID == globalID) {
+        uint256 currencyID = stablecoinIndex[token];
+        uint256 vaultID = stakeablecoinIndex[asset];
+        uint256 lotId;
+        unchecked { lotId = nextLotId++; }
 
-            uint256 head = globalHead;
+        acquisitionLots[lotId] = AcquisitionLot({
+            user:            user,
+            currencyID:      currencyID,
+            stableAmount:    stableAmount,
+            nativeAmount:    nativeAmount,
+            remainingNative: nativeAmount,
+            remainingStable: stableAmount,
+            exchangeRate:    exchangeRate,
+            timestamp:       timeStamp,
+            chapterHead:     0,
+            chapterEnd:      0,
+            credit:          true,          // credit to user
+            status:          false,         // not fully consumed
+            purchaseHash:    depositHash
+        });
 
-            AcquisitionLot memory v = acquisitionLots[globalHead];
+        globalQueue.push(acquisitionLots[lotId]);
 
-            uint256 nativeSnapShot = v.remainingNative;
-            uint256 stableSnapShot = v.remainingStable;
+        // Update User aggregates
+        if (activeUsers[user] == false) { _initializeNewUser(d.user); }
+        uint256 uL = userView[user].length - 1;
+        User storage u = userView[user][uL];
 
-            // 1) Deplete FIFO AcquisitionLots
-            _consumeAcquisitionFIFO(user, nativeAmount);
+        unchecked { u.vaultDepositAmount[vaultID] += nativeAmount; }
 
-            // New DEBIT AcquisitionLot (storyline entry)
-            acquisitionDebitLotId = nextLotId++;
-            acquisitionLots[acquisitionDebitLotId] = AcquisitionLot({
-                user:            user,
-                currencyID:      currencyID,
-                stableAmount:    stableAmount,
-                nativeAmount:    nativeAmount,
-                remainingNative: nativeAmount,
-                remainingStable: stableAmount,
-                exchangeRate:    exchangeRate,
-                nativeSnapShot:  nativeSnapShot,
-                stableSnapShot:  stableSnapShot,
-                timestamp:       timeStamp,
-                chapterHead:     head,
-                chapterEnd:      globalHead,
-                credit:          false,        // debit from user
-                status:          true,
-                purchaseHash:    depositHash
-            });
+        // Update Global aggregates (opposite side)
+        if (activeGlobal[owner()] == false) { _initializeGlobal(); }
+        uint256 gL = globalView[owner()].length - 1;
+        Global storage g = globalView[owner()][gL];
 
-            acquisitionsByHash[depositHash] = AcquisitionRef({ user: user, refLot: acquisitionDebitLotId });
+        // Stable amount is liquid but not realized until the user spends Native
+        unchecked {
+            g.balanceAmount[currencyID] += d.stableAmount;
+            g.liquidAmount[currencyID] += d.stableAmount;
 
-        }  else if (currencyID != globalID) {
-
-            // 4) Adjust aggregates
-            if (activeUsers[user] == false) {_initializeNewUser(user);}
-            User storage u = userView[user][global];
-
-            u.balanceAmount[currencyID] -= stableAmount;
-
-            u.liquidAmount[currencyID] -= stableAmount; 
-            u.vaultDepositAmount[currencyID] += stableAmount;
-
-            if (activeGlobal[owner()] == false) {_initializeGlobal();}
-            Global storage g = globalView[owner()][global];
-            
-            // Should not be a balance increase only liquid
-            g.balanceAmount[currencyID] += stableAmount;
-            g.liquidAmount[currencyID] += stableAmount;
-            g.vaultDepositAmount[currencyID] += stableAmount;
-        } else {
-            revert ("Currency ID Not Valid");
+            g.vaultDepositAmount[vaultID] += d.nativeAmount;
         }
 
         // --- New Vault Lot
         uint256 vaultLotId = nextLotId++;
         vaultLots[vaultLotId] = VaultLot({
-            user: user,
+            user:         d.user,
+            currencyID:   currencyID,
+            stableAmount: d.stableAmount,
+            nativeAmount: d.nativeAmount,
+            exchangeRate: d.exchangeRate,
+            timestamp:    d.timeStamp,
+            credit:       true,           // credit to platform/escrow
+            status:       false,          // open until fully refunded/settled
+            depositHash: d.depositHash
+        });
+    }
+
+    function recordVentureDeposit(
+        LedgerDepositHandle calldata d
+    ) external override onlyContracts {
+
+        address user = d.user;
+        address token = d.token;
+        address asset = d.asset;
+        uint256 stableAmount = d.stableAmount;
+        uint256 nativeAmount = d.nativeAmount;
+        uint256 exchangeRate = d.exchangeRate;
+        uint256 timeStamp = d.timeStamp;
+        bytes32 depositHash = d.depositHash;
+        
+        if(user == address(0)) revert InvalidUserAddress();
+        if(acquisitionHashes[depositHash]) revert HashDuplicated();
+
+        uint256 currencyID = stablecoinIndex[token];
+        uint256 vaultID = venturecoinIndex[asset];
+
+        uint256 lotId;
+        unchecked { lotId = nextLotId++; }
+        acquisitionLots[lotId] = AcquisitionLot({
+            user:            user,
+            currencyID:      currencyID,
+            stableAmount:    stableAmount,
+            nativeAmount:    nativeAmount,
+            remainingNative: nativeAmount,
+            remainingStable: stableAmount,
+            exchangeRate:    exchangeRate,
+            timestamp:       timeStamp,
+            chapterHead:     0,
+            chapterEnd:      0,
+            credit:          true,          // credit to user
+            status:          false,         // not fully consumed
+            purchaseHash:    depositHash
+        });
+
+        globalQueue.push(acquisitionLots[lotId]);
+
+        // Update User aggregates
+        if (activeUsers[user] == false) {_initializeNewUser(user);}
+        uint256 uL = userView[user].length - 1;
+        User storage u = userView[user][uL];
+
+        unchecked { u.ventureDepositAmount[vaultID] += nativeAmount; }
+
+        // Update Global aggregates (opposite side)
+        if (activeGlobal[owner()] == false) {_initializeGlobal();}
+        uint256 gL = globalView[owner()].length - 1;
+        Global storage g = globalView[owner()][gL];
+
+        // Stable amount is liquid but not realized until the user spends Native
+        unchecked {
+            g.balanceAmount[currencyID] += stableAmount;
+            g.liquidAmount[currencyID] += stableAmount;
+
+            g.ventureDepositAmount[vaultID] += nativeAmount;
+        }
+
+        // --- New Venture Lot
+        uint256 ventureLotId;
+        unchecked { ventureLotId = nextLotId++; }
+        ventureLots[ventureLotId] = VentureLot({
+            user:         user,
             currencyID:   currencyID,
             stableAmount: stableAmount,
             nativeAmount: nativeAmount,
@@ -1090,40 +693,249 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
             timestamp:    timeStamp,
             credit:       true,           // credit to platform/escrow
             status:       false,          // open until fully refunded/settled
-            depositHash: depositHash
+            depositHash:  depositHash
         });
     }
 
-    function recordVentureDeposit(
-        address user,
-        address currency,
-        uint256 timeStamp,
-        uint256 nativeAmount,
-        uint256 stableAmount,
-        uint256 exchangeRate,
-        bytes32 depositHash
-    ) external onlyContracts {
+    // -------------------------
+    // WITHDRAW
+    // -------------------------
+    function vaultWithdraw(
+        LedgerWithdrawHandle calldata d
+    ) external override onlyContracts returns (uint256[] memory stableOutByCurrency) {
+        if(d.user == address(0)) revert InvalidUserAddress();
+        stableOutByCurrency = new uint256[](150);
 
-        require(!acquisitionHashes[depositHash], "Duplicate Hash");
+        address user = d.user;
+        address token = d.token;
+        address asset = d.asset;
+        uint256 payoutAmount = d.payoutAmount;
+        uint256 investmentAmount = d.investmentAmount;
+        uint256 timeStamp = d.timeStamp;
+        uint256 remaining = 0;
+        bool initiationStatus = d.initiationStatus;
+        bool status = d.status;
+        if (status) {remaining = d.investmentAmount;}
 
-        uint8 currencyID = stablecoinIndex[currency]; 
-        uint256 acquisitionDebitLotId;
+        uint256 currencyID = stablecoinIndex[token];
+        uint256 vaultID = stakeablecoinIndex[asset];
+
+        if (currencyID == globalID && status) {
+
+            _consumeAcquisitionFIFO(
+                FIFOConsumeParams({
+                    user: d.user,
+                    currencyID: currencyID,
+                    vaultID: vaultID,
+                    remaining: remaining,
+                    investmentAmount: investmentAmount,
+                    timeStamp: timeStamp,
+                    initiationStatus: initiationStatus,
+                    vaultDraw: true,       // Hardcoded true from your original call
+                    ventureDraw: false,    // Hardcoded false from your original call
+                    purchase: false        // Hardcoded false from your original call
+                }),
+                stableOutByCurrency
+            );
+
+        }
+
+        // New DEBIT WithdrawalLot
+        uint256 vaultWithdrawLotId;
+        unchecked { vaultWithdrawLotId = nextLotId++; }
+        vaultWithdrawLots[vaultWithdrawLotId] = VaultWithdrawLot({
+            user:         user,
+            currencyID:   currencyID,
+            vaultID:      vaultID,
+            stableAmount: payoutAmount,
+            timestamp:    timeStamp,
+            credit:       false           // debit to platform/escrow
+        });
+
+        uint256 dividendPortion = 0;
+        unchecked {
+            if(status) {dividendPortion = payoutAmount - investmentAmount;} else {dividendPortion = payoutAmount;}
+        }
+        uint256 converted = (dividendPortion * 105e16) / 1e18;
+
+        unchecked{ stableOutByCurrency[1] += converted; }
+    }
+
+    function ventureWithdraw(
+        LedgerWithdrawHandle calldata d
+    ) external override onlyContracts returns (uint256[] memory stableOutByCurrency) {
+        if(d.user == address(0)) revert InvalidUserAddress();
+        stableOutByCurrency = new uint256[](150);
+
+        address user = d.user;
+        address token = d.token;
+        address asset = d.asset;
+        uint256 payoutAmount = d.payoutAmount;
+        uint256 remaining = d.principalSlice;
+        uint256 investmentAmount = d.investmentAmount;
+        uint256 timeStamp = d.timeStamp;
+        bool initiationStatus = d.initiationStatus;
+
+        uint256 currencyID = stablecoinIndex[token];
+        uint256 vaultID = stakeablecoinIndex[asset];
 
         if (currencyID == globalID) {
 
-            uint256 head = globalHead;
+            _consumeAcquisitionFIFO(
+                FIFOConsumeParams({
+                    user:       user,
+                    currencyID: currencyID,
+                    vaultID:    vaultID,
+                    remaining:  remaining,
+                    investmentAmount: investmentAmount,
+                    timeStamp:  timeStamp,
+                    initiationStatus: initiationStatus,
+                    vaultDraw:  false,       // Hardcoded true from your original call
+                    ventureDraw: true,    // Hardcoded false from your original call
+                    purchase:   false        // Hardcoded false from your original call
+                }),
+                stableOutByCurrency
+            );
 
-            AcquisitionLot memory v = acquisitionLots[globalHead];
+        }
 
-            uint256 nativeSnapShot = v.remainingNative;
-            uint256 stableSnapShot = v.remainingStable;
+        {
 
-            // 1) Deplete FIFO AcquisitionLots
-            _consumeAcquisitionFIFO(user, nativeAmount);
+            // New DEBIT WithdrawalLot
+            uint256 vaultWithdrawLotId;
+            unchecked { vaultWithdrawLotId = nextLotId++; }
+            vaultWithdrawLots[vaultWithdrawLotId] = VaultWithdrawLot({
+                user:         user,
+                currencyID:   currencyID,
+                vaultID:      vaultID,
+                stableAmount: payoutAmount,
+                timestamp:    timeStamp,
+                credit:       false           // debit to platform/escrow
+            });
+        }
 
-            // New DEBIT AcquisitionLot (storyline entry)
-            acquisitionDebitLotId = nextLotId++;
-            acquisitionLots[acquisitionDebitLotId] = AcquisitionLot({
+        uint256 interest;
+        unchecked { interest = payoutAmount - d.principalSlice; }
+        uint256 converted = (interest * 105e16) / 1e18; 
+
+        unchecked { stableOutByCurrency[1] += converted; }
+    }
+
+    function recordVaultPoolDeposit(
+        LedgerPoolHandle calldata d
+    ) external override onlyContracts {
+        address callingContract = d.callingContract;
+        address currency = d.currency;
+        uint256 nativeAmount = d.nativeAmount;
+        uint256 timeStamp = d.timeStamp;
+        bytes32 depositHash = d.depositHash;
+        if(currency == address(0)) revert InvalidPoolCurrency();
+
+        //if(depositHash == bytes32(0)) revert InvalidHash();
+        uint256 currencyID = stablecoinIndex[currency];
+        uint256 stableAmount = (nativeAmount * 105e16) / 1e18;
+
+        {
+
+            // 3) New CREDIT PurchaseLot
+            uint256 vaultPoolLotId = nextLotId++;
+            vaultPoolLots[vaultPoolLotId] = VaultPoolLot({
+                sourceContract:     callingContract,
+                currencyID:   currencyID,
+                stableAmount: stableAmount,
+                timestamp:    timeStamp,
+                credit:       true,           // credit to platform/escrow
+                status:       true,          // open until fully refunded/settled
+                depositHash:  depositHash
+            });
+        }
+
+        {
+
+            if (activeGlobal[owner()] == false) {_initializeGlobal();}
+            uint256 gindex = globalView[owner()].length - 1;
+            Global storage g = globalView[owner()][gindex];
+            
+            // Should not be a balance increase only liquid
+            unchecked {
+                g.balanceAmount[currencyID] += stableAmount;
+                g.liquidAmount[currencyID] += stableAmount;
+
+                g.vaultPoolAmount[currencyID] += stableAmount;
+            }
+        }
+    }
+
+    function recordVenturePoolDeposit(
+        LedgerPoolHandle calldata d
+    ) external override onlyContracts {
+        address callingContract = d.callingContract;
+        address currency = d.currency;
+        uint256 nativeAmount = d.nativeAmount;
+        uint256 timeStamp = d.timeStamp;
+        bytes32 depositHash = d.depositHash;
+        if(currency == address(0)) revert InvalidPoolCurrency();
+        uint256 currencyID = stablecoinIndex[currency];
+        uint256 stableAmount = (nativeAmount * 105e16) / 1e18;
+
+        {
+
+            // 3) New CREDIT PurchaseLot
+            uint256 venturePoolLotId;
+            unchecked { venturePoolLotId = nextLotId++; }
+            venturePoolLots[venturePoolLotId] = VenturePoolLot({
+                sourceContract:     callingContract,
+                currencyID:   currencyID,
+                stableAmount: stableAmount,
+                timestamp:    timeStamp,
+                credit:       true,           // credit to platform/escrow
+                status:       true,          // open until fully refunded/settled
+                depositHash:  depositHash
+            });
+        }
+
+        {
+            if (activeGlobal[owner()] == false) {_initializeGlobal();}
+            uint256 gL = globalView[owner()].length - 1;
+            Global storage g = globalView[owner()][gL];
+            
+            // Should not be a balance increase only liquid
+            unchecked {
+                g.balanceAmount[currencyID] += stableAmount;
+                g.liquidAmount[currencyID] += stableAmount;
+
+                g.venturePoolAmount[currencyID] += stableAmount;
+            }
+        }
+    }
+
+    function _balanceRefundFIFO(
+        FIFOBalanceParams memory b
+    ) internal returns (uint256[] memory stableOutByCurrency) {
+
+        address user = b.user;
+        uint256 timeStamp = b.timeStamp;
+        uint256 nativeAmountx = b.nativeAmount;
+        bytes32 purchaseHash = b.purchaseHash;
+
+        AcquisitionRef memory ar = acquisitionsByHash[b.purchaseHash];
+        AcquisitionLot memory a = acquisitionLots[ar.refLot];
+
+        // --- For Loop --- //
+        for (uint256 i = a.chapterHead; i < a.chapterEnd;) {
+
+            uint256 lotId;
+            unchecked { lotId = nextLotId++; }
+
+            AcquisitionLot memory ax = acquisitionLots[i];
+
+            uint256 nativeAmount = ax.nativeAmount;
+            uint256 stableAmount = ax.stableAmount;
+            uint256 exchangeRate = ax.exchangeRate;
+            uint256 currencyID = ax.currencyID;
+
+
+            acquisitionLots[lotId] = AcquisitionLot({
                 user:            user,
                 currencyID:      currencyID,
                 stableAmount:    stableAmount,
@@ -1131,117 +943,226 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
                 remainingNative: nativeAmount,
                 remainingStable: stableAmount,
                 exchangeRate:    exchangeRate,
-                nativeSnapShot:  nativeSnapShot,
-                stableSnapShot:  stableSnapShot,
                 timestamp:       timeStamp,
-                chapterHead:     head,
-                chapterEnd:      globalHead,
-                credit:          false,        // debit from user
-                status:          true,
-                purchaseHash:    depositHash
+                chapterHead:     0,
+                chapterEnd:      0,
+                credit:          true,          // credit to user
+                status:          false,         // not fully consumed
+                purchaseHash:    purchaseHash
             });
 
-            acquisitionsByHash[depositHash] = AcquisitionRef({ user: user, refLot: acquisitionDebitLotId });
+            globalQueue.push(acquisitionLots[lotId]);
+    
+            if (activeUsers[b.user] == false) {_initializeNewUser(b.user);}
+            uint256 uL = userView[b.user].length - 1;
+            User storage u = userView[b.user][uL];
 
-        } else if (currencyID != globalID) {
+            // --- User accounting ---
+            unchecked {
+                u.purchases[globalID] -= nativeAmount;
+                u.balanceAmount[globalID] += nativeAmount;
+                u.liquidAmount[globalID] += nativeAmount;
+            }
         
-            // 4) Adjust aggregates
-            if (activeUsers[user] == false) {_initializeNewUser(user);}
-            User storage u = userView[user][global];
-
-            u.balanceAmount[currencyID] -= stableAmount;
-
-            u.liquidAmount[currencyID] -= stableAmount; 
-            u.ventureDepositAmount[currencyID] += stableAmount;
-
             if (activeGlobal[owner()] == false) {_initializeGlobal();}
-            Global storage g = globalView[owner()][global];
-            
-            // Should not be a balance increase only liquid
-            g.balanceAmount[currencyID] += stableAmount;
-            g.liquidAmount[currencyID] += stableAmount;
-            g.ventureDepositAmount[currencyID] += stableAmount;
-        } else {
-            revert ("Currency ID Not Valid");
+            uint256 gL = globalView[owner()].length - 1;
+            Global storage g = globalView[owner()][gL];
+
+            // --- Global accounting ---
+            unchecked {
+                g.balanceAmount[ax.currencyID] -= stableAmount;
+                g.liquidAmount[ax.currencyID] -= stableAmount;
+                g.purchases[ax.currencyID] -= stableAmount;
+
+                // --- Native
+                g.balanceAmount[globalID] -= nativeAmount;
+                g.liquidAmount[globalID] -= nativeAmount;
+            }
+
+            unchecked { i++; }
+
         }
 
-        // --- New Venture Lot
-        uint256 ventureLotId = nextLotId++;
-        ventureLots[ventureLotId] = VentureLot({
-            user: user,
-            currencyID:   currencyID,
-            stableAmount: stableAmount,
-            nativeAmount: nativeAmount,
-            exchangeRate: exchangeRate,
-            timestamp:    timeStamp,
-            credit:       true,           // credit to platform/escrow
-            status:       false,          // open until fully refunded/settled
-            depositHash: depositHash
+        unchecked { stableOutByCurrency[globalID] += nativeAmountx; }
+
+    }
+
+    function _balanceLiquidationFIFO(
+        address user,
+        uint256 returningNative,
+        uint256 timeStamp
+    ) internal returns (uint256[] memory stableOutByCurrency) {
+        stableOutByCurrency = new uint256[](150);
+
+        uint256 head = globalHead;
+
+        uint256 remaining = returningNative;
+        
+        for (uint256 i = head; i > 0;) {
+
+            AcquisitionLot storage ax = acquisitionLots[i];
+            uint256 nativeAmount = ax.nativeAmount;
+            uint256 remainingNative = ax.remainingNative;
+            uint256 stableAmount = ax.stableAmount;
+            uint256 exchangeRate = ax.exchangeRate;
+            uint256 chapterHead = ax.chapterHead;
+            uint256 chapterEnd = ax.chapterEnd;
+            uint256 currencyID = ax.currencyID;
+            bool credit = ax.credit;
+            bool status = ax.status;
+
+            if (!status && credit && chapterHead == 0 && chapterEnd == 0) {
+
+                uint256 take = remaining < nativeAmount ? remaining : nativeAmount;
+                unchecked { remainingNative += take; }
+                ax.timestamp = timeStamp;
+
+                uint256 stableDelta = take * exchangeRate / 1e18;
+
+                unchecked {
+                    remaining -= take;
+
+                    stableOutByCurrency[currencyID] += stableDelta;
+                }
+                
+                if (activeUsers[user] == false) {_initializeNewUser(user);}
+                uint256 uL = userView[user].length - 1;
+                User storage u = userView[user][uL];
+
+                // --- User accounting ---
+                unchecked {
+                    u.balanceAmount[globalID] -= nativeAmount;
+                    u.liquidAmount[globalID] -= nativeAmount;
+                }
+
+                if (activeGlobal[owner()] == false) {_initializeGlobal();}
+                uint256 gL = globalView[owner()].length - 1;
+                Global storage g = globalView[owner()][gL];
+
+                // --- Global accounting ---
+                unchecked {
+                    g.balanceAmount[ax.currencyID] -= stableAmount;
+                    g.liquidAmount[ax.currencyID] -= stableAmount;
+
+                    // --- Global Native ---
+                    g.balanceAmount[globalID] -= nativeAmount;
+                    g.liquidAmount[globalID] -= nativeAmount;
+
+                    g.balanceAmount[globalID] += nativeAmount;
+                    g.liquidAmount[globalID] += nativeAmount;
+                }
+
+                globalHead = i;
+                unchecked { i--; }
+            }
+        }
+
+    }
+
+    function _consumeAcquisitionFIFO(
+        FIFOConsumeParams memory params,
+        uint256[] memory stableOutByCurrency
+    ) internal {
+
+        address user = params.user;
+        uint256 currencyID = params.currencyID;
+        uint256 investmentAmount = params.investmentAmount;
+        uint256 timeStamp = params.timeStamp;
+        uint256 remaining;
+        uint256 head;
+        
+
+        // Run the loop helper, passing the struct along
+        remaining = _runFIFOLoop(params, stableOutByCurrency);
+
+        if(remaining != 0) revert InsufficientFIFOLots();
+
+        uint256 acquisitionCreditLotId;
+        unchecked { acquisitionCreditLotId = nextLotId++; }
+        acquisitionLots[acquisitionCreditLotId] = AcquisitionLot({
+            user:            user,
+            currencyID:      currencyID,
+            stableAmount:    0,
+            nativeAmount:    investmentAmount,
+            remainingNative: params.investmentAmount,
+            remainingStable: 0,
+            exchangeRate:    0,
+            timestamp:       timeStamp,
+            chapterHead:     head,
+            chapterEnd:      globalHead,
+            credit:          true,
+            status:          true,
+            purchaseHash:    0
         });
     }
 
-    function recordVaultPoolDeposit(
-        address currency,
-        address callingContract,
-        uint256 timeStamp,
-        uint256 stableAmount,
-        bytes32 depositHash
-    ) external onlyContracts {
-
-        uint8 currencyID = stablecoinIndex[currency];
-
-        // 3) New CREDIT PurchaseLot
-        uint256 vaultPoolLotId = nextLotId++;
-        vaultPoolLots[vaultPoolLotId] = VaultPoolLot({
-            sourceContract:     callingContract,
-            currencyID:   currencyID,
-            stableAmount: stableAmount,
-            timestamp:    timeStamp,
-            credit:       true,           // credit to platform/escrow
-            status:       true,          // open until fully refunded/settled
-            depositHash:  depositHash
-        });
-
-        if (activeGlobal[owner()] == false) {_initializeGlobal();}
-        Global storage g = globalView[owner()][global];
+    function _runFIFOLoop(
+        FIFOConsumeParams memory params,
+        uint256[] memory stableOutByCurrency
+    ) internal returns (uint256) {
         
-        // Should not be a balance increase only liquid
-        g.balanceAmount[currencyID] += stableAmount;
-        g.liquidAmount[currencyID] += stableAmount;
+        address user = params.user;
+        uint256 remaining = params.remaining;
+        uint256 investmentAmount = params.investmentAmount;
+        uint256 take;
+        uint256 stableDelta;
+        uint256 currentHead = globalHead;
+        bool purchase = params.purchase;
+        bool vaultDraw = params.vaultDraw;
+        bool ventureDraw = params.ventureDraw;
+        bool initiationStatus = params.initiationStatus;
 
-        g.vaultPoolAmount[currencyID] += stableAmount;
-    }
+        uint256 len = globalQueue.length;
 
-    function recordVenturePoolDeposit(
-        address currency,
-        address callingContract,
-        uint256 timeStamp,
-        uint256 stableAmount,
-        bytes32 depositHash
-    ) external onlyContracts {
+        if (activeUsers[user] == false) { _initializeNewUser(user); }
+        User storage u = userView[user][userView[user].length - 1];
+        if (activeGlobal[owner()] == false) { _initializeGlobal(); }
+        Global storage g = globalView[owner()][globalView[owner()].length - 1];
 
-        uint8 currencyID = stablecoinIndex[currency];
+        unchecked {
+            if (ventureDraw && initiationStatus) { u.ventureWithdrawAmount[params.vaultID] += investmentAmount; }
+            if (vaultDraw && initiationStatus) { u.vaultWithdrawAmount[params.vaultID] += investmentAmount; }
+        }
 
-        // 3) New CREDIT PurchaseLot
-        uint256 venturePoolLotId = nextLotId++;
-        venturePoolLots[venturePoolLotId] = VenturePoolLot({
-            sourceContract:     callingContract,
-            currencyID:   currencyID,
-            stableAmount: stableAmount,
-            timestamp:    timeStamp,
-            credit:       true,           // credit to platform/escrow
-            status:       true,          // open until fully refunded/settled
-            depositHash:  depositHash
-        });
+        for (uint256 i = currentHead; i < len && remaining > 0;) {
+            AcquisitionLot storage lot = globalQueue[i];
 
-        if (activeGlobal[owner()] == false) {_initializeGlobal();}
-        Global storage g = globalView[owner()][global];
-        
-        // Should not be a balance increase only liquid
-        g.balanceAmount[currencyID] += stableAmount;
-        g.liquidAmount[currencyID] += stableAmount;
+            // This line will now compile flawlessly!
+            take = remaining > lot.remainingNative ? lot.remainingNative : remaining;
+            
+            unchecked {
+                lot.remainingNative -= take;
+                remaining -= take;
+            }
 
-        g.venturePoolAmount[currencyID] += stableAmount;
+            stableDelta = take / lot.exchangeRate;
+
+            unchecked {
+                if (vaultDraw) { u.vaultWithdrawAmount[params.vaultID] -= take; }
+                if (ventureDraw) { u.ventureWithdrawAmount[params.vaultID] -= take; }
+                if (purchase) { u.purchases[globalID] += take; }
+            }
+
+            unchecked {
+                g.balanceAmount[lot.currencyID] -= stableDelta;
+                g.liquidAmount[lot.currencyID] -= stableDelta;
+                if (purchase) { g.purchases[lot.currencyID] -= stableDelta; }
+                if (vaultDraw) { g.vaultPoolAmount[params.vaultID] -= stableDelta; }
+                if (ventureDraw) { g.venturePoolAmount[params.vaultID] -= stableDelta; }
+
+                g.balanceAmount[globalID] -= take;
+                g.liquidAmount[globalID] -= take;
+                if (purchase) { g.purchases[globalID] += take; }
+            }
+
+            unchecked { 
+                stableOutByCurrency[lot.currencyID] += stableDelta;
+                if (lot.remainingNative == 0) { globalHead++; }
+                i++;
+            }
+        }
+
+        return remaining;
     }
 
     function getUserOverview(address user)
@@ -1249,7 +1170,7 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         view
         returns (User[] memory)
     {
-        require(_isAdmin(msg.sender), "Permission Denied");
+        if(!_isAdmin(msg.sender)) revert NotAuthorized();
         return userView[user];
     }
 
@@ -1258,80 +1179,202 @@ contract GlobalLedger is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         view
         returns (Global[] memory)
     {
-        require(_isAdmin(msg.sender), "Permission Denied");
+        if(!_isAdmin(msg.sender)) revert NotAuthorized();
         return globalView[owner()];
     }
 
-    function addToWhitelist(address contractAddress) external onlyOwner {
-        contractWhitelistMap[contractAddress] = true;
-    }
+    function _additionHelper(address[] memory addresses, bool stc, bool stk, bool vtc, bool ctr, bool adn) internal {
+        uint256 len = addresses.length;
+        
+        for (uint256 i = 0; i < len;) {
+            address sc = addresses[i];
 
-    function removeFromWhitelist(address contractAddress) external onlyOwner {
-        contractWhitelistMap[contractAddress] = false;
-    }
-
-    function addToAdminWhitelist(address[] memory adminsToAdd) external onlyOwner {
-        for (uint256 i = 0; i < adminsToAdd.length; i++) {
-            address admin = adminsToAdd[i];
-            require(admin != address(0), "Zero address not allowed");
-
-            if (!adminWhitelistMap[admin]) {
-                adminWhitelistMap[admin] = true;
-                admins.push(admin);
+            // Skip if ALREADY added to prevent array bloating
+            if (stc && !stablecoinWhitelistMap[sc]) {
+                stablecoinIndex[sc] = stables.length; // FIXED: Tracks actual state array position
+                stables.push(sc);
+                stablecoinWhitelistMap[sc] = true;
             }
+            if (stk && !stakeableWhitelistMap[sc]) {
+                stakeablecoinIndex[sc] = stakeables.length;
+                stakeables.push(sc);
+                stakeableWhitelistMap[sc] = true;
+            }
+            if (vtc && !venturecoinWhitelistMap[sc]) {
+                venturecoinIndex[sc] = ventures.length;
+                ventures.push(sc);
+                venturecoinWhitelistMap[sc] = true;
+            }
+            if (ctr && !contractWhitelistMap[sc]) {
+                contractIndex[sc] = contractAddresses.length;
+                contractAddresses.push(sc);
+                contractWhitelistMap[sc] = true;
+            }
+            if (adn && !adminWhitelistMap[sc]) {
+                adminIndex[sc] = admins.length;
+                admins.push(sc);
+                adminWhitelistMap[sc] = true;
+            }
+            
+            unchecked { i++; }
         }
-    }
+    } 
 
-    function removeFromAdminWhitelist(address[] memory adminsToRemove) external onlyOwner {
-        for (uint256 i = 0; i < adminsToRemove.length; i++) {
-            address admin = adminsToRemove[i];
-            require(adminWhitelistMap[admin], "Not whitelisted");
+    function _removalHelper(address[] memory addresses, bool stc, bool stk, bool vtc, bool ctr, bool adn) internal {
+        uint256 len = addresses.length;
 
-            adminWhitelistMap[admin] = false;
+        for (uint256 i = 0; i < len;) {
+            address sc = addresses[i];
 
-            // Remove from array
-            uint256 len = admins.length;
-            for (uint256 j = 0; j < len; j++) {
-                if (admins[j] == admin) {
-                    admins[j] = admins[len - 1];
-                    admins.pop();
-                    break;
+            // Process individual types using isolated indexes to prevent state pollution
+            if (stc && stablecoinWhitelistMap[sc]) {
+                uint256 index = stablecoinIndex[sc];
+                uint256 lastIndex = stables.length - 1;
+
+                if (index != lastIndex) {
+                    address lastAddr = stables[lastIndex];
+                    stables[index] = lastAddr;
+                    stablecoinIndex[lastAddr] = index;
                 }
+                stables.pop();
+                stablecoinWhitelistMap[sc] = false;
+                delete stablecoinIndex[sc];
             }
-        }
-    }
 
-    function addToVentureWhitelist(address[] memory venturesToAdd) external onlyOwner {
-        for (uint256 i = 0; i < venturesToAdd.length; i++) {
-            address venture = venturesToAdd[i];
-            require(venture != address(0), "Zero address not allowed");
+            if (stk && stakeableWhitelistMap[sc]) {
+                uint256 index = stakeablecoinIndex[sc];
+                uint256 lastIndex = stakeables.length - 1;
 
-            if (!venturecoinWhitelistMap[venture]) {
-                venturecoinWhitelistMap[venture] = true;
-                venturecoins.push(venture);
-            }
-        }
-    }
-
-    function removeFromVentureWhitelist(address[] memory venturesToAddRemove) external onlyOwner {
-        for (uint256 i = 0; i < venturesToAddRemove.length; i++) {
-            address venture = venturesToAddRemove[i];
-            require(venturecoinWhitelistMap[venture], "Not whitelisted");
-
-            venturecoinWhitelistMap[venture] = false;
-
-            // Remove from array
-            uint256 len = venturecoins.length;
-            for (uint256 j = 0; j < len; j++) {
-                if (venturecoins[j] == venture) {
-                    venturecoins[j] = venturecoins[len - 1];
-                    venturecoins.pop();
-                    break;
+                if (index != lastIndex) {
+                    address lastAddr = stakeables[lastIndex];
+                    stakeables[index] = lastAddr;
+                    stakeablecoinIndex[lastAddr] = index;
                 }
+                stakeables.pop();
+                stakeableWhitelistMap[sc] = false;
+                delete stakeablecoinIndex[sc];
             }
+
+            if (vtc && venturecoinWhitelistMap[sc]) {
+                uint256 index = venturecoinIndex[sc];
+                uint256 lastIndex = ventures.length - 1;
+
+                if (index != lastIndex) {
+                    address lastAddr = admins[lastIndex];
+                    ventures[index] = lastAddr;
+                    venturecoinIndex[lastAddr] = index;
+                }
+                ventures.pop();
+                venturecoinWhitelistMap[sc] = false;
+                delete venturecoinIndex[sc];
+            }
+
+            if (ctr && contractWhitelistMap[sc]) {
+                uint256 index = contractIndex[sc];
+                uint256 lastIndex = contractAddresses.length - 1;
+
+                if (index != lastIndex) {
+                    address lastAddr = contractAddresses[lastIndex];
+                    contractAddresses[index] = lastAddr;
+                    contractIndex[lastAddr] = index;
+                }
+                contractAddresses.pop();
+                contractWhitelistMap[sc] = false;
+                delete contractIndex[sc];
+            }
+
+            if (adn && adminWhitelistMap[sc]) {
+                uint256 index = adminIndex[sc];
+                uint256 lastIndex = admins.length - 1;
+
+                if (index != lastIndex) {
+                    address lastAddr = admins[lastIndex];
+                    admins[index] = lastAddr;
+                    adminIndex[lastAddr] = index;
+                }
+                admins.pop();
+                adminWhitelistMap[sc] = false;
+                delete adminIndex[sc];
+            }
+
+            unchecked { i++; }
         }
     }
 
+    function addToStableWhitelist(address[] memory stableAddress) external onlyOwner {
+
+        _additionHelper(stableAddress, true, false, false, false, false);
+    }
+
+    function stableIndex() external view onlyOwner returns(address[] memory stable) {
+        
+        return stables;
+    }
+
+    function removeFromStableWhitelist(address[] memory stableAddress) external onlyOwner {
+
+        _removalHelper(stableAddress, true, false, false, false, false);
+    }
+
+    function addToStakeableWhitelist(address[] memory stakeableAddress) external onlyOwner {
+        
+        _additionHelper(stakeableAddress, false, true, false, false, false);
+    }
+
+    function stakeableIndex() external view onlyOwner returns(address[] memory stakes) {
+        
+        return stakeables;
+    }
+
+    function removeFromStakeableWhitelist(address[] memory stakeableAddress) external onlyOwner {
+
+        _removalHelper(stakeableAddress, false, true, false, false, false);
+    }
+
+    function addToVentureWhitelist(address[] memory ventureAddress) external onlyOwner {
+
+        _additionHelper(ventureAddress, false, false, true, false, false);
+    }
+
+    function ventureIndex() external view onlyOwner returns(address[] memory vents) {
+        
+        return ventures;
+    }
+
+    function removeFromVentureWhitelist(address[] memory ventureAddress) external onlyOwner {
+
+        _removalHelper(ventureAddress, false, false, true, false, false);
+    }
+
+    function addToAdminWhitelist(address[] memory adminToAdd) external onlyOwner {
+       
+        _additionHelper(adminToAdd, false, false, false, false, true);
+    }
+
+    function adminsIndex() external view onlyOwner returns(address[] memory admin) {
+        
+        return admins;
+    }
+
+    function removeFromAdminWhitelist(address[] memory adminToRemove) external onlyOwner {
+
+        _removalHelper(adminToRemove, false, false, false, false, true);
+    }
+
+    function addToContractWhitelist(address[] memory contractAddress) external onlyOwner {
+        
+        _additionHelper(contractAddress, false, false, false, true, false);
+    }
+
+    function contractsIndex() external view onlyOwner returns(address[] memory contracts) {
+        
+        return contractAddresses;
+    }
+
+    function removeFromContractWhitelist(address[] memory contractAddress) external onlyOwner {
+        
+        _removalHelper(contractAddress, false, false, false, true, false);
+    }
 
     uint256[50] __gap;
 }

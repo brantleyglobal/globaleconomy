@@ -2,41 +2,21 @@ import fs from "fs";
 import readline from "readline";import path from "path";
 import { parseUnits, Wallet } from "ethers";
 import gbdoxxAbi from "../artifacts/contracts/dividend/Dividend121.sol/Dividend121.json";
+import shieldAbi from "../artifacts/contracts/globalShield.sol/GlobalShield.json";
+import ledgerAbi from "../artifacts/contracts/ledger/globalLedger.sol/GlobalLedger.json";
+import vaultAbi from "../artifacts/contracts/vaults/smartVault.sol/SmartVault.json";
+import regionAbi from "../artifacts/contracts/vaults/regionInfrastructure.sol/RegionInfrastructure.json";
+import purchaseAbi from "../artifacts/contracts/purchase/assetPurchase.sol/AssetPurchase.json";
+import acquisitionAbi from "../artifacts/contracts/purchase/acquisitionGateway.sol/AcquisitionGateway.json";
+import swapregistryAbi from "../artifacts/contracts/xchange/globalSwapRegistry.sol/GlobalSwapRegistry.json"
 import dotenv from "dotenv";
 dotenv.config();
 
 // Deployment Registry
 type DeployedContracts = Record<string, string>;
 const deploymentsPath = path.join(__dirname, "..", "deployments.json");
+const deploymentsPathE = path.join(__dirname, "..", "globalsync-partner", "src", "deployments.json");
 const DeploymentsPath = path.join(__dirname, "..", "..", "nextjs", "lib", "contracts", "deployments.json");
-
-function promptHidden(query: string): Promise<string> {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-      terminal: true
-    });
-
-    // Turn off terminal echo
-    process.stdin.on("data", () => {
-      // Clear the line and reprint the prompt
-      readline.cursorTo(process.stdout, 0);
-      process.stdout.write(query);
-    });
-
-    rl.question(query, (value) => {
-      rl.close();
-      process.stdout.write("\n");
-      resolve(value);
-    });
-
-    // Disable echo by setting raw mode
-    if (process.stdin.isTTY) {
-      process.stdin.setRawMode(true);
-    }
-  });
-}
 
 function promptSecret(query: string): Promise<string> {
   return new Promise((resolve) => {
@@ -78,6 +58,9 @@ function loadDeployments(): DeployedContracts {
   if (fs.existsSync(deploymentsPath)) {
     deployments = { ...deployments, ...JSON.parse(fs.readFileSync(deploymentsPath, "utf8")) };
   }
+  if (fs.existsSync(deploymentsPathE)) {
+    deployments = { ...deployments, ...JSON.parse(fs.readFileSync(deploymentsPathE, "utf8")) };
+  }
   if (fs.existsSync(DeploymentsPath)) {
     deployments = { ...deployments, ...JSON.parse(fs.readFileSync(DeploymentsPath, "utf8")) };
   }
@@ -89,6 +72,7 @@ function saveDeployment(name: string, address: string, registry: DeployedContrac
   // or only to one if preferred.
   registry[name] = address;
   fs.writeFileSync(deploymentsPath, JSON.stringify(registry, null, 2));
+  fs.writeFileSync(deploymentsPathE, JSON.stringify(registry, null, 2));
   fs.writeFileSync(DeploymentsPath, JSON.stringify(registry, null, 2));
   console.log(`Saved: ${name} → ${address} in both deployments files`);
 }
@@ -164,32 +148,10 @@ async function main() {
   // Create array of contract names based on your digits pattern
   const contractNames: string[] = [];
   for (let middle = 2; middle <= 8; middle++) {
-    let maxDigit = middle + 8;
+    let maxDigit = (middle * 3) + 24;
     for (let fl = 1; fl <= maxDigit; fl++) {
       contractNames.push(`Dividend${fl}${middle}${fl}`);
     }
-  }
-
-  // Loop through all contract names and deploy each
-  for (const name of contractNames) {
-    // Customize constructor/initializer args if needed; here just using deployer address as example
-    const args = [deployer.address];
-
-    try {
-      await deployProxy(name, deployed, args);
-      console.log(`Successfully deployed or upgraded ${name}`);
-    } catch (error) {
-      console.error(`Failed deployment for ${name}:`, error);
-    }
-  }
-
-  const stakeablecoinAddresses: string[] = [];
-
-  // Deploy each Dividend contract and collect address
-  for (const name of contractNames) {
-    const args = [deployer.address]; // Customize args here if needed
-    const address = await deployProxy(name, deployed, args);
-    stakeablecoinAddresses.push(address);
   }
 
   const preaddr = [
@@ -225,14 +187,6 @@ async function main() {
 
   const gbd = await ethers.getContractAt("GlobalDollar", gbdAddress);
 
-  const gbdoAddress = await deployProxy("GlobalDollarX", deployed, [
-    deployer.address,
-    preaddr,
-    prefnd,
-  ]);
-
-  const gbdo = await ethers.getContractAt("GlobalDollarX", gbdoAddress);
-
   // Token Infrastructure
   const copxAddress = await deployProxy("Copian", deployed, [
     deployer.address,
@@ -246,23 +200,22 @@ async function main() {
     "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC     1  
     "0x4A16BAf414b8e637Ed12019faD5Dd705735DB2e0", // QCAD     2
     "0x6B175474E89094C44Da98b954EedeAC495271d0F", // DAI      3
-    "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c", // EURC     4
+    "0xe0b52e49357fd4daf2c15e02058dce6bc0057db4", // agEUR    4
     "0x7d60F21072b585351dFd5E8b17109458D97ec120", // FDUSD    5
     "0x853d955aCEf822Db058eb8505911ED77F175b99e", // FRAX     6
-    "0x6AE7Dfc73E0dDE2aa99ac063DcF7e8A63265108c", // JPYC     7
+    "0x431D5dfF03120AFA4bDf332c61A6e1766eF37BDB", // JPYC     7
     "0x95C2E7cbc7Ae370E28160Bd04297C53F96d092B4", // MMXN     8
     "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8", // PYUSD    9
     "0x70e8dE73cE538DA2bEEd35d14187F6959a8ecA96", // XSGD     10
     "0x0000000000085d4780B73119b644AE5ecd22b376", // TUSD     11
-    "0x1456688345527bE1f37E9e627DA0837D6f08C925", // USDP     12
+    "0x8E870D67F660D95d5be530380D0eC0bd388289E1", // USDP     12
     "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT     13
     "0x4cCe605eD955295432958d8951D0B176C10720d5", // AUDD     14
     "0xb755506531786C8aC63B756BaB1ac387bACB0C04", // ZARP     15
-    "0x5C067C80C00eCd2345b05E83A3e758eF799C40B5", // BRL1     16
+    "0x8c6fa66c21ae3fc435790e451946a9ea82e6e523", // BRZ      16
     "0x86B4dBE5D203e634a12364C0e428fa242A3FbA98", // GBPT     17
     "0x6FAff971d9248e7d398A98FdBE6a81F6d7489568", // TRYX     18
-    "0x3231Cb76718CDeF2155FC47b5286d82e6eDA273f", // EURe     19
-    "0x0000000000000000000000000000000000000000", //GBDo      20
+    "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c", // EURc     19
     copxAddress,                                  // COPx     21
     gbdAddress                                    // GBDO     22
     //"0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", // WBTC     23
@@ -277,76 +230,19 @@ async function main() {
   
   const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 
-
-  const globeAddress = await deployProxy("Globe", deployed, [
-    deployer.address,
-  ]);
-
-  const GLOBE = await ethers.getContractAt("Globe", globeAddress);
-
-  const tgusaAddress = await deployProxy("TGUSA", deployed, [
-    deployer.address,
-  ]);
-
-  const TGUSA = await ethers.getContractAt("TGUSA", tgusaAddress);
-
-  const tgmxAddress = await deployProxy("TGMX", deployed, [
-    deployer.address,
-  ]);
-
-  const TGMX = await ethers.getContractAt("TGMX", tgmxAddress);
-
-  const bgffsAddress = await deployProxy("BGFFS", deployed, [
-    deployer.address,
-  ]);
-
-  const BGFFS = await ethers.getContractAt("BGFFS", bgffsAddress);
-
-  const bgfrsAddress = await deployProxy("BGFRS", deployed, [
-    deployer.address,
-  ]);
-
-  const BGFRS = await ethers.getContractAt("BGFRS", bgfrsAddress);
-
-  const bggridAddress = await deployProxy("BGGRID", deployed, [
-    deployer.address,
-  ]);
-
-  const BGGRID = await ethers.getContractAt("BGGRID", bggridAddress);
-
-  const ventureAddresses = [
-    globeAddress,
-    tgusaAddress,
-    tgmxAddress,
-    bgffsAddress,
-    bgfrsAddress,
-    bggridAddress
-  ]
-
   const adminAddresses = [
     deployer.address,
     "0xb84753ff376d8347f27ea669ad36f7e79f0c364e"
   ]
 
-  console.log("stablecoinAddresses:", stablecoinAddresses);
-  console.log("stakeablecoinAddresses:", stakeablecoinAddresses);
-  console.log("ventureAddresses:", ventureAddresses);
-  console.log("adminAddresses:", adminAddresses);
-
-
+  //console.log("adminAddresses:", adminAddresses);
+  
   const GlobalLedger = await deployProxy("GlobalLedger", deployed, [
     deployer.address,
-    stablecoinAddresses,
-    stakeablecoinAddresses,
   ]);
 
-  const GlobalLedgerRouter = await deployProxy("GlobalLedgerRouter", deployed, [
-  ]);
-
-  const GlobalLedgerProxy = await deployProxy("GlobalLedgerRouter", deployed, [
+  const GlobalShield = await deployProxy("GlobalShield", deployed, [
     deployer.address,
-    GlobalLedger,
-    GlobalLedgerRouter
   ]);
 
     // Deploy Counter implementation (non-upgradeable)
@@ -358,23 +254,44 @@ async function main() {
   console.log(`GlobalSwapFactory deployed at: ${GlobalSwapFactoryAddress}`);
 
   const GlobalSwapFactory = await ethers.getContractAt("GlobalSwapFactory", GlobalSwapFactoryAddress);
-  await GlobalSwapFactory.initialize(deployer.address, stablecoinAddresses);
+  await GlobalSwapFactory.initialize(deployer.address);
 
-  console.log(GlobalLedgerProxy);
+  const GlobalSwapRegistry = await deployProxy("GlobalSwapRegistry", deployed, [
+    deployer.address,
+  ]);
 
   const AssetPurchase = await deployProxy("AssetPurchase", deployed, [
     deployer.address,
-    stablecoinAddresses,
-    adminAddresses,
-    GlobalLedgerProxy
+    GlobalLedger
   ]);
 
   const AcquisitionGateway = await deployProxy("AcquisitionGateway", deployed, [
     deployer.address,
-    stablecoinAddresses,
-    adminAddresses,
-    GlobalLedgerProxy,
+    GlobalLedger,
   ]);
+
+  const now = Math.floor(Date.now() / 1000);
+
+  const SmartVault = await deployProxy("SmartVault", deployed, [
+    deployer.address,
+    usdc,
+    GlobalLedger,
+  ]);
+
+  const RegionInfrastructure = await deployProxy("RegionInfrastructure", deployed, [
+    deployer.address,
+    usdc,
+    GlobalLedger,
+  ]);
+
+  const stakeablecoinAddresses: string[] = [];
+
+  // Deploy each Dividend contract and collect address
+  for (const name of contractNames) {
+    const args = [deployer.address, SmartVault]; // Customize args here if needed
+    const address = await deployProxy(name, deployed, args);
+    stakeablecoinAddresses.push(address);
+  }
 
   console.log("Stakeablecoin addresses to be passed to SmartVault:");
   for (const [index, addr] of stakeablecoinAddresses.entries()) {
@@ -386,67 +303,188 @@ async function main() {
     }
   }
 
-  const SmartVault = await deployProxy("SmartVault", deployed, [
+  const GBDt = await deployProxy("GlobalDollarT", deployed, [
     deployer.address,
-    stablecoinAddresses,
-    stakeablecoinAddresses,
-    adminAddresses,
-    usdc,
-    GlobalLedgerProxy,
+    SmartVault
   ]);
 
-  await gbdo.grantRole(await gbdo.MINTER_ROLE(), SmartVault);
-  console.log(`SmartVault granted MINTER_ROLE on GBD2x`);
+  const GLOBE = await deployProxy("Globe", deployed, [
+    deployer.address,
+    RegionInfrastructure
+  ]);
 
-  for (const addr of stakeablecoinAddresses) {
-    try {
-      const tokenContract = new ethers.Contract(addr, gbdoxxAbi.abi, deployer);
-      const minterRole = await tokenContract.MINTER_ROLE();
-      const tx = await tokenContract.grantRole(minterRole, SmartVault);
-      await tx.wait();
-      console.log(`Granted MINTER_ROLE to SmartVault on token at ${addr}`);
-    } catch (error) {
-      console.error(`Failed to grant MINTER_ROLE on token at ${addr}:`, error);
-    }
+  const TGUSA = await deployProxy("TGUsRenewable", deployed, [
+    deployer.address,
+    RegionInfrastructure
+  ]);
+
+  const TGMX = await deployProxy("TGMxRenewable", deployed, [
+    deployer.address,
+    RegionInfrastructure
+  ]);
+
+  const BGFFS = await deployProxy("BGSellRE", deployed, [
+    deployer.address,
+    RegionInfrastructure
+  ]);
+
+  const BGFRS = await deployProxy("BGHoldRE", deployed, [
+    deployer.address,
+    RegionInfrastructure
+  ]);
+
+  const BGGRID = await deployProxy("BGGrid", deployed, [
+    deployer.address,
+    RegionInfrastructure
+  ]);
+
+  const ventureAddresses = [
+    GLOBE,
+    TGUSA,
+    TGMX,
+    BGFFS,
+    BGFRS,
+    BGGRID
+  ]
+
+  const contractAddresses = [
+    AcquisitionGateway,
+    AssetPurchase,
+    SmartVault,
+    RegionInfrastructure
+  ]
+
+  const contract2 = new ethers.Contract(GlobalLedger, ledgerAbi.abi, deployer);
+  const contractv = new ethers.Contract(SmartVault, vaultAbi.abi, deployer);
+  const contractr = new ethers.Contract(RegionInfrastructure, regionAbi.abi, deployer);
+  const contractp = new ethers.Contract(AssetPurchase, purchaseAbi.abi, deployer);
+  const contracta = new ethers.Contract(AcquisitionGateway, acquisitionAbi.abi, deployer);
+  const contractg = new ethers.Contract(GlobalSwapRegistry, swapregistryAbi.abi, deployer);
+  const contractShield = new ethers.Contract(GlobalShield, shieldAbi.abi, deployer);
+
+
+  // ------
+  //  ADDRESS UPDATING
+  // -----
+
+  console.log("Attempting to Update Ledger Addresses");
+
+  // -- Ledger Address Load --- //
+  const stcadd = await contract2.addToVentureWhitelist!(stablecoinAddresses);
+
+  const vadd = await contract2.addToVentureWhitelist!(ventureAddresses);
+
+  const stkadd = await contract2.addToStakeableWhitelist!(stakeablecoinAddresses);
+
+  const ctradd = await contract2.addToContractWhitelist!(contractAddresses);
+
+  const adnladd = await contract2.addToContractWhitelist!(adminAddresses);
+
+  console.log("Attempting to Update Vault Addresses");
+
+  // -- Vault Address Load --- //
+  const stcvadd = await contractv.addToStableWhitelist!(stablecoinAddresses);
+
+  const stkvadd = await contractv.addToStakeableWhitelist!(stakeablecoinAddresses);
+
+  const adnadd = await contractv.addToAdminWhitelist!(adminAddresses);
+
+  console.log("Attempting to Update Region Addresses");
+
+  // -- Region Address Load --- //
+  const stcradd = await contractr.addToStableWhitelist!(stablecoinAddresses);
+
+  const vradd = await contractr.addToStakeableWhitelist!(ventureAddresses);
+
+  const admnradd = await contractr.addToAdminWhitelist!(adminAddresses);
+
+  console.log("Attempting to Update Purchase Addresses");
+
+  // -- Acquisition Address Load --- //
+  const stcpadd = await contractp.addToStableWhitelist!(stablecoinAddresses);
+
+  const admnpadd = await contractp.addToAdminWhitelist!(adminAddresses);
+
+  console.log("Attempting to Update Acqisition Addresses");
+
+  // -- Purchase Address Load --- //
+  const stcaadd = await contracta.addToStableWhitelist!(stablecoinAddresses);
+
+  const admnaadd = await contracta.addToAdminWhitelist!(adminAddresses);
+
+  console.log("Attempting to Update Registry Addresses");
+  const admngadd = await contractg.addToAdminWhitelist!(adminAddresses);
+
+  console.log("Attempting to Update Shield Addresses");
+  const admnsadd = await contractShield.addToAdminWhitelist!(adminAddresses);
+
+  // --- Address Removal Logic --- //
+  //const v = await contract2.removeFromVentureWhitelist!(ventureAddresses);
+
+  //const stk = await contract2.removeFromStakeableWhitelist!(stakeablecoinAddresses);
+
+  /*console.log("Attempting to Update Dates");
+
+  const sIndex1 = 0;
+  const eIndex1 = 68;
+  const sIndex2 = 68;  //to match index guard
+  const eIndex2 = 136;
+  const sIndex3 = 136; //to match index guard
+  const eIndex3 = 204; //to match index guard
+  const sIndex4 = 204; //to match index guard
+  const eIndex4 = 273; //to match index guard
+
+  const txQuarterInit1 = await contractv.initCalldates!(now, sIndex1, eIndex1, { gasLimit: 20_000_000n });
+  await txQuarterInit1.wait();
+
+  const txQuarterInit2 = await contractv.initCalldates!(now, sIndex2, eIndex2, { gasLimit: 20_000_000n });
+  await txQuarterInit2.wait();
+
+  const txQuarterInit3 = await contractv.initCalldates!(now, sIndex3, eIndex3, { gasLimit: 20_000_000n });
+  await txQuarterInit3.wait();
+
+  const txQuarterInit4 = await contractv.initCalldates!(now, sIndex4, eIndex4, { gasLimit: 20_000_000n });
+  await txQuarterInit4.wait();
+
+  console.log("Attempting to Update Globals");
+
+  // --- Populate Values ---
+  const txPop = await contractv.populateGlobals!({ gasLimit: 8_000_000n });
+  await txPop.wait();
+
+  console.log("Attempting to check Unlock Quarter by Contract");
+
+  for (const token of stakeablecoinAddresses) {
+    const contract2 = new ethers.Contract(token, gbdoxxAbi.abi, deployer);
+    const balance = await contract2.unlockQuarter!();
+    console.log(`Unlock Quarter for ${token}: ${balance}`);
   }
 
-  const MultiCall3 = await deployContract("Multicall3", deployed, []);
-  console.log(`MultiCall deployed at: ${MultiCall3}`);
+  console.log("Attempting to check Multiplier by Contract");
 
-  const RegionInfrastructure = await deployProxy("RegionInfrastructure", deployed, [
-    deployer.address,
-    stablecoinAddresses,
-    ventureAddresses,
-    adminAddresses,
-    usdc,
-    GlobalLedgerProxy,
-  ]);
+  for (const token of stakeablecoinAddresses) {
+    const balance = await contractv.multiplier!(token);
+    console.log(`Multiplier ${token}: ${balance}`);
+  }*/
 
-  await GLOBE.grantRole(await GLOBE.MINTER_ROLE(), RegionInfrastructure);
-  console.log(`RegionalInfra granted MINTER_ROLE on GLOBE`);
+  console.log("Attempting to set Factory Address");
 
-  await TGUSA.grantRole(await TGUSA.MINTER_ROLE(), RegionInfrastructure);
-  console.log(`RegionalInfra granted MINTER_ROLE on TGUSA`);
+  const factoryInit = await contractg.setFactory!(GlobalSwapFactoryAddress, { gasLimit: 200_000n });
+  await factoryInit.wait();
 
-  await TGMX.grantRole(await TGMX.MINTER_ROLE(), RegionInfrastructure);
-  console.log(`RegionalInfra granted MINTER_ROLE on TGMX`);
-
-  await BGFFS.grantRole(await BGFFS.MINTER_ROLE(), RegionInfrastructure);
-  console.log(`RegionalInfra granted MINTER_ROLE on BGFFS`);
-
-  await BGFRS.grantRole(await BGFRS.MINTER_ROLE(), RegionInfrastructure);
-  console.log(`RegionalInfra granted MINTER_ROLE on BGFRS`);
-
-  await BGGRID.grantRole(await BGGRID.MINTER_ROLE(), RegionInfrastructure);
-  console.log(`RegionalInfra granted MINTER_ROLE on BGGRID`);
+  const shieldInit = await contractg.setShield!(GlobalShield, { gasLimit: 200_000n });
+  await shieldInit.wait();
 
   // ABI Generation
   const generateTsAbis = await import("./generateTsAbis").then((m) => m.default);
   await generateTsAbis(hre);
   console.log(" TypeScript ABIs generated.");
+
+  process.exit(1)
 }
+
 
 main().catch((err) => {
   console.error(" Deployment failed:", err);
-  //process.exit(1);
+  process.exit(1);
 });

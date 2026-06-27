@@ -82,8 +82,8 @@ To know more about products and platform, check out our [website](https://brantl
 npx hardhat clean
 
 npx hardhat compile
-npx hardhat run scripts/deploy.ts --network GLOBALCHAIN
-
+npx ts-node scripts/deploy.ts
+ 
 ## Nextjs
 
 yarn build 
@@ -91,9 +91,12 @@ yarn build
 *****Cloudflare deploy only*****
 npx wrangler pages deploy ./out --project-name globaleco
 
+****Test****
+npx wrangler pages dev
+
 ## Git
 
-git remote set-url origin https://github.com/brantleyglobal/globaleconomy.git
+git remote set-url origin ssh://git@ssh.github.com:443/brantleyglobal/globaleconomy.git
 git add .
 git commit -m "Polished"
 git push origin main
@@ -129,5 +132,12 @@ wrangler init my-worker
 npx quorum-genesis-tool
 
 ## Con Call
-ts-node
+npx ts-node
+
+## GlobalSync
+git tag v1.0.04
+git push origin v1.0.04
+
+## Remove Tag
+git tag -d v1.0.04
 

@@ -39,3 +39,7 @@ artifact/
 cache/
 test
 
+#globalsync
+globalsync/
+globalsync-partner/
+

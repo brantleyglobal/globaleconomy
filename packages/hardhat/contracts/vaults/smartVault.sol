@@ -1,28 +1,32 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "../proxies/globalLedgerProxy.sol";
-import "../currency/GBDx.sol";
+import "../libraries/dateTimeLibrary.sol";
+import "../interfaces/IGlobalLedger.sol";
+import "../currency/globalDollarT.sol";
 
 contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
+    using DateTimeLibrary for uint256;
 
-    GlobalLedgerProxy public ledgerProxy;
-    GlobalDollarX public stakeablecoins;
+    IGlobalLedger public ledgerProxy;
 
     struct Deposit {
         uint256 timestamp;
         uint256 amountin;
         uint256 amountout; 
+        uint256 rate;
         address user;
         address token;
         address dividend;
-        uint8 quartersCommitted;
+        uint256 quartersCommitted;
+        uint256 startQuarter;
+        uint256 key;
         bytes32 depositTxHash;
         bytes32 refundHash;
         bool refund;
@@ -30,30 +34,31 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
     struct Withdraw {
         address user;
-        uint32 termIndex;
-        uint8 stage;
+        uint256 termIndex;
+        uint256 stage;
     }
 
     struct User {
         address user;
         address dividendToken;
-        address payToken;
-        uint8 quartersCommitted;
-        uint16 startQuarter;
-        uint16 unlockQuarter;
-        bool finalize;
+        address[7] payToken;
+        uint256 quartersCommitted;
+        uint256 startQuarter;
+        uint256 unlockQuarter;
+        uint256 stage;
         bool autoPay;
         uint256 userDividendAmount;
-        uint256[8] termSupplyPerStage;
-        uint256[8] poolBalancePerStage;
-        address[8] payoutSetter;
-        uint256[8] amountout;
-        bytes32[8] payoutTxHash;
+        uint256[7] termSupplyPerStage;
+        uint256[7] poolBalancePerStage;
+        address[7] payoutSetter;
+        uint256[7] amountout;
+        bytes32[7] payoutTxHash;
     }
 
     struct EcoQuarterData {
-        uint16 currentQuarter;
+        uint256 currentQuarter;
         uint256 ecoSupply;
+        uint256 effectiveRawSupply;
         uint256 ecoPool;
         uint256 ecoRedemptions;
         uint256 poolMin;
@@ -67,26 +72,64 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
     struct DepositRef {
         address user;
-        uint32 depositIndex;
+        uint256 depositIndex;
     }
 
+    struct WithdrawInit {
+        address user;
+        address dividendToken;
+        address payToken;
+        uint256 currentQuarter;
+        uint256 timeStamp;
+    }
+
+    struct WithdrawHandle {
+        address payToken;
+        uint256 stageCheck;
+        uint256 termIndex;
+        uint256 timeStamp;
+    }
+
+    struct LedgerHandle {
+        uint256 stage;
+        uint256 termIndex;
+        uint256 payout;
+        uint256 ts;
+        bool status;
+        bool initiationStatus;
+    }
+
+    error NotAuthorized();
+    error InsufficientFunds();
+    error SpendNotApproved();
+    error QuarterNotCalculated();
+    error FeeOutofBounds();
+    error InvalidAddress(address addressSupplied);
+    error MintFailed();
+    error UnapprovedToken(address token);
+    error NoEligibleQuarter();
+    error HashDuplicated();
+    error InvalidHash(bytes32 input);
+    error PayoutStageOutofBounds();
+    error InvalidPoolAmount(uint256 poolMin, uint256 inputAmount);
+    error NoEligibleTerms();
+
     address public payoutToken;
-    address public payoutAddress;
-    address public rtoken;
+    address private payoutAddress; //Remove
     address public feeRecipient;
-    address[] public stablecoins;
-    address[]  public stakeables;
-    address[] public admins;
-    address constant NATIVE_TOKEN = address(0);
-    address constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
+    address[] public stakeables;
+    address[] public stables;
+    address[] private admins;
+    address[] private autopay;
+    address constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD; //Remove
     
-    uint constant QUARTER_DAYS = 91;
-    uint8 public constant TOTAL_TERMS = 8;
-    // Add this state variable to track injected time
-    uint16 public lastUpdatedTime;
-    uint16 public updatedStartQuarter;
+    // State variable to track injected time
+    uint256 public lastUpdatedTime;
+    uint256 public lastTimeStamp;
+    uint256 public updatedStartQuarter;
     uint256 public depositFeeBps;
-    uint256 public processTimestamp;
+    uint256 public processDepositTimestamp;
+    uint256 public processWithdrawTimestamp;
     uint256[] public depositTimestamps;
     uint256[] public withdrawTimestamps;
 
@@ -94,37 +137,61 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     mapping(address => bool) private adminWhitelistMap;
     mapping(address => bool) private stablecoinWhitelistMap;
     mapping(address => bool) private stakeableWhitelistMap;
-    mapping(address => uint8) public multiplier;
-    mapping(address => uint8) public quartersCommitted;
+    mapping(address => bool) private autopayWhitelistMap;
+    mapping(address => uint256) public multiplier;
     mapping(uint256 => DepositRef) public depositsByTimestamp;
     mapping(bytes32 => DepositRef) public depositsByHash;
     mapping(address => uint256[]) public depositTimestampsByUser;
     mapping(bytes32 => bool) public processedDeposits;
-    mapping(uint256 => bool) public processedDepositsTs;
     mapping(uint256 => Withdraw) public withdrawByTimestamp;
     mapping(bytes32 => Withdraw) public withdrawByHash;
     mapping(address => User[]) public withdrawalsByUser;
     mapping(address => Deposit[]) public depositsByUser;
-    mapping(uint16 => EcoQuarterData) public ecoDataByQuarter;
-    mapping(address => uint8) stablecoinIndex;
-    mapping(uint8 => RateRange) public rateRange;
-    mapping(address => mapping(uint32 => mapping(uint8 => uint256[22]))) stagePayouts;
+    mapping(uint256 => EcoQuarterData) public ecoDataByQuarter;
+    mapping(address => uint256) stablecoinIndex;
+    mapping(address => uint256) stakeablecoinIndex;
+    mapping(address => uint256) adminIndex;
+    mapping(address => uint256) autopayIndex;
+    mapping(uint256 => RateRange) public rateRange;
+    mapping(address => mapping(uint256 => mapping(uint256 => uint256[]))) public stagePayouts;
+    mapping(uint256 => mapping (uint256 => address[])) private quarterLocker;
+    mapping(uint256 => mapping (uint256 => mapping(uint256 => address))) private contractTracker;
 
+    event Deposited(address indexed user, uint256 amountOut, uint256 amountIn, uint256 fee, uint256 committedQuarters);
+    event UpdateFailed(address indexed addr, uint256 index, string reason); //Remove
+    event FundsWithdrawn(address indexed token, address indexed to, uint256 amount); //Remove
+    event WithdrawInRange(
+        address indexed user,
+        uint256 amountout,
+        uint256[] stableOut,
+        address payoutToken,
+        uint256 termIndex,
+        uint256 stage
+    );
+    event DepositInRange(
+        uint256 timestamp,
+        address indexed user,
+        address token,
+        address dividend,
+        uint256 quartersCommitted,
+        uint256 amountin,
+        uint256 amountout
+    );
+    event UserWithdraw(
+        uint256 timestamp, //Remove
+        address indexed user,
+        uint256 quartersCommitted,
+        uint256 unlockQuarter,
+        uint256 amountout, 
+        uint256 termIndex,
+        uint256 stage
+    );
+    event PayoutTxHashCorrected(address user, uint256 quarter, bytes32 old, bytes32 newTxHash, address payoutSetter);
 
-    event Deposited(address indexed user, uint256 amountOut, uint256 amountIn, uint256 fee, uint8 committedQuarters);
-    event StakeableAddress(address indexed addr);
-    event UpdateFailed(address indexed addr, uint256 index, string reason);
-    event PoolBalanceUpdated(address indexed token, uint256 newBalance);
-    event PayoutAddressUpdated(address indexed oldAddress, address indexed newAddress);
-    event FundsWithdrawn(address indexed token, address indexed to, uint256 amount);
-    event WithdrawInRange( address indexed user, uint256 amountout, uint256[] stableOut, address payoutToken, uint32 termIndex, uint8 stage);
-    event DepositInRange( uint256 timestamp, address indexed user, address token, address dividend, uint8 quartersCommitted, uint256 amountin, uint256 amountout);
-    event UserWithdraw( uint256 timestamp, address indexed user, uint8 quartersCommitted, uint16 unlockQuarter, uint256 amountout, uint32 termIndex, uint8 stage );
-    event PayoutTxHashCorrected(address user, uint8 quarter, bytes32 old, bytes32 newTxHash, address payoutSetter);
-    event UnexpectedPayoutTxHash(address indexed user,  uint16 unlockQuarter, bytes32 existingHash, address existingSetter, uint256 amount, address attemptedSetter);
-
+    uint256 constant MIN_RATE = 30;  // 3%
+    uint256 constant MAX_RATE = 120; // 12%
     uint256 constant DECIMALS = 1e18;
-    uint256 constant GBDr = 1030000000000000000;
+    uint256 constant GBDr = 1050000000000000000;
     uint256 constant RATE_098 = 980000000000000000;   // 0.98 * 1e18
     uint256 constant RATE_102 = 1020000000000000000;  // 1.02 * 1e18s
     uint256 constant RATE_065 = 65000000000000000;    // 0.065 * 1e18
@@ -154,9 +221,6 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
     function initialize(
         address _owner,
-        address[] memory initialStables,
-        address[] memory initialStakeables,
-        address[] memory adminList,
         address _payoutToken,
         address ledgerProxyAddress
     ) public initializer {
@@ -164,55 +228,21 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
         _transferOwnership(_owner);
-        populateMultipliers();
 
         feeRecipient = _owner;
         depositFeeBps = 25;
         payoutToken = _payoutToken;
-        ledgerProxy = GlobalLedgerProxy(ledgerProxyAddress);
+        ledgerProxy = IGlobalLedger(ledgerProxyAddress);
 
-       // Initialize whitelist and store in map and array for iteration
-       for (uint256 i = 0; i < initialStables.length; i++) {
-            address sc = initialStables[i];
-            //require(sc != address(0), "Zero address not allowed");
-
-            stablecoinWhitelistMap[sc] = true;
-            stablecoins.push(sc);
-
-            stablecoinIndex[sc] = uint8(i);
-        }
-
-        // Initialize whitelist and store in map and array for iteration
-        for (uint256 i = 0; i < initialStakeables.length; i++) {
-            require(initialStakeables[i] != address(0), "Zero address not allowed");
-            stakeableWhitelistMap[initialStakeables[i]] = true;
-            stakeables.push(initialStakeables[i]);
-        }
-
-        // Initialize whitelist and store in map and array for iteration
-        for (uint256 i = 0; i < adminList.length; i++) {
-            address a = adminList[i];
-            require(a != address(0), "Zero address not allowed");
-
-            adminWhitelistMap[a] = true;
-            admins.push(a);
-        }
-
-    }
-
-    function setPayoutAddress(address newAddress) external onlyOwner {
-        require(newAddress != address(0), "Invalid address");
-        emit PayoutAddressUpdated(payoutAddress, newAddress);
-        payoutAddress = newAddress;
     }
 
     function setDepositFee(uint256 newFeeBps) external onlyOwner {
-        require(newFeeBps <= 5000, "Fee too high");
+        if(newFeeBps <= 5000) revert FeeOutofBounds();
         depositFeeBps = newFeeBps;
     }
 
     function setFeeRecipient(address newRecipient) external onlyOwner {
-        require(newRecipient != address(0), "Invalid address");
+        if(newRecipient != address(0)) revert InvalidAddress(newRecipient);
         feeRecipient = newRecipient;
     }
 
@@ -227,29 +257,109 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         return stakeableWhitelistMap[token];
     }
 
-    function _isAdmin(address admin) internal view returns (bool) {
+    function _isAdmin(address admin) public view returns (bool) {
         return adminWhitelistMap[admin];
     }
 
-    function calldates(uint16 _currentQuarter) public {
-        // Unlock quarters already set, just update
-        lastUpdatedTime = _currentQuarter;
-    
-        for (uint256 i = 0; i < stakeables.length; i++) {
-            address addr = stakeables[i];
-            uint16 redemptionEnd = GlobalDollarX(addr).comingQuarter();
-            if (_currentQuarter >= redemptionEnd) {
-                GlobalDollarX(addr).supply(0);
-            }
+    function initCalldates(uint256 ts, uint256 sIndex, uint256 eIndex) public {
+        if(!_isAdmin(msg.sender)) revert NotAuthorized();
 
-            try GlobalDollarX(addr).update(_currentQuarter) {
-                // success
-            } catch Error(string memory reason) {
-                emit UpdateFailed(addr, i, reason);
-            } catch {
-                emit UpdateFailed(addr, i, "Unknown error");
+        (uint256 year, uint256 key,) = ts.timestampToDate();
+
+        uint256 quarter = 0;
+        unchecked { quarter= (key - 1) / 3; }
+
+        uint256 cQ;
+        unchecked { cQ = year * 4 + quarter; }
+
+        for (uint256 i = sIndex; i < eIndex;) {
+            GlobalDollarT token = GlobalDollarT(stakeables[i]); // Cache contract instance
+
+            // Single external call gas cost minimized by fetching values into memory
+            token.update(cQ, key, ts);
+            uint256 mK = token.monthKey();
+            uint256 comQ = token.committedQuarters();
+            uint256 uQ = token.unlockQuarter();
+            uint256 rE = token.comingQuarter();
+
+            quarterLocker[rE][mK].push(stakeables[i]);
+            contractTracker[uQ][comQ][mK] = (stakeables[i]);
+            unchecked { i++; }
+        }
+
+    }
+
+    function calldates(uint256 ts) internal returns (uint256 cQ) {
+
+        (uint256 year, uint256 key, uint256 day) = ts.timestampToDate();
+
+        uint256 quarter = 0;
+        unchecked { 
+            quarter = (key - 1) / 3;
+            cQ = year * 4 + quarter;
+        }
+
+        uint256 startQuarter = cQ;
+        if (day > 14) {
+            quarter = (key) / 3;
+            unchecked { startQuarter = year * 4 + quarter; }
+        }
+
+        address[] memory locker = quarterLocker[cQ][key];
+        uint256 contractTotal = locker.length;
+
+        for(uint256 i = 0; i < contractTotal; i++) {
+            GlobalDollarT token = GlobalDollarT(locker[i]);
+            uint256 comQ = token.committedQuarters();
+
+            delete contractTracker[cQ][comQ][key];
+
+            token.update(cQ, key, ts);
+            uint256 nQ = token.comingQuarter();
+            uint256 uQ = token.unlockQuarter();
+            uint256 nK = token.monthKey();
+
+            quarterLocker[nQ][nK].push(locker[i]);
+            contractTracker[uQ][comQ][nK] = locker[i];
+
+            unchecked { i++; }
+
+        }
+
+        delete quarterLocker[cQ][key];
+        
+        lastUpdatedTime = cQ;
+        updatedStartQuarter = startQuarter;
+        lastTimeStamp = ts;
+    }
+
+    function _getCurrentQuarter(uint256 ts) internal pure returns(uint256 cQ) {
+        (uint256 year, uint256 key,) = ts.timestampToDate();
+
+        uint256 quarter = 0;
+        unchecked {
+            quarter = (key - 1) / 3;
+            cQ = year * 4 + quarter;
+        }
+    }
+
+    function _generateEntries(uint256 ts) internal pure returns(uint256 sQ, uint256 kE){
+
+        (uint256 year, uint256 key, uint256 day) = ts.timestampToDate();
+        uint256 quarter;
+        unchecked { quarter = (key - 1) / 3; }
+
+        sQ = year * 4 + quarter;
+
+        if(day > 14) {
+            unchecked { 
+                key += 1;
+                quarter = (key - 1) / 3;
+                sQ += year * 4 + quarter;
             }
         }
+
+        kE = key;
     }
 
     // Deposit with reentrancy guard
@@ -258,124 +368,112 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         address investor,
         address token,
         uint256 amount,
-        uint8 committedQuarters,
-        uint16 startQuarter,
+        uint256 committedQuarters,
         uint256 incomingRate,
         bytes32 depositHash 
-    ) external payable nonReentrant {        
-        // Calculate total payment, fee, and net amount
+    ) external payable nonReentrant {     
+
         uint256 fee = 0;
+        uint256 gbdAmountOut;
+        uint256 amountIn;
+
+        (uint256 startQuarter, uint256 keyEntry) = _generateEntries(timeStamp);
 
         if (token == address(0)) {
-
-            require(!processedDepositsTs[timeStamp], "Duplicate Timestamp");
-            processedDepositsTs[timeStamp] = true;
-            
-            uint256 nativeAmount = msg.value;
-
-            _finalize(timeStamp, updatedStartQuarter, investor, token, committedQuarters, nativeAmount, incomingRate, nativeAmount, depositHash);
-            emit Deposited(investor, nativeAmount, amount, fee, committedQuarters);
-
+            gbdAmountOut = msg.value;
+            amountIn = msg.value;
+            startQuarter = updatedStartQuarter;
         } else {
-            require (_isAdmin(msg.sender), "Permission Denied");
-            require(!processedDeposits[depositHash], "Duplicate Hash");
-            processedDeposits[depositHash] = true;
-            require(!processedDepositsTs[timeStamp], "Duplicate Timestamp");
-            processedDepositsTs[timeStamp] = true;
+            if(!_isAdmin(msg.sender)) revert NotAuthorized();
 
-            fee = (amount * (depositFeeBps)) / 10000;
-            uint256 baseAmount = (amount * incomingRate) / 1e18;
-            uint256 netAmount = baseAmount - fee;
-            uint256 gbdAmountout = amount - fee;
-
-            uint8 i = stablecoinIndex[token];
-            RateRange memory r = rateRange[i];
-
-            uint256 minRate = (((netAmount * DECIMALS) / GBDr) * r.min) / DECIMALS;
-            uint256 maxRate = (((netAmount * DECIMALS) / GBDr) * r.max) / DECIMALS;
-
-            if (netAmount < minRate || netAmount > maxRate) {
-                gbdAmountout = minRate;
+            if (depositHash != bytes32(0)){
+                if(!processedDeposits[depositHash]) revert HashDuplicated();
+                processedDeposits[depositHash] = true;
             }
 
-            _finalize(timeStamp, startQuarter, investor, token, committedQuarters, amount, incomingRate, gbdAmountout, depositHash);
-            emit Deposited(investor, gbdAmountout, amount, fee, committedQuarters);
-        }
+            // Set amountIn properly so event logs reflect historical data accurately
+            amountIn = amount;
 
-    }
+            fee = (amount * depositFeeBps) / 10000;
+            uint256 baseAmount = (amount * incomingRate) / 1e18;
+            uint256 netAmount = baseAmount - fee;
+            gbdAmountOut = amount - fee;
 
-    function _finalize(uint256 timeStamp, uint16 startQuarter, address investor, address token, uint8 _committedQuarters, uint256 amount, uint256 rate, uint256 _gbdAmountout, bytes32 _depositHash) internal {
-        uint256 startIndex;
-        uint256 endIndex;
-        // Map committed quarter groups to array indices
-        if (_committedQuarters == 2) {
-            startIndex = 0; endIndex = 9;
-        } else if (_committedQuarters == 3) {
-            startIndex = 10; endIndex = 20;
-        } else if (_committedQuarters == 4) {
-            startIndex = 21; endIndex = 32;
-        } else if (_committedQuarters == 5) {
-            startIndex = 33; endIndex = 45;
-        } else if (_committedQuarters == 6) {
-            startIndex = 46; endIndex = 59;
-        } else if (_committedQuarters == 7) {
-            startIndex = 60; endIndex = 74;
-        } else if (_committedQuarters == 8) {
-            startIndex = 75; endIndex = 90;
+            uint256 i = stablecoinIndex[token];
+            RateRange memory r = rateRange[i];
+
+            // Cache constants to prevent multiple runtime lookups
+            uint256 decimalsCached = DECIMALS;
+            uint256 gbdrCached = GBDr;
+
+            uint256 minRate = (((netAmount * decimalsCached) * r.min) / gbdrCached) / decimalsCached;
+            uint256 maxRate = (((netAmount * decimalsCached) * r.max) / gbdrCached) / decimalsCached;
+
+            if (netAmount < minRate || netAmount > maxRate) {
+                gbdAmountOut = minRate;
+            }            
         }
 
         bool minted = false;
+        //address mintedTokenAddress = address(0);
+        uint256 checkMate = startQuarter + committedQuarters;
+        address mintedTokenAddress = contractTracker[checkMate][committedQuarters][keyEntry];
+        GlobalDollarT instance = GlobalDollarT(mintedTokenAddress);
+        instance.mint(investor, gbdAmountOut);
+        minted = true;
+            
+        // 22,000+ gas if I find a way to elminate:
+        uint256 supply = instance.viewSupply();
+        unchecked { supply += gbdAmountOut; }
+        instance.supply(supply);
 
-        address mintedTokenAddress;
+        //if (!minted) revert MintFailed();
 
-        uint16 checkMate = startQuarter + _committedQuarters;
+        // Single operation structural push return assignment
+        Deposit storage d = depositsByUser[investor].push();
+        uint256 termIndex;
+        unchecked { termIndex = depositsByUser[investor].length - 1; }
 
-
-        // --- Mint attempt at Unlock Quarter match ---
-        for (uint256 i = startIndex; i <= endIndex; i++) {
-            GlobalDollarX instance = GlobalDollarX(stakeables[i]);
-            uint16 check = instance.unlockQuarter();
-
-            if (checkMate == check) {
-                instance.mint(investor, _gbdAmountout);
-                minted = true;
-                mintedTokenAddress = stakeables[i];
-                uint256 tokenSupply = instance.viewSupply();
-                uint256 supply = (tokenSupply + _gbdAmountout);
-                instance.supply(supply);
-                break; // exit loop on first mint
-            }
-        }
-
-        uint256 ts = timeStamp;
-
-        depositsByUser[investor].push();
-        uint32 termIndex = uint32(depositsByUser[investor].length - 1);
-        Deposit storage d = depositsByUser[investor][termIndex];
-
-        d.timestamp = ts;
+        d.timestamp = timeStamp;
         d.amountin = amount;
-        d.amountout = _gbdAmountout;
-        d.user = msg.sender;
+        d.amountout = gbdAmountOut;
+        d.rate = incomingRate;
+        d.user = investor;
         d.token = token;
+        d.quartersCommitted = committedQuarters;
+        d.startQuarter = startQuarter;
+        d.key = keyEntry;
+        d.depositTxHash = depositHash;
         d.dividend = mintedTokenAddress;
-        d.quartersCommitted = _committedQuarters;
-        d.depositTxHash = _depositHash;
+
+        depositTimestamps.push(timeStamp);
         
-        depositTimestamps.push(ts);
+        // Combined storage structural references assignments
+        DepositRef memory ref = DepositRef({ user: d.user, depositIndex: termIndex });
+        depositsByTimestamp[d.timestamp] = ref;
+        depositsByHash[d.depositTxHash] = ref;
+        
+        _recordDeposit(d);
 
-        depositsByTimestamp[ts] = DepositRef({ user: investor, depositIndex: termIndex });
-        depositsByHash[_depositHash] = DepositRef({ user: investor, depositIndex: termIndex });
+        emit Deposited(mintedTokenAddress, gbdAmountOut, checkMate, keyEntry, committedQuarters);
+    }
 
-        uint256 nativeAmount = 0;
-        uint256 stableAmount = 0;
-        if (token == address(0)) {
-            nativeAmount = amount;
-        } else {
-            stableAmount = amount;
-        }
+    function _recordDeposit(Deposit storage d) internal {
 
-        ledgerProxy.recordVaultDeposit(investor, token, ts,  nativeAmount, stableAmount, rate, _depositHash);
+        IGlobalLedger.LedgerDepositHandle memory depositData = IGlobalLedger.LedgerDepositHandle({
+            user: d.user,
+            token: d.token,
+            asset: d.dividend,
+            timeStamp: d.timestamp, 
+            nativeAmount: d.amountout,
+            stableAmount: d.amountin,
+            exchangeRate: d.rate,
+            depositHash: d.depositTxHash
+        });
+
+        ledgerProxy.recordVaultDeposit(
+            depositData
+        );
     }
 
     function withdraw(
@@ -385,118 +483,196 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         uint256 timeStamp
     ) external payable nonReentrant {
 
+        uint256 currentQuarter = _getCurrentQuarter(lastTimeStamp);
+        uint256 startQuarter = GlobalDollarT(dividendToken).startQuarter();
+        uint256 allowance = IERC20(dividendToken).allowance(msg.sender, address(this));
+        if(allowance < holderBalance) revert InsufficientFunds();
+
         if (holderBalance != 0) {
-            _processInitialWithdraw(dividendToken, payToken, lastUpdatedTime, holderBalance, timeStamp);
+
+            if(!_isWhitelistedx(dividendToken)) revert UnapprovedToken(dividendToken);
+
+            if(currentQuarter <= startQuarter) revert NoEligibleQuarter();       
+
+            // Allocate a new struct slot
+            withdrawalsByUser[msg.sender].push();
+
+            // Get the index of the new struct
+            uint256 termIndex = withdrawalsByUser[msg.sender].length - 1;
+            User storage u = withdrawalsByUser[msg.sender][termIndex];
+
+            u.user = msg.sender;
+            u.dividendToken = dividendToken;
+            u.startQuarter = GlobalDollarT(dividendToken).startQuarter();
+            u.quartersCommitted = GlobalDollarT(dividendToken).committedQuarters();
+            u.unlockQuarter = GlobalDollarT(dividendToken).unlockQuarter();
+            u.userDividendAmount = holderBalance;
+            u.stage = 0;
+
+            _processPayout(
+                WithdrawInit({
+                    user: msg.sender,
+                    dividendToken: dividendToken,
+                    payToken: payToken,
+                    currentQuarter: currentQuarter,
+                    timeStamp: timeStamp
+                })
+            );
+
+            IERC20(dividendToken).safeTransferFrom(msg.sender, address(this), holderBalance);
+
         } else {
-            _processPayout(msg.sender, lastUpdatedTime, timeStamp);
+
+            _processPayout(
+                WithdrawInit({
+                    user: msg.sender,
+                    dividendToken: dividendToken,
+                    payToken: payToken,
+                    currentQuarter: currentQuarter,
+                    timeStamp: timeStamp
+                })
+            ); 
         }
     }
 
     function withdrawAdmin(
         address user,
-        uint16 currentQuarter,
         uint256 timeStamp
     ) external payable onlyOwner {
-        
-        _processPayout(user, currentQuarter, timeStamp);
+
+        uint256 currentQuarter = _getCurrentQuarter(timeStamp);
+
+        _processPayout(
+            WithdrawInit({
+                user: user,
+                dividendToken: address(0),
+                payToken: address(0),
+                currentQuarter: currentQuarter,
+                timeStamp: timeStamp
+            })
+        ); 
     }
 
-    function _processInitialWithdraw(
-        address dividendToken,
-        address payToken,
-        uint16 currentQuarter,
-        uint256 holderBalance,
-        uint256 timeStamp
-    ) internal {
-        (uint16 startQuarter, uint16 unlockQuarter, uint8 committedQuarters, uint8 stageCheck) = computeTermData(dividendToken, currentQuarter);
-
-        require(stageCheck >= 1, "Quarter has not lapsed or unlock quarter not reached");
-
-        IERC20(dividendToken).safeTransferFrom(msg.sender, address(this), holderBalance);
-
-        // Allocate a new struct slot
-        withdrawalsByUser[msg.sender].push();
-
-        // Now get the index of the new struct
-        uint32 termIndex = uint32(withdrawalsByUser[msg.sender].length - 1);
-        User storage u = withdrawalsByUser[msg.sender][termIndex];
-
-        u.user = msg.sender;
-        u.dividendToken = dividendToken;
-        u.payToken = payToken;
-        u.startQuarter = startQuarter;
-        u.quartersCommitted = committedQuarters;
-        u.unlockQuarter = unlockQuarter;
-        u.userDividendAmount = holderBalance;
-        u.finalize = false;
-
-        uint8 stage = 0;
-
-        if (stageCheck >= 1) {
-
-            _handlePayout(u, stage, stageCheck, startQuarter, termIndex, timeStamp); 
-
-        } else {
-            revert("Payout for not available or payout has been processed");
-        }       
-            
-    }
-
-    function _findEligibleTerm(address user, uint16 currentQuarter)
-        internal
-        view
-        returns (uint32)   // <-- return uint16 instead of uint256
-    {
-        User[] memory terms = withdrawalsByUser[user];
-
+    function _processPayout(WithdrawInit memory init) internal {
+        User[] storage terms = withdrawalsByUser[init.user];
         uint256 len = terms.length;
 
-        for (uint256 i = len; i > 0; i--) {
-            User memory u = terms[i - 1];
+        // Cache parameters to local stack variables
+        uint256 allocationSize = len > 100 ? len - 100 : 0;        
 
-            // Skip if struct has been finalized
-            if (u.finalize) continue;
+        // Loop corrected to safely read from 0 to (len - 1) backwards
+        for (uint256 i = len; i > allocationSize; i--) {
+            uint256 termIndex;
+            unchecked { termIndex = i - 1;}
 
-            // compute stage using your existing logic
-            (,,, uint8 stage) = computeTermData(u.dividendToken, currentQuarter);
+            User storage u = terms[termIndex];
 
-            if (stage <= u.quartersCommitted && u.amountout[stage - 1] == 0) {
-                return uint32(i - 1);   // <-- safe cast
+            // Combined Early Exit Gates
+            //address divToken = u.dividendToken;
+
+            if (u.user == address(0) || u.stage >= u.quartersCommitted) {
+                continue;
             }
+
+            // Math execution safely bounded under explicit check
+            if (init.currentQuarter <= u.startQuarter) {
+                continue;
+            }
+
+            uint256 stageCheck;
+            unchecked {
+                stageCheck = init.currentQuarter - u.startQuarter;
+            }
+
+            _handlePayout(u,
+                WithdrawHandle({
+                    payToken: init.payToken,
+                    stageCheck: stageCheck,
+                    termIndex: termIndex,
+                    timeStamp: init.timeStamp
+                })
+            );
         }
 
-        revert("No eligible unpaid term found");
+        //emit FundsWithdrawn(init.user, msg.sender, allocationSize);
     }
 
-    function computeTermData(
-        address dividendToken,
-        uint16 currentQuarter
-    )
-        internal
-        view
-        returns (
-            uint16 startQuarter,
-            uint16 unlockQuarter,
-            uint8 committedQuarters,
-            uint8 stageCheck
-        )
-    {
+    function _handlePayout(
+        User storage u,
+        WithdrawHandle memory h
+    ) internal {
+        uint256 payout = 0;
+        uint256 ts = h.timeStamp;
 
-        unlockQuarter = GlobalDollarX(dividendToken).unlockQuarter();
-        committedQuarters = GlobalDollarX(dividendToken).committedQuarters();
+        // Fetch external token details ONCE here instead of down in the loops
+        uint256 fromTs = GlobalDollarT(u.dividendToken).contractTime();
+        uint256 monthDiff = fromTs.diffMonths(ts);
 
-        startQuarter = unlockQuarter - committedQuarters;
+        for (uint256 i = u.stage; i < h.stageCheck; i++) {
+            
+            // Time rules evaluation using cached parameter registers
+            if (monthDiff < ((i + 1) * 3)) {
+                continue;
+            }
 
-        require(currentQuarter >= startQuarter, "Quarter not reached");
+            if (u.amountout[i] != 0) {
+                continue;
+            }
 
-        stageCheck = uint8(currentQuarter - startQuarter);
+            uint256 payoutQuarter = (u.startQuarter + 1) + i;
+            EcoQuarterData memory g = ecoDataByQuarter[payoutQuarter];
 
+            if (g.ecoPool == 0 || g.ecoSupply == 0) {
+                continue;
+            }
+
+            // Write state records efficiently
+            u.termSupplyPerStage[i] = g.ecoSupply;
+            u.poolBalancePerStage[i] = g.ecoPool;
+            
+            payout = _computePayout(u, payoutQuarter);
+            u.amountout[i] = payout;
+            
+            // Safe structural element alignment without modifying your loop counter
+            if (i > 0) {
+                if ((u.payToken[i] == address(0) && h.payToken == address(0)) || u.autoPay) {
+                    u.payToken[i] = u.payToken[i - 1]; 
+                }
+            }
+
+            unchecked { ts += i; } 
+
+            withdrawByTimestamp[ts] = Withdraw(
+                msg.sender,
+                h.termIndex,
+                i
+            );
+            withdrawTimestamps.push(ts);
+
+            // Changed evaluation expression into explicit variable assignment
+            bool status = (i + 1) == u.quartersCommitted;
+            bool initiationStatus = (i == 0);
+
+            _recordWithdrawal(u, h,
+                LedgerHandle({
+                    stage: i,
+                    termIndex: h.termIndex,
+                    payout: payout,
+                    ts: ts,
+                    status: status,
+                    initiationStatus: initiationStatus
+                })
+            );
+
+            emit FundsWithdrawn(u.payToken[i], msg.sender, payout);
+
+            u.stage = i;
+        }
     }
 
     function _computePayout(
         User storage u,
-        uint16 currentQuarter,
-        uint8 stageCheck
+        uint256 currentQuarter
     )
         internal
         view
@@ -504,143 +680,54 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             uint256 payout
         )
     {
-
-        // --- Pool for current stage ---]
-        uint256 ecoPool = ecoDataByQuarter[currentQuarter].ecoPool;
+        // Single read operation fetches everything we need for the quarter
+        EcoQuarterData storage g = ecoDataByQuarter[currentQuarter];
         
-        uint256 effectiveRawSupply = 0;
-        for (uint256 i = 0; i < stakeables.length; i++) {
-            address token = stakeables[i];
-            uint256 tokenSupply = GlobalDollarX(token).viewSupply();
-            effectiveRawSupply += (tokenSupply * multiplier[token]) / 100;
-        }
+        uint256 ecoPool = g.ecoPool - g.ecoRedemptions;
+        uint256 effectiveRawSupply = g.effectiveRawSupply;
 
-        uint256 effectiveStake = (u.userDividendAmount * multiplier[u.dividendToken]) / 100;
+        // Guardrail safety gate checking
+        if(effectiveRawSupply == 0) revert QuarterNotCalculated();
 
-        //User pro-rata share
+        // Local variable caching allocation layers
+        uint256 userDivAmount = u.userDividendAmount;
+        address divToken = u.dividendToken;
+
+        uint256 effectiveStake = (userDivAmount * multiplier[divToken]) / 100;
+
+        // Pro-rata mathematical distribution calculation
         uint256 dividend = (ecoPool * effectiveStake) / effectiveRawSupply;
 
-
-        if ((stageCheck + 1) == u.quartersCommitted) {
-            payout = dividend + u.userDividendAmount;
-        } else {
-            payout = dividend;
-        }
-        
-    }
-
-    function _processPayout(
-        address user,
-        uint16 currentQuarter,
-        uint256 timeStamp
-    ) internal {
-
-        uint32 termIndex = _findEligibleTerm(user, currentQuarter);
-
-        User storage u = withdrawalsByUser[user][termIndex];
-
-        require(u.user != address(0), "No prior withdrawal found");
-        if (u.finalize) revert("All payouts completed");
-
-        // --- Compute payout for this stage ---
-        (uint16 startQuarter,,, uint8 stageCheck) = computeTermData(u.dividendToken, currentQuarter);
-
-        // --- Determine last completed stage ---
-        uint8 stage = 0;
-        for (uint8 i = 0; i < u.quartersCommitted; i++) {
-            if (u.amountout[i] == 0) {
-                stage = i;
-                break;
+        unchecked {
+            if ((currentQuarter - u.startQuarter) >= u.quartersCommitted) {
+                payout = dividend + userDivAmount;
+            } else {
+                payout = dividend;
             }
         }
-
-        // --- Determine next stage (sequential enforcement) ---
-        require(stage < u.quartersCommitted, "No more payouts");
-        require((stageCheck - 1) >= stage, "Next stage not unlocked yet");
-
-        uint8 align = stageCheck - (stage + 1);
-
-        if (align >= 1) {
-
-            // --- Write payout to the correct stage ---
-            _handlePayout(u, stage, stageCheck, startQuarter, termIndex, timeStamp); 
-
-        } else {
-            revert("Payout for not available or payout has been processed");
-        }
     }
 
-    function _handlePayout(
-        User storage u,
-        uint8 stage,
-        uint8 stageCheck,
-        uint16 startQuarter,
-        uint32 termIndex,
-        uint256 timeStamp
-    ) internal {
+    function _recordWithdrawal(User storage u, WithdrawHandle memory handle, LedgerHandle memory w) internal {
 
-        uint256 payout = 0;
-        uint256 ts = timeStamp;
-        uint8 end = stageCheck - 1;
+        IGlobalLedger.LedgerWithdrawHandle memory withdrawData = IGlobalLedger.LedgerWithdrawHandle({
+            user: u.user,
+            token: address(0),
+            asset: u.dividendToken,
+            payoutAmount: u.amountout[w.stage],
+            principalSlice: 0, //Venture Only
+            investmentAmount: u.userDividendAmount,
+            timeStamp: w.ts,
+            status: w.status, //Vault Only
+            initiationStatus: w.initiationStatus
+        });
 
-        for (uint8 i = stage; i < end; i++) {
-
-            uint16 payoutQuarter = (startQuarter + 1) + i;
-
-            EcoQuarterData storage g = ecoDataByQuarter[payoutQuarter];
-
-            if (g.currentQuarter == 0) {
-                g.currentQuarter = payoutQuarter;
-            }
-
-            if (g.ecoPool == 0 || g.ecoSupply == 0 || u.amountout[i] != 0)
-                continue;
-
-            u.termSupplyPerStage[i] = g.ecoSupply;
-            u.poolBalancePerStage[i] = g.ecoPool;
-            
-            payout = _computePayout(u, payoutQuarter, i);
-            u.amountout[i] = payout;
-
-            ts = timeStamp + i; // Ensure unique timestamp for each stage payout
-
-            withdrawByTimestamp[ts] = Withdraw(
-                msg.sender,
-                termIndex,
-                i
-            );
-
-            withdrawTimestamps.push(ts);
-
-            // --- Ledger Logic && Update---//
-
-            bool status = (i + 1) == u.quartersCommitted;
-            if (status) u.finalize = true;
-
-            //_ledgerWithdraw(u, i, termIndex, payout, ts, status);
-            (uint256[22] memory amountOut) = ledgerProxy.vaultWithdraw(msg.sender, address(0), u.dividendToken,  payout, u.userDividendAmount, ts, status);
-        
-            stagePayouts[u.user][termIndex][i] = amountOut;
-            
-        }
+        (uint256[] memory amountOut) = ledgerProxy.vaultWithdraw(
+            withdrawData
+        );
+        stagePayouts[u.user][handle.termIndex][w.stage] = amountOut;
     }
 
-    /*function _ledgerWithdraw(
-        User storage u,
-        uint8 stage2,
-        uint32 termIndex,
-        uint256 payout,
-        uint256 ts,
-        bool status
-    ) internal {
-            
-        (uint256[22] memory amountOut) = ledgerProxy.vaultWithdraw(msg.sender, address(0), u.dividendToken,  payout, u.userDividendAmount, ts, status);
-        
-        stagePayouts[u.user][termIndex][stage2] = amountOut;
-
-    }*/
-
-    function computeGlobalPoolRange(uint16 currentQuarter)
+    function computeGlobalPoolRange(uint256 ts)
         public
         returns (
             uint256 poolMin,
@@ -649,395 +736,331 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             uint256 totalEcoSupply
         )
     {
-        if (currentQuarter != lastUpdatedTime) {
-            calldates(currentQuarter);
-        }
+        uint256 cQ = _getCurrentQuarter(ts);
+        (, uint256 key,) = ts.timestampToDate();
+        EcoQuarterData storage g = ecoDataByQuarter[cQ];
 
-        uint256 n = stakeables.length;
-
-        uint256 total = 0;
-        uint256 principalBase = 0;     // payout token units
-        uint256 unlockPrincipal = 0;   // payout token units
-
-        uint256 minRate = 30;  // 3%
-        uint256 maxRate = 120; // 12%
-
-
-        EcoQuarterData storage g = ecoDataByQuarter[currentQuarter];
+        uint256 total;
+        uint256 unlockPrincipal;
+        uint256 effectiveRawSupply;
 
         // ---------------------------------------------
         // CASE 1: ecoSupply already exists → READ ONLY
         // ---------------------------------------------
         if (g.ecoSupply > 0) {
-
             total = g.ecoSupply;
             poolMin = g.poolMin;
             poolMax = g.poolMax;
 
-            if (g.ecoRedemptions == 0){
-                
-                _handleCompute(currentQuarter, n);
-
+            if (g.ecoRedemptions == 0) {
+                (unlockPrincipal, effectiveRawSupply, total) = _handleCompute(cQ, key);
                 g.ecoRedemptions = unlockPrincipal;
+                
+                uint256 minDividend = (total * MIN_RATE) / 1000;
+                uint256 maxDividend = (total * MAX_RATE) / 1000;
+                
+                unchecked {
+                    poolMin = unlockPrincipal + minDividend;
+                    poolMax = unlockPrincipal + maxDividend;
+                }
+                
+                g.poolMin = poolMin;
+                g.poolMax = poolMax;
+                g.effectiveRawSupply = effectiveRawSupply; //Cache on late-computation
             }
             
-            redemptions = g.ecoRedemptions;
-
-            return (poolMin, poolMax, redemptions, total); // Done
+            return (poolMin, poolMax, g.ecoRedemptions, total);
         }
 
         // ---------------------------------------------
-        // CASE 2: ecoSupply == 0 → INITIALIZE OR UPDATE
+        // CASE 2: ecoSupply == 0 → INITIALIZE
         // ---------------------------------------------
+        (unlockPrincipal, effectiveRawSupply, total) = _handleCompute(cQ, key);
 
-        if (g.ecoSupply == 0) {
+        uint256 minDiv = (total * MIN_RATE) / 1000;
+        uint256 maxDiv = (total * MAX_RATE) / 1000;
 
-            // First pass: compute total supply
-            _handleCompute(currentQuarter, n);
-
-
-            uint256 minDividend = (principalBase * minRate) / 1000;
-            uint256 maxDividend = (principalBase * maxRate) / 1000;
-
-            poolMin = minDividend;
-            poolMax = maxDividend;
-
-            // Initialize or update struct
-            if (g.currentQuarter == 0) {
-                // First-time creation
-                g.currentQuarter = currentQuarter;
-                g.ecoSupply = total;
-                g.ecoRedemptions = unlockPrincipal;
-                g.poolMin = unlockPrincipal + minDividend;
-                g.poolMax = unlockPrincipal + maxDividend;
-
-            } else {
-                // Struct exists → update supply
-                g.ecoSupply = total;
-                g.ecoRedemptions = unlockPrincipal;
-                g.poolMin = unlockPrincipal + minDividend;
-                g.poolMax = unlockPrincipal + maxDividend;
-            }
+        unchecked {
+            poolMin = unlockPrincipal + minDiv;
+            poolMax = unlockPrincipal + maxDiv;
         }
+        redemptions = unlockPrincipal;
+
+        g.currentQuarter = cQ;
+        g.ecoSupply = total;
+        g.ecoRedemptions = unlockPrincipal;
+        g.poolMin = poolMin;
+        g.poolMax = poolMax;
+        g.effectiveRawSupply = effectiveRawSupply; // Cache on first-time setup
 
         return (poolMin, poolMax, redemptions, total);
     }
 
-    function _handleCompute (
-        uint16 currentQuarter,
-        uint256 n
-    ) internal view returns (uint256 unlockPrincipal, uint256 total) {
+    function _handleCompute(
+        uint256 cQ,
+        uint256 key
+    ) internal view returns (uint256 unlockPrincipal, uint256 effectiveRawSupply, uint256 total) {
+        // 1. Cache storage array locally to prevent reading array length from storage on every iteration
+        address[] memory tokens = stakeables;
+        uint256 len = tokens.length;
 
-        for (uint256 i = 0; i < n; i++) {
-            address token = stakeables[i];
+        for (uint256 i = 0; i < len;) {
+            address token = tokens[i];
+            
+            // Fetch data sequentially. If the first check fails, we don't waste gas fetching uQ or mK.
+            uint256 sQ = GlobalDollarT(token).startQuarter();
+            
+            // Flattened logical conditions: drastically reduces JUMPDEST instruction generation
+            if (cQ > sQ) {
+                uint256 uQ = GlobalDollarT(token).unlockQuarter();
+                
+                if (cQ <= uQ) {
+                    uint256 mK = GlobalDollarT(token).monthKey();
+                    
+                    if (mK <= key) {
+                        uint256 eligibleSupply = GlobalDollarT(token).viewSupply();
 
-            uint16 unlockQuarter = GlobalDollarX(token).unlockQuarter();
-            uint8 committedQuarters = GlobalDollarX(token).committedQuarters();
+                        // 3. Keep all arithmetic in a single unchecked block to reduce overhead
+                        unchecked { 
+                            total += eligibleSupply; 
+                            effectiveRawSupply += (eligibleSupply * multiplier[token]) / 100;
 
-            uint16 startQuarter = unlockQuarter - committedQuarters;
-
-            if (currentQuarter <= startQuarter) continue;
-
-            uint8 stageCheck = uint8(currentQuarter - startQuarter);
-
-            if (stageCheck >= 1) {
-                uint256 supply = GlobalDollarX(token).viewSupply();
-                total += supply;
-                if (currentQuarter <= unlockQuarter && currentQuarter > startQuarter) {
-                    unlockPrincipal += supply;
+                            if (cQ == uQ && mK == key) {
+                                unlockPrincipal += eligibleSupply;
+                            }
+                        }
+                    }
                 }
             }
+
+            unchecked { i++; }
         }
     }
 
     function addToDividendPools(
         uint256 poolAmount,
-        uint16 currentQuarter,
-        uint256 timeStamp,
+        uint256 ts,
         bytes32 depositHash
     ) external payable onlyOwner nonReentrant {
-
-        if (currentQuarter != lastUpdatedTime) {
-            calldates(currentQuarter);
-        }
-        
-        if ((currentQuarter + 1) != updatedStartQuarter) {
-            updatedStartQuarter = currentQuarter + 1;
-        }
+        uint256 currentQuarter = calldates(ts);
 
         EcoQuarterData storage g = ecoDataByQuarter[currentQuarter];
+        if(g.ecoSupply == 0) revert QuarterNotCalculated();
+
+        uint256 currentPool = g.ecoPool;
         uint256 newTotal;
 
-        // If pool has never been set, allow initialization
-        if (g.ecoSupply == 0) {
+        if (currentPool != 0) {
+            // Safe evaluation ordering to prevent underflow crashes
+            newTotal = currentPool + poolAmount;
 
-            revert("Pool Values Not Determined.. Must compute quarter global ranges");
-
-        } else {
-
-            // If pool already exists, ensure we are not exceeding limits
-            newTotal = g.ecoPool + poolAmount - g.ecoRedemptions;
-
-
-            if (newTotal > (g.poolMax - g.ecoRedemptions)) { 
-                g.ecoPool = g.poolMax - g.ecoRedemptions;
-            } else if (newTotal < (g.poolMin - g.ecoRedemptions)) { 
-                revert("Pool amount is not sufficient");
+            if (newTotal > g.poolMax) { 
+                g.ecoPool = g.poolMax;
+                newTotal = g.poolMax; // Sync variable for ledger reporting accuracy
+            } else if (newTotal < g.poolMin) { 
+                revert InvalidPoolAmount(g.poolMin, newTotal);
             } else {
-                // Update pool
                 g.ecoPool = newTotal;
             }
+        } else {
+            // Base initialization path
+            g.ecoPool = poolAmount;
+            newTotal = poolAmount;
         }
 
-        ledgerProxy.recordVaultPoolDeposit(payoutToken, address(this), timeStamp, newTotal, depositHash);
+        ledgerProxy.recordVaultPoolDeposit(
+            IGlobalLedger.LedgerPoolHandle({
+                currency: payoutToken,
+                callingContract: address(this),
+                timeStamp: ts,
+                nativeAmount: newTotal,
+                depositHash: depositHash
+            })
+        );
+    }
+
+    function populateGlobals() public {
+        if(msg.sender != owner()) revert NotAuthorized();
+        
+        for (uint256 i = 0; i < stakeables.length; i++) {
+            if (i <= 29) {
+                multiplier[stakeables[i]] = 110;
+            } else if (i <= 62) {
+                multiplier[stakeables[i]] = 115;
+            } else if (i <= 98) {
+                multiplier[stakeables[i]] = 120;
+            } else if (i <= 137) {
+                multiplier[stakeables[i]] = 130;
+            } else if (i <= 179) {
+                multiplier[stakeables[i]] = 140;
+            } else if (i <= 224) {
+                multiplier[stakeables[i]] = 150;
+            } else if (i <= 272) {
+                multiplier[stakeables[i]] = 160;
+            }
+        }
+        
+        {
+
+            rateRange[0]  = RateRange(RATE_100, RATE_100);
+            rateRange[1]  = RateRange(RATE_102, RATE_098);
+            rateRange[3]  = RateRange(RATE_102, RATE_098);
+            rateRange[5]  = RateRange(RATE_102, RATE_098);
+            rateRange[9]  = RateRange(RATE_102, RATE_098);
+            rateRange[11] = RateRange(RATE_102, RATE_098);
+            rateRange[12] = RateRange(RATE_102, RATE_098);
+            rateRange[13] = RateRange(RATE_102, RATE_098);
+
+            rateRange[14] = RateRange(RATE_069, RATE_065);
+
+            rateRange[2]  = RateRange(RATE_076, RATE_072);
+
+            rateRange[4]  = RateRange(RATE_112, RATE_108);
+            rateRange[19] = RateRange(RATE_112, RATE_108);
+
+            rateRange[6]  = RateRange(RATE_100, RATE_097);
+
+            rateRange[7]  = RateRange(RATE_0073, RATE_0065);
+
+            rateRange[8]  = RateRange(RATE_062, RATE_058);
+
+            rateRange[10] = RateRange(RATE_076, RATE_074);
+
+            rateRange[15] = RateRange(RATE_064, RATE_054);
+
+            rateRange[16] = RateRange(RATE_021, RATE_019);
+
+            rateRange[17] = RateRange(RATE_130, RATE_120);
+
+            rateRange[18] = RateRange(RATE_033, RATE_030);
+
+            rateRange[20] = RateRange(RATE_100, RATE_100);
+            rateRange[21] = RateRange(RATE_100, RATE_100);
+        }
 
     }
 
-    // ==================================================================
-    // Possible for future payouts in Platform Currency **Needs Updating
-    // ==================================================================
+    function getQuarterData(uint256 cQ) external view returns(EcoQuarterData memory) {
+        if(!_isAdmin(msg.sender)) revert NotAuthorized();
+        return ecoDataByQuarter[cQ];
+    }
 
-    /*function batchWithdraw() external onlyOwner {
-        require(payoutAddress != address(0), "Payout address not set");
-        for (uint256 i = 0; i < stablecoins.length; i++) {
-            address token = stablecoins[i];
-            if (!stablecoinWhitelistMap[token]) continue;
-            uint256 tokenBalance = IERC20(token).balanceOf(address(this));
-            if (tokenBalance > 0) {
-                //IERC20(token).safeTransfer(payoutAddress, tokenBalance);
-                totalWithdrawn += tokenBalance;
-                emit FundsWithdrawn(token, payoutAddress, tokenBalance);
-            }
-        }
-    }*/
-
-    function populateMultipliers() public {
-        for (uint256 i = 0; i < stakeables.length; i++) {
-            if (i <= 9) {
-                multiplier[stakeables[i]] = 110;
-                quartersCommitted[stakeables[i]] = 2;
-            } else if (i <= 20) {
-                multiplier[stakeables[i]] = 115;
-                quartersCommitted[stakeables[i]] = 3;
-            } else if (i <= 32) {
-                multiplier[stakeables[i]] = 120;
-                quartersCommitted[stakeables[i]] = 4;
-            } else if (i <= 45) {
-                multiplier[stakeables[i]] = 130;
-                quartersCommitted[stakeables[i]] = 5;
-            } else if (i <= 59) {
-                multiplier[stakeables[i]] = 140;
-                quartersCommitted[stakeables[i]] = 6;
-            } else if (i <= 74) {
-                multiplier[stakeables[i]] = 150;
-                quartersCommitted[stakeables[i]] = 7;
-            } else if (i <= 90) {
-                multiplier[stakeables[i]] = 160;
-                quartersCommitted[stakeables[i]] = 8;
-            }
-        }
-
-        rateRange[0]  = RateRange(RATE_102, RATE_098);
-        rateRange[1]  = RateRange(RATE_102, RATE_098);
-        rateRange[3]  = RateRange(RATE_102, RATE_098);
-        rateRange[5]  = RateRange(RATE_102, RATE_098);
-        rateRange[9]  = RateRange(RATE_102, RATE_098);
-        rateRange[11] = RateRange(RATE_102, RATE_098);
-        rateRange[12] = RateRange(RATE_102, RATE_098);
-        rateRange[13] = RateRange(RATE_102, RATE_098);
-
-        rateRange[14] = RateRange(RATE_069, RATE_065);
-
-        rateRange[2]  = RateRange(RATE_076, RATE_072);
-
-        rateRange[4]  = RateRange(RATE_112, RATE_108);
-        rateRange[19] = RateRange(RATE_112, RATE_108);
-
-        rateRange[6]  = RateRange(RATE_100, RATE_097);
-
-        rateRange[7]  = RateRange(RATE_0073, RATE_0065);
-
-        rateRange[8]  = RateRange(RATE_062, RATE_058);
-
-        rateRange[10] = RateRange(RATE_076, RATE_074);
-
-        rateRange[15] = RateRange(RATE_064, RATE_054);
-
-        rateRange[16] = RateRange(RATE_021, RATE_019);
-
-        rateRange[17] = RateRange(RATE_130, RATE_120);
-
-        rateRange[18] = RateRange(RATE_033, RATE_030);
-
-        rateRange[20] = RateRange(RATE_100000, RATE_100000);
-        rateRange[23] = RateRange(RATE_100000, RATE_100000);
-
-        rateRange[22] = RateRange(RATE_16000, RATE_16000);
-        rateRange[24] = RateRange(RATE_16000, RATE_16000);
-
-        rateRange[22] = RateRange(RATE_600, RATE_600);
-
+    function updateProcessTs(uint256 ts) external {
+        processWithdrawTimestamp = ts;
     }
 
     function getUserTermCount(address user) external view returns (uint256) {
         return withdrawalsByUser[user].length;
     }
 
-    function getUserWithdrawals(address user)
-        external
-        view
-        returns (User[] memory)
-    {
-        return withdrawalsByUser[user];
+    function getUserDepositCount(address user) external view returns (uint256) {
+        return depositsByUser[user].length;
     }
 
-    function getUserCurrentTerm(address user)
-        external
-        view
-        returns (User memory)
-    {
-        uint32 index = uint32(withdrawalsByUser[msg.sender].length - 1);
+    function getDepositTimestampCount() external view returns (uint256[] memory) {
+        return depositTimestamps;
+    }
+
+    function getWithdrawTimestampCount() external view returns (uint256[] memory) {
+        return withdrawTimestamps;
+    }
+
+    function getStagePayouts(address user, uint256 term, uint256 stage) public view returns(uint256[] memory) {
+        return stagePayouts[user][term][stage];
+    }
+
+    function getWithdrawalUser(address user, uint256 index) external view returns (User memory) {
+        if (!_isAdmin(msg.sender) || msg.sender != user) revert NotAuthorized();
         return withdrawalsByUser[user][index];
     }
 
-    function getUserDepositCount(address user) external view returns (uint256) {
-        return depositTimestampsByUser[user].length;
+    function getDepositUser(address user, uint256 index) external view returns (Deposit memory) {
+        if (!_isAdmin(msg.sender) || msg.sender != user) revert NotAuthorized();
+        return depositsByUser[user][index];
     }
 
-    function getUserDeposit(address user)
-        external
-        view
-        returns (Deposit[] memory)
-    {
-        return depositsByUser[user];
-    }
+    function updateUser(address user, address addressToUpdate, address dividendToken) external {
+        address addr;
 
-    function getQuarterData(uint16 quarter) external view returns (EcoQuarterData memory) {
-        return ecoDataByQuarter[quarter];
-    }
+        if (!_isAdmin(msg.sender)){addr = msg.sender;}
+        if (_isAdmin(msg.sender)){addr = user;}
 
-    function changePayoutToken(address newToken) external {
-        uint256 len = withdrawalsByUser[msg.sender].length;
-        require(len > 0, "No withdrawals found");
+        uint256 len = withdrawalsByUser[addr].length;
 
-        // Get the most recent withdrawal entry
-        User storage u = withdrawalsByUser[msg.sender][len - 1];
+        for (uint256 i = len; i > 0; i--) {
+            User storage u = withdrawalsByUser[addr][i - 1];
 
-        // Only the current payout address can change it
-        require(msg.sender == u.user, "Not authorized");
 
-        u.payToken = newToken;
-    }
+            if (u.dividendToken == dividendToken) {
 
-    function changePayoutAddress(address newUser) external onlyOwner {
-        uint256 len = withdrawalsByUser[msg.sender].length;
-        require(len > 0, "No withdrawals found");
+                // Skip if struct has been finalized
+                if (u.stage + 1 >= u.quartersCommitted) continue;
 
-        // Get the most recent withdrawal entry
-        User storage u = withdrawalsByUser[msg.sender][len - 1];
-
-        // Only the current payout address can change it
-        require(msg.sender == u.user, "Not authorized");
-
-        u.user = newUser;
-    }
-
-    function autoPay() external {
-        uint256 len = withdrawalsByUser[msg.sender].length;
-        require(len > 0, "No withdrawals found");
-
-        User storage u = withdrawalsByUser[msg.sender][len - 1];
-        u.autoPay = true;
-    }
-
-    function updatePayoutTxHash(
-        address user,
-        bytes32 newTxHash,
-        bytes32 refundHash
-    ) external {
-
-        if (_isAdmin(msg.sender)) {
-
-            // At least one of the supplied hashes must be non-zero
-            if (newTxHash == bytes32(0) && refundHash == bytes32(0)) {
-                revert("No Hash Included In The Transaction Call");
+                u.user = addressToUpdate;
             }
-
-            // Old hash must exist
-            bytes32 old;
-            bytes32 newHash;
-
-            if (newTxHash != bytes32(0)) {
-
-                Withdraw memory wr = withdrawByHash[newTxHash];
-                User storage u = withdrawalsByUser[wr.user][wr.termIndex];
-
-                require(wr.termIndex < withdrawalsByUser[user].length, "Invalid term index");
-                require(!processedDeposits[newTxHash], "Duplicate Hash");
-                processedDeposits[newTxHash] = true;
-
-                require(!u.finalize, "All payouts completed");
-                require(wr.stage <= u.quartersCommitted, "Stage exceeds committed quarters");
-                require(wr.stage < 8, "Stage out of range");
-
-                // Must have a payout computed
-                uint256 payout = u.amountout[wr.stage];
-                require(payout != 0, "Payout not yet computed");
-
-                // Prevent overwriting
-                if (u.payoutTxHash[wr.stage] != bytes32(0)) {
-                    emit UnexpectedPayoutTxHash(
-                        user,
-                        u.unlockQuarter,
-                        u.payoutTxHash[wr.stage],
-                        u.payoutSetter[wr.stage],
-                        payout,
-                        msg.sender
-                    );
-                    return;
-                }
-
-                // Record tx hash
-                u.payoutTxHash[wr.stage] = newTxHash;
-                u.payoutSetter[wr.stage] = msg.sender;
-
-                emit PayoutTxHashCorrected(user, wr.stage, old, newHash, msg.sender);
-
-            } else if (refundHash != bytes32(0)) {
-
-                DepositRef memory r = depositsByHash[refundHash];
-                Deposit storage d = depositsByUser[r.user][r.depositIndex];
-
-                old = d.refundHash;
-                newHash = refundHash;
-
-                // Apply correction
-                d.depositTxHash = refundHash;
-
-                emit PayoutTxHashCorrected(user, 0, old, newHash, msg.sender);
-                
-            } else {
-                revert("Invalid Parameters");
-            }
-        } else {
-            revert("Permission Denied");
         }
     }
 
+    function autoPay(bool ap) external {
+        uint256 len = withdrawalsByUser[msg.sender].length;
+        User[] storage terms = withdrawalsByUser[msg.sender];
+
+        if(len == 0) revert NoEligibleTerms();
+
+        if (!autopayWhitelistMap[msg.sender] && ap) {
+
+            for (uint256 i = len; i > 0; i--) {
+                User storage u = terms[i];
+                if (u.user == address(0)) continue;
+                if ((u.stage + 1) == u.quartersCommitted) continue;
+                u.autoPay = true;
+            }
+
+            autopay.push(msg.sender);
+
+        } else {
+
+            for (uint256 i = len; i > 0; i--) {
+                User storage u = terms[i];
+                if (u.user == address(0)) continue;
+                if ((u.stage + 1) == u.quartersCommitted) continue;
+                u.autoPay = false;
+            }
+
+            uint256 index = autopayIndex[msg.sender];
+            uint256 lastIndex = autopay.length - 1;
+
+            if (index != lastIndex) {
+                address lastAddr = autopay[lastIndex];
+                autopay[index] = lastAddr;
+                
+                autopayIndex[lastAddr] = index;
+
+                autopay.pop();
+                autopayWhitelistMap[msg.sender] = false;
+
+                delete autopayIndex[msg.sender];
+            }
+        }
+
+    }
+
+    function apAddrs() public view returns(address[] memory){
+        if(!_isAdmin(msg.sender)) revert NotAuthorized();
+        return autopay;
+    }
+
     function correctPayoutTxHash(
-        address user,
-        uint32 termIndex,
-        uint8 stage,
+        uint256 stage,
         bytes32 newTxHash,
         bytes32 refundHash
     ) external onlyOwner {
 
-        // Validate term index
-        //require(termIndex < withdrawalsByUser[user].length, "Invalid term index");
+        if(!_isAdmin(msg.sender)) revert NotAuthorized();
 
         // At least one of the supplied hashes must be non-zero
         if (newTxHash == bytes32(0) && refundHash == bytes32(0)) {
-            revert("No Hash Included In The Transaction Call");
+            revert InvalidHash(newTxHash);
         }
 
         // Old hash must exist
@@ -1045,25 +1068,18 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         bytes32 newHash;
 
         if (newTxHash != bytes32(0)) {
-            require(!processedDeposits[newTxHash], "Duplicate Hash");
+            if(processedDeposits[newTxHash]) revert HashDuplicated();
             processedDeposits[newTxHash] = true;
 
             // Load the correct term record
             Withdraw memory wr = withdrawByHash[newTxHash];
-            User storage u = withdrawalsByUser[user][termIndex];
-
-
-            // No corrections allowed after final payout
-            //require(!u.finalize, "All payouts completed");
+            User storage u = withdrawalsByUser[wr.user][wr.termIndex];
 
             // Stage must be within committed quarters
-            require(stage <= u.quartersCommitted, "Stage exceeds committed quarters");
-
-            // Stage must be within array bounds (0–7)
-            //require(stage < 8, "Stage out of range");
-
+            if(stage >= u.quartersCommitted) revert PayoutStageOutofBounds();
+            
             // A payout must exist for this stage before correcting a hash
-            require(u.amountout[stage] != 0, "Payout not yet computed");
+            if(u.amountout[stage] == 0) revert SpendNotApproved();
 
             old = u.payoutTxHash[stage];
             newHash = newTxHash;
@@ -1072,67 +1088,86 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             u.payoutTxHash[wr.stage] = newTxHash;
             u.payoutSetter[wr.stage] = msg.sender;
 
+            emit PayoutTxHashCorrected(wr.user, stage, old, newHash, msg.sender);
+
         } else if (refundHash != bytes32(0)) {
-            require(!processedDeposits[refundHash], "Duplicate Hash");
+            if(!processedDeposits[refundHash]) HashDuplicated;
             processedDeposits[refundHash] = true;
 
             DepositRef memory r = depositsByHash[refundHash];
             Deposit storage d = depositsByUser[r.user][r.depositIndex];
 
-            //old = d.refundHash;
+            old = d.refundHash;
             newHash = refundHash;
 
             // Apply correction
             d.depositTxHash = refundHash;
+
+            emit PayoutTxHashCorrected(r.user, stage, old, newHash, msg.sender);
             
         } else {
-            revert("Invalid Parameters");
+            revert InvalidHash(refundHash);
         }
-
-        emit PayoutTxHashCorrected(user, stage, old, newHash, msg.sender);
     }
 
-    function getDepositsInRange(uint256 startTs, uint256 endTs) public {
+    function getDepositsInRange(uint256 startTs, uint256 endTs, bool process) public {
 
-        if (msg.sender == owner()) {
+        if (process) {
+            if(msg.sender != owner()) revert NotAuthorized();
 
-            for (uint256 i = 0; i < depositTimestamps.length; i++) {
-                uint256 ts = depositTimestamps[i];
-                if (ts >= startTs && ts <= endTs) {
-                    DepositRef memory r = depositsByTimestamp[ts];
-                    Deposit memory w = depositsByUser[r.user][r.depositIndex];
-                    emit DepositInRange(w.timestamp, w.user, w.token, w.dividend, w.quartersCommitted, w.amountin, w.amountout);
-                }
-            }
+            _emitDeposit(processDepositTimestamp, endTs);
+
+            processDepositTimestamp = endTs;
 
         } else {
 
-            require (_isAdmin(msg.sender), "Permission Denied");
+            if(!_isAdmin(msg.sender)) revert NotAuthorized();
 
-            for (uint256 i = 0; i < depositTimestamps.length; i++) {
-                uint256 ts = depositTimestamps[i];
-                if (ts >= startTs && ts <= endTs) {
-                    DepositRef memory r = depositsByTimestamp[ts];
-                    Deposit memory w = depositsByUser[r.user][r.depositIndex];
-                    emit DepositInRange(w.timestamp, w.user, w.token, w.dividend, w.quartersCommitted, w.amountin, w.amountout);
-                }
+            _emitDeposit(startTs, endTs);
+        }
+    }
+
+    function _emitDeposit(uint256 startTs, uint256 endTs) internal {
+        // Cache array length to memory to prevent continuous storage reads (SLOAD)
+        uint256 len = depositTimestamps.length;
+
+        for (uint256 i = 0; i < len;) {
+            uint256 ts = depositTimestamps[i];
+            
+            if (ts >= startTs && ts <= endTs) {
+                // Read pointers to storage instead of copying the whole struct to memory
+                DepositRef storage r = depositsByTimestamp[ts];
+                Deposit storage w = depositsByUser[r.user][r.depositIndex];
+                
+                emit DepositInRange(
+                    w.timestamp, 
+                    w.user, 
+                    w.token, 
+                    w.dividend,
+                    w.quartersCommitted,
+                    w.amountin, 
+                    w.amountout
+                );
             }
+
+            // Use unchecked increments for the loop counter to bypass safety checks
+            unchecked { i++; }
         }
     }
 
     function getWithdrawInRange(uint256 startTs, uint256 endTs, bool process) public {
         if (process) {
-            require(msg.sender == owner(), "Permission Denied");
+            if(msg.sender != owner()) revert NotAuthorized();
+            calldates(endTs);
 
-            uint256 oneMonth = 28 days;
-            if (endTs - processTimestamp < oneMonth) {
-                revert("Withdrawal Process Time Gap Has Not Elapsed");
-            }
+            uint256 diff = endTs.diffDays(processWithdrawTimestamp);
+            if(diff > 25) revert SpendNotApproved();
 
-            _emitWithdrawRange(processTimestamp, endTs);
-            processTimestamp = endTs;
+            _emitWithdrawRange(processWithdrawTimestamp, endTs);
+            processWithdrawTimestamp = endTs;
         } else {
-            require(_isAdmin(msg.sender), "Permission Denied");
+            if(!_isAdmin(msg.sender)) revert NotAuthorized();
+            calldates(endTs);
             _emitWithdrawRange(startTs, endTs);
         }
     }
@@ -1140,43 +1175,175 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     function _emitWithdrawRange(uint256 startTs, uint256 endTs) internal {
         uint256 len = withdrawTimestamps.length;
 
-        for (uint256 i = 0; i < len; ++i) {
+        for (uint256 i = 0; i < len;) {
             uint256 ts = withdrawTimestamps[i];
-            if (ts < startTs || ts > endTs) continue;
+            
+            if (ts >= startTs && ts <= endTs) {
+                // Read directly from storage pointers to avoid copying large structs to memory
+                Withdraw storage r = withdrawByTimestamp[ts];
+                User storage w = withdrawalsByUser[r.user][r.termIndex];
 
-            Withdraw storage r = withdrawByTimestamp[ts];
-            User storage w = withdrawalsByUser[r.user][r.termIndex];
-
-            uint256[22] storage src = stagePayouts[r.user][r.termIndex][r.stage];
-            uint256[] memory sp = new uint256[](22);
-
-            for (uint8 j = 0; j < 22; ++j) {
-                sp[j] = src[j];
+                emit WithdrawInRange(
+                    w.user,
+                    w.amountout[r.stage],
+                    stagePayouts[r.user][r.termIndex][r.stage],
+                    w.payToken[r.stage],
+                    r.termIndex,
+                    r.stage
+                );
             }
 
-            emit WithdrawInRange(
-                w.user,
-                w.amountout[r.stage],
-                sp,
-                w.payToken,
-                r.termIndex,
-                r.stage
-            );
+            unchecked { i++; }
         }
     }
 
-    function addAdmin (address admin) external onlyOwner {
-        admins.push(admin);
+    function stableIndex() external view onlyOwner returns(address[] memory stable) {
+        
+        return stables;
     }
 
-    function removeAdmin (address admin) external onlyOwner {
-        for (uint i = 0; i < admins.length; i++) {
-            if (admins[i] == admin) {
-                admins[i] = admins[admins.length - 1];
+    function stakeableIndex() external view onlyOwner returns(address[] memory stakes) {
+        
+        return stakeables;
+    }
+
+    function adminsIndex() external view onlyOwner returns(address[] memory adns) {
+        
+        return admins;
+    }
+
+    function _additionHelper(address[] memory addresses, bool stc, bool stk, bool adn) internal {
+        uint256 len = addresses.length;
+        
+        for (uint256 i = 0; i < len;) {
+            address sc = addresses[i];
+
+            // Skip if ALREADY added to prevent array bloating
+            if (stc && !stablecoinWhitelistMap[sc]) {
+                stablecoinIndex[sc] = stables.length; // Tracks actual state array position
+                stables.push(sc);
+                stablecoinWhitelistMap[sc] = true;
+            }
+            if (stk && !stakeableWhitelistMap[sc]) {
+                stakeablecoinIndex[sc] = stakeables.length;
+                stakeables.push(sc);
+                stakeableWhitelistMap[sc] = true;
+            }
+            if (adn && !adminWhitelistMap[sc]) {
+                adminIndex[sc] = admins.length;
+                admins.push(sc);
+                adminWhitelistMap[sc] = true;
+            }
+            
+            unchecked { i++; }
+        }
+    } 
+
+    function _removalHelper(address[] memory addresses, bool stc, bool stk, bool adn) internal {
+        uint256 len = addresses.length;
+
+        for (uint256 i = 0; i < len;) {
+            address sc = addresses[i];
+
+            // Process individual types using isolated indexes to prevent state pollution
+            if (stc && stablecoinWhitelistMap[sc]) {
+                uint256 index = stablecoinIndex[sc];
+                uint256 lastIndex = stables.length - 1;
+
+                if (index != lastIndex) {
+                    address lastAddr = stables[lastIndex];
+                    stables[index] = lastAddr;
+                    stablecoinIndex[lastAddr] = index;
+                }
+                stables.pop();
+                stablecoinWhitelistMap[sc] = false;
+                delete stablecoinIndex[sc];
+            }
+
+            if (stk && stakeableWhitelistMap[sc]) {
+                uint256 index = stakeablecoinIndex[sc];
+                uint256 lastIndex = stakeables.length - 1;
+
+                if (index != lastIndex) {
+                    address lastAddr = stakeables[lastIndex];
+                    stakeables[index] = lastAddr;
+                    stakeablecoinIndex[lastAddr] = index;
+                }
+                stakeables.pop();
+                stakeableWhitelistMap[sc] = false;
+                delete stakeablecoinIndex[sc];
+            }
+
+            if (adn && adminWhitelistMap[sc]) {
+                uint256 index = adminIndex[sc];
+                uint256 lastIndex = admins.length - 1;
+
+                if (index != lastIndex) {
+                    address lastAddr = admins[lastIndex];
+                    admins[index] = lastAddr;
+                    adminIndex[lastAddr] = index;
+                }
                 admins.pop();
-                break;
+                adminWhitelistMap[sc] = false;
+                delete adminIndex[sc];
             }
+
+            unchecked { i++; }
         }
+    }
+
+    function addToStableWhitelist(address[] memory stableAddress) external onlyOwner {
+
+        bool stc = true;
+        bool stk = false;
+        bool adn = false;
+
+        _additionHelper(stableAddress, stc, stk, adn);
+    }
+
+    function removeFromStableWhitelist(address[] memory stableAddress) external onlyOwner {
+
+        bool stc = true;
+        bool stk = false;
+        bool adn = false;
+
+        _removalHelper(stableAddress, stc, stk, adn);
+    }
+
+    function addToStakeableWhitelist(address[] memory stakeableAddress) external onlyOwner {
+
+        bool stc = false;
+        bool stk = true;
+        bool adn = false;
+        
+        _additionHelper(stakeableAddress, stc, stk, adn);
+    }
+
+    function removeFromStakeableWhitelist(address[] memory stakeableAddress) external onlyOwner {
+
+        bool stc = false;
+        bool stk = true;
+        bool adn = false;
+
+        _removalHelper(stakeableAddress, stc, stk, adn);
+    }
+
+    function addToAdminWhitelist(address[] memory adminToAdd) external onlyOwner {
+
+        bool stc = false;
+        bool stk = false;
+        bool adn = true;
+       
+        _additionHelper(adminToAdd, stc, stk, adn);
+    }
+
+    function removeFromAdminWhitelist(address[] memory adminToRemove) external onlyOwner {
+
+        bool stc = false;
+        bool stk = false;
+        bool adn = true;
+
+        _removalHelper(adminToRemove, stc, stk, adn);
     }
 
     uint256[50] __gap;
