@@ -49,7 +49,7 @@ const currencyMap: Record<string, string> = {
   GUSD: "USD", PYUSD: "USD", USDP: "USD", FRAX: "USD",
   EURC: "EUR", EURe: "EUR",  USDT: "USD",
   GBPT: "GBP", ARSX: "ARS", INRX: "INR", TRYX: "TRY",
-  NGNT: "NGN", ZARP: "ZAR", BRL1: "BRL", AUDT: "AUD", AUDD: "AUD",
+  NGNT: "NGN", ZARP: "ZAR", BRZ: "BRZ", AUDT: "AUD", AUDD: "AUD",
   JPYC: "JPY", MMXN: "MXN", QCAD: "CAD", XCHF: "CHF", XSGD: "SGD"
 };
 
@@ -58,14 +58,14 @@ const networkMap: Record<string, string> = {
   GUSD: "ethereum", PYUSD: "ethereum", USDP: "ethereum",  XSGD: "ethereum",
   EURC: "ethereum", EURe: "gnosis", USDT: "ethereum", FRAX: "ethereum",
   GBPT: "optimism", ARSX: "arbitrum", INRX: "polygon", TRYX: "avalanche",
-  NGNT: "bsc", ZARP: "polygon", BRL1: "ethereum", AUDT: "ethereum", AUDD: "ethereum",
+  NGNT: "bsc", ZARP: "polygon", BRZ: "ethereum", AUDT: "ethereum", AUDD: "ethereum",
   JPYC: "ethereum", MMXN: "ethereum", QCAD: "ethereum", XCHF: "ethereum",
 };
 
 const redstoneFeeds: Record<string, string> = {
   USDC: "USDC", USDT: "USDT", DAI: "DAI", TUSD: "TUSD", FDUSD: "FDUSD", FRAX: "FRAX",
   PYUSD: "PYUSD", USDP: "USDP", EURC: "EUR", EURe: "EURe", GBPT: "GBP",
-  ARSX: "ARS", INRX: "INR", TRYX: "TRY", NGNT: "NGN", ZARP: "ZAR", BRL1: "BRL",
+  ARSX: "ARS", INRX: "INR", TRYX: "TRY", NGNT: "NGN", ZARP: "ZAR", BRZ: "BRZ",
   AUDT: "AUD", AUDD: "AUD", JPYC: "JPY", MMXN: "MXN", QCAD: "CAD", XCHF: "CHF",
   XSGD: "SGD", GUSD: "GUSD"
 };
@@ -75,7 +75,7 @@ const pythFeeds: Record<string, string> = {
   FDUSD: "Crypto.FDUSD/USD", FRAX: "Crypto.FRAX/USD", PYUSD: "Crypto.PYUSD/USD", USDP: "Crypto.USDP/USD",
   EURC: "Crypto.EUR/USD", EURe: "Crypto.EURe/USD", GBPT: "Forex.GBP/USD",
   ARSX: "Forex.ARS/USD", INRX: "Forex.INR/USD", TRYX: "Forex.TRY/USD", NGNT: "Forex.NGN/USD",
-  ZARP: "Forex.ZAR/USD", BRL1: "Forex.BRL/USD", AUDT: "Forex.AUD/USD", AUDD: "Forex.AUD/USD",
+  ZARP: "Forex.ZAR/USD", BRZ: "Forex.BRZ/USD", AUDT: "Forex.AUD/USD", AUDD: "Forex.AUD/USD",
   JPYC: "Forex.JPY/USD", MMXN: "Forex.MXN/USD", QCAD: "Forex.CAD/USD", XCHF: "Forex.CHF/USD",
   XSGD: "Forex.SGD/USD", GUSD: "Crypto.GUSD/USD"
 };
@@ -100,7 +100,7 @@ const rateGuards: Record<string, { min: number; max: number; fallback?: number }
   QCAD: { min: 0.72, max: 0.76, fallback: 0.74 },
   XCHF: { min: 1.10, max: 1.14, fallback: 1.12 },
   ZARP: { min: 0.054, max: 0.064, fallback: 0.059 },
-  BRL1: { min: 0.19, max: 0.21, fallback: 0.20 },
+  BRZ: { min: 0.19, max: 0.21, fallback: 0.20 },
   MMXN: { min: 0.058, max: 0.062, fallback: 0.060 },
   NGNT: { min: 0.00063, max: 0.00068, fallback: 0.000655 },
   INRX: { min: 0.0118, max: 0.0124, fallback: 0.0121 },
