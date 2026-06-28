@@ -49,8 +49,8 @@ interface VaultPayload {
   txhash: string;
   contractaddress: string;
   useraddress: string;
-  exchangerate: bigint;
-  depositamount: bigint;
+  exchangerate: string;
+  depositamount: string;
   committedquarters: number;
   paymentmethod: string;
   depositstarttime: string;
@@ -188,7 +188,7 @@ export function useDeposit(): UseDepositResult {
             chainStatus = true;
 
           } catch (err) {
-            console.error("Xchange Creation failed")
+            console.error("Vault Deposit failed")
           }
 
           console.log("after try/catch")
@@ -212,8 +212,8 @@ export function useDeposit(): UseDepositResult {
           txhash: dTxHash?.toString() ?? "",
           contractaddress: deployments.SmartVault,
           useraddress: userAddress,
-          exchangerate: rate,
-          depositamount: parsedValue,
+          exchangerate: rate.toString(),
+          depositamount: parsedValue.toString(),
           committedquarters: committedQuarters,
           paymentmethod: token.symbol,
           depositstarttime: startQuarterIndex.toString(),
@@ -245,9 +245,8 @@ export function useDeposit(): UseDepositResult {
           "Unknown error";
 
         console.error("Vault Deposit failed:", revertReason);
-
         throw new Error(revertReason);
-        throw err;
+
       } finally {
         setIsProcessing(false);
       }

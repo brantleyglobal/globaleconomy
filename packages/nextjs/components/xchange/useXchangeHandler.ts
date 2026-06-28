@@ -170,7 +170,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
       const signer = await provider.getSigner();
       const signerAddress = await signer.getAddress();
 
-      if (signerAddress === recipient || signerAddress === recipient2 && isNewContractSelected!) {
+      if ((signerAddress === recipient || signerAddress === recipient2) && isNewContractSelected) {
         console.log("Creating AssetXchange Contract");
 
         const xchangeFactory = new Contract(deployments.GlobalSwapRegistry, GlobalSwapRegistryAbi.abi, signer);
@@ -234,7 +234,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
         try {
           // Step 3: Send transaction directly to contract
-          const tokenTx = await xchangeFactory.createSwap(
+          tokenTx = await xchangeFactory.createSwap(
             recipient,
             recipient2,
             callAddress,
@@ -246,8 +246,8 @@ export function useXchangeHandler(config: TransferHandlerProps) {
             ts,
             { gasLimit: 600_000 }
           );
-          txhash = tokenTx.hash;
-          receipt = await tokenTx.wait();
+          txhash = tokenTx?.hash ?? "";
+          receipt = tokenTx ? await tokenTx.wait() : null;
           console.log("AssetXchange creation confirmed");
 
           if (!receipt) throw new Error("Transaction receipt is null");
@@ -518,10 +518,10 @@ export function useXchangeHandler(config: TransferHandlerProps) {
           useraddress: signerAddress,
           initiator: recipient || "",
           counterparty: recipient2 || "",
-          amounta: parsedValue,
+          amounta: parsedValue?.toString(),
           tokena: selectedToken.address,
           depositahash: hash,
-          amountb: parsedValue2,
+          amountb: parsedValue2?.toString(),
           tokenb: selectedToken2.address,
           depositbhash: hash2,
           paymentmethod: JSON.stringify([selectedToken?.symbol, selectedToken2?.symbol].filter(Boolean)),
@@ -583,28 +583,30 @@ export function useXchangeHandler(config: TransferHandlerProps) {
 
         //****Deposit Log Exception*****//
         if (!isNewContractSelected && !isRefundSelected) {
-          // who had already deposited before this action
-          // bitmask: 1 = A deposited, 2 = B deposited 3 = Both Parties deposited
-
           let newContractFlag;
-          if (swap.newcontract === 2 && isInitiator && dTxHash!){
-            newContractFlag = 3
-            xchangePayload.depositahash = dTxHash;
-          } else if (swap.newcontract === 0 && isInitiator && dTxHash!) {
+          let depositahash = swap.depositahash;
+          let depositbhash = swap.depositbhash;
+
+          if (swap.newcontract === 2 && isInitiator && dTxHash) {
+            newContractFlag = 3;
+            depositahash = dTxHash;
+          } else if (swap.newcontract === 0 && isInitiator && dTxHash) {
             newContractFlag = 1;
-            xchangePayload.depositahash = dTxHash;
+            depositahash = dTxHash;
           }
 
-          if (swap.newcontract === 1 && isCounterparty && dTxHash!){
+          if (swap.newcontract === 1 && isCounterparty && dTxHash) {
             newContractFlag = 3;
-            xchangePayload.depositbhash = dTxHash;
-          } else if (swap.newcontract === 0 && isCounterparty && dTxHash!){
+            depositbhash = dTxHash;
+          } else if (swap.newcontract === 0 && isCounterparty && dTxHash) {
             newContractFlag = 2;
-            xchangePayload.depositbhash = dTxHash;
+            depositbhash = dTxHash;
           }
 
           xchangePayload = {
             newcontract: newContractFlag,
+            depositahash,
+            depositbhash,
             timestamp: new Date().toISOString(),
           };
         }

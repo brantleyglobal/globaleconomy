@@ -21,8 +21,8 @@ interface VaultPayload {
   txhash: string;
   contractaddress: string;
   useraddress: string;
-  exchangerate: bigint;
-  depositamount: bigint;
+  exchangerate: string;
+  depositamount: string;
   committedquarters: number;
   paymentmethod: string;
   depositstarttime: string;
@@ -190,8 +190,8 @@ export function useInfra(): UseDepositResult {
           txhash: dTxHash?.toString() ?? "",
           contractaddress: deployments.RegionInfrastructure,
           useraddress: userAddress,
-          exchangerate: rate,
-          depositamount: parsedValue,
+          exchangerate: rate.toString(),
+          depositamount: parsedValue.toString(),
           committedquarters: committedQuarters,
           paymentmethod: token.symbol,
           depositstarttime: startQuarterIndex.toString(),

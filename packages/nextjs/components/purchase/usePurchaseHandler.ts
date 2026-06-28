@@ -654,15 +654,15 @@ async function handleCryptoPurchase(params: InitiateParams) {
       useraddress: userAddress,
       affiliate: affiliateAddress || "",
       asset: checkoutAsset.id,
-      amount: totalTokenAmount,
-      shipping: shipping,
-      customizations: customizationTotal,
-      exchangerate: exchangeRate,
+      amount: totalTokenAmount.toString(),
+      shipping: shipping.toString(),
+      customizations: customizationTotal.toString(),
+      exchangerate: exchangeRate.toString(),
       quantity,
       configs: bytes32Config,
       paymentmethod: tokenSymbol,
       region, 
-      commission: commmissionTotal || "",
+      commission: commmissionTotal.toString() || "",
       payout,
       refund: false,
       refundhash: "",
@@ -752,6 +752,15 @@ async function handleCryptoPurchase(params: InitiateParams) {
       });
     } else {
       console.warn("Purchase logging failed or returned unexpected response.");
+    }
+
+    const finalHashString = dTxHash && typeof dTxHash === 'object' && 'hash' in dTxHash 
+      ? dTxHash.hash 
+      : dTxHash?.toString() || "";
+
+    // CRITICAL FIX: Push the evaluated string hash into your Zustand store state
+    if (finalHashString) {
+      useCheckoutStore.getState().setField('txhash', finalHashString);
     }
 
     toast.success("Transaction successful.");

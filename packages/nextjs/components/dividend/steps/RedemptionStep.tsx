@@ -36,6 +36,8 @@ type Props = {
   setUserLastName: (val: string) => void;
   userEmail: string;
   setUserEmail: (val: string) => void;
+  receiptHash: string | "";
+  setReceiptHash: (val: string) => void;
   onBack: () => void;
   onNext: () => void;
   onHelpToggle: () => void;
@@ -78,6 +80,8 @@ export default function RedemptionStep({
   setUserLastName,
   userEmail,
   setUserEmail,
+  receiptHash,
+  setReceiptHash,
   onHelpToggle,
   openWalletModal,
   onBack,
@@ -215,6 +219,10 @@ export default function RedemptionStep({
         if (!summary) {
           toast.error("Summary info not available.");
           return;
+        }
+
+        if (receipt) {
+          setReceiptHash(receipt);
         }
 
         const { unlockLabel, eligibilityLabel, multiplier } = summary;

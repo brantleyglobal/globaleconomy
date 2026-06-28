@@ -58,6 +58,8 @@ export const AcquireModal: React.FC<Props> = ({
   const [exchangeRate, setExchangeRate] = useState("");
   const [provider, setProvider] = useState<EthereumProvider | null>(null);
   const [walletName, setWalletName] = useState<string>("");
+
+  const [receiptHash, setReceiptHash] = useState("");
   
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -158,7 +160,7 @@ export const AcquireModal: React.FC<Props> = ({
 
       let receiptx = "";
 
-      const txHash = await deposit(
+      receiptx = await deposit(
         userAction!,
         depositAmount,
         convertedAmount,
@@ -167,6 +169,10 @@ export const AcquireModal: React.FC<Props> = ({
         exchangeRate,
         provider,
       );
+
+      if (receiptx) {
+        setReceiptHash(receiptx);
+      }
 
       console.log("Transaction Hash:", receiptx);
       console.log("Sending Confirmation");
@@ -183,7 +189,7 @@ export const AcquireModal: React.FC<Props> = ({
         receipt: receiptx || "",
       });
 
-      setStep(1);
+      setStep(ModalStep.DoneStep);
       toast.success("Deposit successful and confirmation email sent.");
     } catch (e) {
       toast.error("Error during deposit or email sending.");
@@ -309,7 +315,7 @@ export const AcquireModal: React.FC<Props> = ({
                 }}
               />
             )}
-            {step === ModalStep.DoneStep && <DoneStep onClose={onClose} />}
+            {step === ModalStep.DoneStep && <DoneStep onClose={onClose} receiptHash={receiptHash}/>}
           </div>
         </>
       )}

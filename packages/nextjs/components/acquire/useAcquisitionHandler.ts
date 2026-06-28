@@ -10,9 +10,9 @@ interface AcquisitionPayload {
   txhash: string;
   contractaddress: string;
   useraddress: string;
-  exchangerate: bigint;
-  amountin: bigint;
-  amountout: bigint;
+  exchangerate: string;
+  amountin: string;
+  amountout: string;
   paymentmethod: string;
   status: string;
   chainstatus: boolean;
@@ -165,9 +165,9 @@ export function useDeposit(): UseDepositResult {
           txhash: dTxHash?.toString() || "",
           contractaddress: deployments.AcquisitionGateway,
           useraddress: userAddress,
-          exchangerate: exchangeRate,
-          amountin: parsedValue,
-          amountout: parsedValue2,
+          exchangerate: exchangeRate.toString(),
+          amountin: parsedValue.toString(),
+          amountout: parsedValue2.toString(),
           paymentmethod: token.symbol,
           status: "accepted",
           chainstatus: false,

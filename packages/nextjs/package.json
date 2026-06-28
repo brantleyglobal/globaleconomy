@@ -17,6 +17,8 @@
   "dependencies": {
     "@account-abstraction/contracts": "^0.6.0",
     "@aws-sdk/client-s3": "^3.1075.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@ethersproject/abi": "^5.8.0",
     "@ethersproject/providers": "^5.8.0",
     "@heroicons/react": "^2.2.0",
@@ -35,6 +37,7 @@
     "chart.js": "^4.5.1",
     "clsx": "^2.1.1",
     "crypto-js": "^4.2.0",
+    "daisyui": "^5.6.3",
     "dompurify": "^3.2.7",
     "ethers": "^6.15.0",
     "framer-motion": "^12.23.9",

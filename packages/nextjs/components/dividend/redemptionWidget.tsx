@@ -13,7 +13,7 @@ import AddressStep from "~~/components/dividend/steps/NewAddressStep";
 import TokenStep from "~~/components/dividend/steps/NewTokenStep";
 import RedemptionStep from "~~/components/dividend/steps/RedemptionStep";
 import HelpStep from "~~/components/dividend/steps/helpStep";
-import { DoneStep } from "../xchange/steps/doneStep";
+import { DoneStep } from "~~/components/dividend/steps/doneStep";
 
 type FaucetProps = {
   isOpen: boolean;
@@ -52,6 +52,7 @@ export const DividendRedeemModal = ({ isOpen, onClose, openWalletModal }: Faucet
   const [userAction, setUserAction] = useState<"addressChange" | "tokenChange" | "redemption" | null>(null);
   
   const [autoPay, setAutoPay] = useState(false);
+  const [receiptHash, setReceiptHash] = useState("");
 
   const [newAddress, setNewAddress] = useState<AddressType | undefined>(undefined);
   
@@ -280,6 +281,8 @@ export const DividendRedeemModal = ({ isOpen, onClose, openWalletModal }: Faucet
               setUserLastName={setUserLastName}
               userEmail={userEmail}
               setUserEmail={setUserEmail}
+              receiptHash={receiptHash}
+              setReceiptHash={setReceiptHash}
               onHelpToggle={() => setIsHelpMode(true)}
               onBack={() => setStep(ModalStep.SelectionStep)}
               onNext={() => setStep(ModalStep.Complete)}
@@ -289,7 +292,7 @@ export const DividendRedeemModal = ({ isOpen, onClose, openWalletModal }: Faucet
         </>
       )}
       {step === ModalStep.Complete && (
-        <DoneStep onClose={onClose} />
+        <DoneStep onClose={onClose} receiptHash={receiptHash}/>
       )}
     </div>
   );
