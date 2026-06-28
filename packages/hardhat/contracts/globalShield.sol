@@ -618,8 +618,6 @@ contract GlobalShield is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         swapsByTimestamp[ts] = SwapRef({ swapAddress: swapAddress });
     }
 
-    // --- MIDDLEMAN EXECUTION & MATRIX ROUTERS ---
-
     function deposit(address swapAddress, address party, bytes32 depositHash, uint256 ts) external nonReentrant {
         // 1. Guard rail: Ensure caller is an authorized platform operator
         if (!_isAdmin(msg.sender)) revert NotAuthorized();
@@ -644,7 +642,7 @@ contract GlobalShield is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         swapsByTimestamp[ts] = SwapRef({ swapAddress: swapAddress });
     }
 
-    function refund(address swapAddress, address party) external nonReentrant {
+    function refund(address swapAddress, address party, uint256 ts) external nonReentrant {
         if (!_isAdmin(msg.sender)) revert NotAuthorized();
 
         Swap storage details = swaps[swapAddress];
@@ -662,7 +660,7 @@ contract GlobalShield is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
             revert InvalidPartyAddress();
         }
 
-        uint256 updateTimestamp = block.timestamp;
+        uint256 updateTimestamp = ts;
         swapTimestamps.push(updateTimestamp);
         swapsByTimestamp[updateTimestamp] = SwapRef({ swapAddress: swapAddress });
     }
