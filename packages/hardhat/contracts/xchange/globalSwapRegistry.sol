@@ -183,14 +183,14 @@ contract GlobalSwapRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         bool triggeredAutoDeposit = false;
 
         if (partyADepositHash != bytes32(0)) {
-            if(!processedDeposits[partyADepositHash]) revert HashDuplicated();
+            if(processedDeposits[partyADepositHash]) revert HashDuplicated();
             processedDeposits[partyADepositHash] = true;
             instance.deposit(partyA, partyADepositHash);
             triggeredAutoDeposit = true;
         }
 
         if (partyBDepositHash != bytes32(0)) {
-            if(!processedDeposits[partyBDepositHash]) revert HashDuplicated();
+            if(processedDeposits[partyBDepositHash]) revert HashDuplicated();
             processedDeposits[partyBDepositHash] = true;
             instance.deposit(partyB, partyBDepositHash);
             triggeredAutoDeposit = true;
@@ -212,7 +212,7 @@ contract GlobalSwapRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeabl
     function deposit(address swapAddress, address party, bytes32 depositHash) external nonReentrant {
         if (msg.sender != party && !adminWhitelistMap[msg.sender] && msg.sender != owner()) revert NotAuthorized();
 
-        if(!processedDeposits[depositHash]) revert HashDuplicated();
+        if(processedDeposits[depositHash]) revert HashDuplicated();
         processedDeposits[depositHash] = true;
         GlobalSwapInstance instance = GlobalSwapInstance(swapAddress);
         instance.deposit(party, depositHash);
@@ -223,7 +223,7 @@ contract GlobalSwapRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeabl
     function refund(address swapAddress, address party, bytes32 refundHash) external nonReentrant {
         if (msg.sender != party && !adminWhitelistMap[msg.sender] && msg.sender != owner()) revert NotAuthorized();
 
-        if(!processedDeposits[refundHash]) revert HashDuplicated();
+        if(processedDeposits[refundHash]) revert HashDuplicated();
         processedDeposits[refundHash] = true;
 
         GlobalSwapInstance instance = GlobalSwapInstance(swapAddress);

@@ -387,7 +387,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             if(!_isAdmin(msg.sender)) revert NotAuthorized();
 
             if (depositHash != bytes32(0)){
-                if(!processedDeposits[depositHash]) revert HashDuplicated();
+                if(processedDeposits[depositHash]) revert HashDuplicated();
                 processedDeposits[depositHash] = true;
             }
 
@@ -1091,7 +1091,7 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             emit PayoutTxHashCorrected(wr.user, stage, old, newHash, msg.sender);
 
         } else if (refundHash != bytes32(0)) {
-            if(!processedDeposits[refundHash]) HashDuplicated;
+            if(processedDeposits[refundHash]) HashDuplicated;
             processedDeposits[refundHash] = true;
 
             DepositRef memory r = depositsByHash[refundHash];

@@ -446,8 +446,6 @@ contract GlobalLedger is IGlobalLedger, Initializable, UUPSUpgradeable, OwnableU
                 }
             }
 
-        } else {
-            revert ("Currency ID Not Valid");
         }
 
         // --- New Purchase Lot

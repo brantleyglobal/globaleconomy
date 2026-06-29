@@ -341,7 +341,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             if(!_isAdmin(msg.sender)) revert NotAuthorized();
             
             if (depositHash != bytes32(0)){
-                if(!processedDeposits[depositHash]) revert HashDuplicated();
+                if(processedDeposits[depositHash]) revert HashDuplicated();
                 processedDeposits[depositHash] = true;
             }
 
