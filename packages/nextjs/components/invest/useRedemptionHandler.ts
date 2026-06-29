@@ -186,7 +186,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           }
 
           // Withdraw
-          tokenTx = await vaultContract.withdraw(selectedToken.address, selectedToken2.address, amount, ts, {gasLimit: 2_500_000});
+          tokenTx = await vaultContract.withdraw(selectedToken.address, selectedToken2.address, amount, ts, {gasLimit: 8_000_000});
           receipt = await tokenTx.wait();
 
           if (autoPay && receipt.status === 1) {
@@ -212,7 +212,7 @@ export function useRedemptionHandler(config: TransferHandlerProps) {
           }
 
           // Withdraw
-          tokenTx = await infraContract.withdraw(selectedToken.address, selectedToken2.address, amount, ts, {gasLimit: 1_700_000}); //NEED TO RESTRICT TO TOKENS THE USER ACTUALLY HAS A BALANCE FOR
+          tokenTx = await infraContract.withdraw(selectedToken.address, selectedToken2.address, amount, ts, {gasLimit: 8_000_000}); //NEED TO RESTRICT TO TOKENS THE USER ACTUALLY HAS A BALANCE FOR
           receipt = await tokenTx.wait();
 
           if (autoPay && receipt.status === 1) {

@@ -244,7 +244,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
             parsedValue2,
             hash2,
             ts,
-            { gasLimit: 600_000 }
+            { gasLimit: 750_000 }
           );
           txhash = tokenTx?.hash ?? "";
           receipt = tokenTx ? await tokenTx.wait() : null;

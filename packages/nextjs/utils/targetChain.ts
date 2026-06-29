@@ -160,7 +160,7 @@ export async function sendTransferOnTargetChain(
       from,
       to: recipient,
       value: value,
-      gas: "80000",
+      gas: "150000",
     });
     dTxHash = receipt2.transactionHash;
 

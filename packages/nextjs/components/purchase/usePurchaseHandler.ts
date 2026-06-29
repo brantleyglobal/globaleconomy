@@ -473,7 +473,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
     const totalTokenAmountFloat = productAmount + shippingCostFloat
 
     // Convert to ethers.BigNumber assuming 18 decimals (full precision)
-    const totalTokenAmount = parseUnits(totalTokenAmountFloat.toString(), 18);
+    const totalTokenAmount = parseUnits(totalTokenAmountFloat.toFixed(18), 18);
     const shipping = parseUnits(shippingCostFloat.toString(), 18);
 
     // Also parse with limited 2 decimals (for display rounding / testing)
@@ -494,9 +494,9 @@ async function handleCryptoPurchase(params: InitiateParams) {
     let receipt2;
     let callAddress;
     if (selectedToken.symbol === "ETH") {
-      callAddress = 0x00000000000000000000000000000000000000E0
+      callAddress = "0x00000000000000000000000000000000000000E0";
     } else if (selectedToken.symbol === "BTC"){
-      callAddress = 0x00000000000000000000000000000000000000b0;
+      callAddress = "0x00000000000000000000000000000000000000b0";
     } else {
       callAddress = selectedToken.address;
     }
@@ -576,7 +576,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
     const customizationTotal = parseUnits(customizations, 18);
     /* Affiliate Logic */
     let affiliateAddress = zeroAddress;
-    let commissionAmount;
+    let commissionAmount = 0;
     let payout = "";
     if (promo != ""){
       if (promo === "something") { 
@@ -619,7 +619,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
           ts,
           {
             value: totalTokenAmount,
-            gasLimit: 1_500_000
+            gasLimit: 3_000_000
           }
           
         );
@@ -713,8 +713,6 @@ async function handleCryptoPurchase(params: InitiateParams) {
       const customizeKey = parsedConfig?.system?.customizeGroupKey;
       const output = parsedConfig?.output ?? {};
 
-      let formattedConfig: string;
-
       if (customizeKey && selectedVariations[customizeKey]?.label === "Customize") {
         const voltage = output.selectedVoltage ? `${output.selectedVoltage}V` : null;
         const frequency = output.selectedFrequency;
@@ -754,11 +752,8 @@ async function handleCryptoPurchase(params: InitiateParams) {
       console.warn("Purchase logging failed or returned unexpected response.");
     }
 
-    const finalHashString = dTxHash && typeof dTxHash === 'object' && 'hash' in dTxHash 
-      ? dTxHash.hash 
-      : dTxHash?.toString() || "";
+    const finalHashString = typeof dTxHash === "string" ? dTxHash : (dTxHash?.hash || "");
 
-    // CRITICAL FIX: Push the evaluated string hash into your Zustand store state
     if (finalHashString) {
       useCheckoutStore.getState().setField('txhash', finalHashString);
     }
