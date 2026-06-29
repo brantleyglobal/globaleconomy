@@ -21,6 +21,13 @@ export const CHAINS: Record<string, ChainInfo> = {
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
     blockExplorerUrls: ["https://etherscan.io"],
   },
+  base: {
+    chainId: 8453,
+    chainName: "Base Mainnet",
+    rpcUrls: ["https://mainnet.base.org"],
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    blockExplorerUrls: ["https://basescan.org"],
+  },
   polygon: {
     chainId: 137,
     chainName: "Polygon Mainnet",

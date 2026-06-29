@@ -910,6 +910,8 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             rateRange[11] = RateRange(RATE_102, RATE_098);
             rateRange[12] = RateRange(RATE_102, RATE_098);
             rateRange[13] = RateRange(RATE_102, RATE_098);
+            rateRange[20] = RateRange(RATE_102, RATE_098);
+            rateRange[21] = RateRange(RATE_102, RATE_098);
 
             rateRange[14] = RateRange(RATE_069, RATE_065);
 
@@ -934,8 +936,8 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
             rateRange[18] = RateRange(RATE_033, RATE_030);
 
-            rateRange[20] = RateRange(RATE_100, RATE_100);
-            rateRange[21] = RateRange(RATE_100, RATE_100);
+            rateRange[22] = RateRange(RATE_100, RATE_100);
+            rateRange[23] = RateRange(RATE_100, RATE_100);
         }
 
     }

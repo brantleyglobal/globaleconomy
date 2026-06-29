@@ -216,8 +216,10 @@ async function main() {
     "0x86B4dBE5D203e634a12364C0e428fa242A3FbA98", // GBPT     17
     "0x6FAff971d9248e7d398A98FdBE6a81F6d7489568", // TRYX     18
     "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c", // EURc     19
-    copxAddress,                                  // COPx     21
-    gbdAddress                                    // GBDO     22
+    "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC (Base)20
+    "0x7712c34205737192402172409a8F7ccef8aA2AEc",  // BUIDL     21
+    copxAddress,                                  // COPx     22
+    gbdAddress                                    // GBDO     23
     //"0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", // WBTC     23
     //"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH     24
     //"0xB8c77482e45F1F44dE1745F52C74426C631bDD52", // BNB      25

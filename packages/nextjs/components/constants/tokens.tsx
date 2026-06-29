@@ -69,12 +69,27 @@ export const supportedTokens: Token[] = [
     chain: "global",
   },
   {
-    name: "USD Coin",
+    name: "USD Coin (Ethereum)",
     symbol: "USDC",
     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     decimals: 6,
     isNative: false,
-    chain: "ethereum",
+  },
+  {
+    name: "USD Coin (Base)",
+    symbol: "USDC",
+    address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    decimals: 6,
+    isNative: false,
+    chain: "base"
+  },
+  {
+    name: "BlackRock USD Institutional Digital Liquidity Fund",
+    symbol: "BUIDL",
+    address: "0x7712c34205737192402172409a8F7ccef8aA2AEc",
+    decimals: 6,
+    isNative: false,
+    chain: "ethereum"
   },
   {
     name: "Dai Stablecoin",

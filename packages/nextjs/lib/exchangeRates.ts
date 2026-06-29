@@ -36,16 +36,18 @@ export interface StablecoinRate {
 
 // Feed maps
 const chainlinkFeeds: Record<string, string> = {
-  USDC: "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
-  DAI: "0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9",
-  FDUSD: "0xF79D6aFBb6dA890132F9D7c355e3015f15F3406F",
-  TUSD: "0x3886BA987236181D98F2401c507Fb8BeA7871F07",
-  USDT: "0x3E7d1eAB13ad0104d2750B8863b489D65364e32D",
-  FRAX: "0xB9E7f8568e08d5659f5D29c4997173d84CDF2607",
+  "USDC-ethereum": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+  "USDC-base": "0x7e86654A2E66034D44184666d6cd2f1e2e55a135",
+  "BUIDL-ethereum": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+  "DAI-ethereum": "0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9",
+  "FDUSD-ethereum": "0xF79D6aFBb6dA890132F9D7c355e3015f15F3406F",
+  "TUSD-ethereum": "0x3886BA987236181D98F2401c507Fb8BeA7871F07",
+  "USDT-ethereum": "0x3E7d1eAB13ad0104d2750B8863b489D65364e32D",
+  "FRAX-ethereum": "0xB9E7f8568e08d5659f5D29c4997173d84CDF2607",
 };
 
 const currencyMap: Record<string, string> = {
-  USDC: "USD", DAI: "USD", FDUSD: "USD", TUSD: "USD",
+  USDC: "USD", BUIDL: "USD", DAI: "USD", FDUSD: "USD", TUSD: "USD",
   GUSD: "USD", PYUSD: "USD", USDP: "USD", FRAX: "USD",
   EURC: "EUR", EURe: "EUR",  USDT: "USD",
   GBPT: "GBP", ARSX: "ARS", INRX: "INR", TRYX: "TRY",
@@ -54,7 +56,7 @@ const currencyMap: Record<string, string> = {
 };
 
 const networkMap: Record<string, string> = {
-  USDC: "ethereum", DAI: "ethereum", FDUSD: "ethereum", TUSD: "ethereum", 
+  USDC: "ethereum", BUIDL: "ethereum", DAI: "ethereum", FDUSD: "ethereum", TUSD: "ethereum", 
   GUSD: "ethereum", PYUSD: "ethereum", USDP: "ethereum",  XSGD: "ethereum",
   EURC: "ethereum", EURe: "gnosis", USDT: "ethereum", FRAX: "ethereum",
   GBPT: "optimism", ARSX: "arbitrum", INRX: "polygon", TRYX: "avalanche",
@@ -63,7 +65,7 @@ const networkMap: Record<string, string> = {
 };
 
 const redstoneFeeds: Record<string, string> = {
-  USDC: "USDC", USDT: "USDT", DAI: "DAI", TUSD: "TUSD", FDUSD: "FDUSD", FRAX: "FRAX",
+  USDC: "USDC", BUIDL: "USDC", USDT: "USDT", DAI: "DAI", TUSD: "TUSD", FDUSD: "FDUSD", FRAX: "FRAX",
   PYUSD: "PYUSD", USDP: "USDP", EURC: "EUR", EURe: "EURe", GBPT: "GBP",
   ARSX: "ARS", INRX: "INR", TRYX: "TRY", NGNT: "NGN", ZARP: "ZAR", BRZ: "BRZ",
   AUDT: "AUD", AUDD: "AUD", JPYC: "JPY", MMXN: "MXN", QCAD: "CAD", XCHF: "CHF",
@@ -71,7 +73,7 @@ const redstoneFeeds: Record<string, string> = {
 };
 
 const pythFeeds: Record<string, string> = {
-  USDC: "Crypto.USDC/USD", USDT: "Crypto.USDT/USD", DAI: "Crypto.DAI/USD", TUSD: "Crypto.TUSD/USD",
+  USDC: "Crypto.USDC/USD", BUIDL: "Crypto.USDC/USD", USDT: "Crypto.USDT/USD", DAI: "Crypto.DAI/USD", TUSD: "Crypto.TUSD/USD",
   FDUSD: "Crypto.FDUSD/USD", FRAX: "Crypto.FRAX/USD", PYUSD: "Crypto.PYUSD/USD", USDP: "Crypto.USDP/USD",
   EURC: "Crypto.EUR/USD", EURe: "Crypto.EURe/USD", GBPT: "Forex.GBP/USD",
   ARSX: "Forex.ARS/USD", INRX: "Forex.INR/USD", TRYX: "Forex.TRY/USD", NGNT: "Forex.NGN/USD",
@@ -82,6 +84,7 @@ const pythFeeds: Record<string, string> = {
 
 const rateGuards: Record<string, { min: number; max: number; fallback?: number }> = {
   USDC: { min: 0.98, max: 1.02, fallback: 1.00 },
+  BUIDL: { min: 0.99, max: 1.01, fallback: 1.00 },
   USDT: { min: 0.98, max: 1.02, fallback: 1.00 },
   DAI:  { min: 0.98, max: 1.02, fallback: 1.00 },
   TUSD: { min: 0.98, max: 1.02, fallback: 1.00 },
@@ -115,39 +118,14 @@ const SMOOTHING_THRESHOLD = 0.02;
 const RATE_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 const rpcFallbacks: Record<string, string[]> = {
-  ethereum: [
-    //"https://1rpc.io/eth",
-    "https://eth.llamarpc.com",
-    "https://cloudflare-eth.com"
-  ],
-  arbitrum: [
-    "https://arb1.arbitrum.io/rpc",
-    "https://arbitrum.llamarpc.com"
-  ],
-  optimism: [
-    "https://mainnet.optimism.io",
-    "https://optimism.llamarpc.com"
-  ],
-  polygon: [
-    "https://polygon-rpc.com",
-    "https://polygon.llamarpc.com"
-  ],
-  base: [
-    "https://mainnet.base.org",
-    "https://base.llamarpc.com"
-  ],
-  avalanche: [
-    "https://api.avax.network/ext/bc/C/rpc",
-    "https://avalanche-c-chain.llamarpc.com"
-  ],
-  bsc: [
-    "https://bsc-dataseed.binance.org",
-    "https://bsc.llamarpc.com"
-  ],
-  gnosis: [
-    "https://rpc.gnosischain.com",
-    "https://gnosis.llamarpc.com"
-  ]
+  ethereum: ["https://eth.llamarpc.com", "https://cloudflare-eth.com"],
+  arbitrum: ["https://arb1.arbitrum.io/rpc", "https://arbitrum.llamarpc.com"],
+  optimism: ["https://mainnet.optimism.io", "https://optimism.llamarpc.com"],
+  polygon: ["https://polygon-rpc.com", "https://polygon.llamarpc.com"],
+  base: ["https://mainnet.base.org", "https://base.llamarpc.com"],
+  avalanche: ["https://api.avax.network/ext/bc/C/rpc", "https://avalanche-c-chain.llamarpc.com"],
+  bsc: ["https://bsc-dataseed.binance.org", "https://bsc.llamarpc.com"],
+  gnosis: ["https://rpc.gnosischain.com", "https://gnosis.llamarpc.com"]
 };
 
 const trustedNetworks = Object.keys(rpcFallbacks);
@@ -161,13 +139,18 @@ let lastUpdated = 0
 const typedSupportedTokens = supportedTokens as RawToken[];
 
 const stablecoins: StablecoinMeta[] = typedSupportedTokens.map((token) => {
+  // 1. Look for 'chain' on the token object itself. Fall back to "ethereum" if absent.
+  const tokenChain = token.chain?.toLowerCase() ?? "ethereum";
+  
   const meta: StablecoinMeta = {
     symbol: token.symbol,
     currency: currencyMap[token.symbol] ?? "USD",
-    network: networkMap[token.symbol] ?? "ethereum",
+    network: tokenChain, //  Now correctly assigns "base" for your Base USDC object
   };
 
-  const chainlink = chainlinkFeeds[token.symbol];
+  // 2. Build a composite key (e.g., "USDC-ethereum" or "USDC-base")
+  const feedKey = `${token.symbol}-${tokenChain}`;
+  const chainlink = chainlinkFeeds[feedKey];
   if (chainlink) meta.chainlinkFeed = chainlink;
 
   const pyth = pythFeeds[token.symbol];
@@ -432,10 +415,13 @@ function applyGuard(symbol: string, rate: number): number {
 
 
 function calculateGBDoRate(rates: StablecoinRate[]): number {
-  const healthyRates = rates.filter(r => r.healthy);
 
-  if (healthyRates.length > 0) {
-    const avg = healthyRates.reduce((sum, r) => sum + r.rate, 0) / healthyRates.length;
+  const usdHealthyRates = rates.filter(
+    r => r.healthy && r.currency === "USD" && r.symbol !== "GBDo"
+  );
+
+  if (usdHealthyRates.length > 0) {
+    const avg = usdHealthyRates.reduce((sum, r) => sum + r.rate, 0) / usdHealthyRates.length;
     return avg * PRIME_FACTOR;
   }
 
