@@ -54,6 +54,14 @@ export const supportedTokens = [
     isNative: false,
     chain: "ethereum"
   },
+  {
+    name: "Ripple USD",
+    symbol: "RLUSD",
+    address: "0x1Ab563507B95c0cBA6210f9a5676bC7B90d9841B",
+    decimals: 6,
+    isNative: false,
+    chain: "ethereum"
+  },
   /*{
     name: "TrueAUD",
     symbol: "AUDT",
@@ -174,11 +182,28 @@ export const supportedTokens = [
     isNative: false,
   },
   {
-    name: "BRL1 Stablecoin",
-    symbol: "BRL1",
-    address: "0x5C067C80C00eCd2345b05E83A3e758eF799C40B5",
+    name: "BRZ Stablecoin",
+    symbol: "BRZ",
+    address: "0x71ab77b7dbb4fa7e017bc15090b2163221420282",
     decimals: 18,
     isNative: false,
+    chain: "ethreum"
+  },
+  {
+    name: "Wrapped BTC",
+    symbol: "WBTC",
+    address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+    decimals: 8,
+    isNative: false,
+    chain: "ethereum"
+  },
+  {
+    name: "Coinbase Wrapped BTC",
+    symbol: "cbBTC",
+    address: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+    decimals: 8,
+    isNative: false,
+    chain: "ethereum"
   },
   /*{
     name: "Nigerian Naira Token",
