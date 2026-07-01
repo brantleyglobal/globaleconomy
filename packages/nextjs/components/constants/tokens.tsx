@@ -94,7 +94,7 @@ export const supportedTokens: Token[] = [
   {
     name: "Ripple USD",
     symbol: "RLUSD",
-    address: "0x1Ab563507B95c0cBA6210f9a5676bC7B90d9841B",
+    address: "0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD",
     decimals: 6,
     isNative: false,
     chain: "ethereum"
