@@ -120,7 +120,7 @@ export const TermStep: React.FC<Props> = ({
             <option value="" disabled>Select Deposit Method</option>
             {supportedTokens
               .filter(t => rpcUp || t.chain !== "global")   // Chain Status to Remove Native Transfers
-              .filter(t => !["GBDx", "ETH", "UNI", "LINK", "MATIC", "BNB", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(t.symbol))
+              .filter(t => !["WBTC", "cbBTC", "ETH", "LINK", "UNI", "MATIC", "BRZ", "MMXN", "AUDD", "AUDT", "NGNT", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(t.symbol))
               .map(t => (
                 <option key={t.symbol} value={t.symbol}>
                   {t.symbol} • {t.name}

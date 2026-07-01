@@ -304,7 +304,7 @@ export default function RedemptionStep({
           >
             <option value="" disabled>Select Payout Token</option>
             {supportedTokens
-            .filter(t => !["GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh"].includes(t.symbol))
+            .filter(t => !["GBDx", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "AUDD", "AUDT", "BRZ", "MMXN", "NGNT", "INRX", "TRYX", "ZARP"].includes(t.symbol))
             .map(t => (
               <option key={t.symbol} value={t.symbol}>
                 {t.symbol} • {t.name}

@@ -44,42 +44,52 @@ const chainlinkFeeds: Record<string, string> = {
   "TUSD-ethereum": "0x3886BA987236181D98F2401c507Fb8BeA7871F07",
   "USDT-ethereum": "0x3E7d1eAB13ad0104d2750B8863b489D65364e32D",
   "FRAX-ethereum": "0xB9E7f8568e08d5659f5D29c4997173d84CDF2607",
+  "RLUSD-ethereum": "0x26C4547432f901Bda93d9aCD2EcaF820CC087f2A",
+
+  "UNI-ethereum": "0x553303d460ee0afb37edff9be42922d8ff63220e",
+  "ETH-ethereum": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+  "LINK-ethereum": "0x2c1d072e956FFC0D435Cb7AC38EF18d658a69e68",
+  "MATIC-polygon": "0xab594600376ec9fd913812674e7f339cf9b71eec",
+  "WBTC-ethereum": "0xF4030086522a5bEEa4988F8cA5B36dbC1C9F46cE",
+  "cbBTC-ethereum": "0xF4030086522a5bEEa4988F8cA5B36dbC1C9F46cE",
 };
 
 const currencyMap: Record<string, string> = {
   USDC: "USD", BUIDL: "USD", DAI: "USD", FDUSD: "USD", TUSD: "USD",
-  GUSD: "USD", PYUSD: "USD", USDP: "USD", FRAX: "USD",
-  EURC: "EUR", EURe: "EUR",  USDT: "USD",
+  GUSD: "USD", PYUSD: "USD", USDP: "USD", FRAX: "USD", WBTC: "BTC",
+  EURC: "EUR", EURe: "EUR",  USDT: "USD", RLUSD: "USD", cbBTC: "BTC",
   GBPT: "GBP", ARSX: "ARS", INRX: "INR", TRYX: "TRY",
   NGNT: "NGN", ZARP: "ZAR", BRZ: "BRZ", AUDT: "AUD", AUDD: "AUD",
-  JPYC: "JPY", MMXN: "MXN", QCAD: "CAD", XCHF: "CHF", XSGD: "SGD"
+  JPYC: "JPY", MMXN: "MXN", QCAD: "CAD", XCHF: "CHF", XSGD: "SGD",
+  UNI: "UNI", ETH: "ETH", LINK: "LINK", MATIC: "MATIC"
 };
 
 const networkMap: Record<string, string> = {
   USDC: "ethereum", BUIDL: "ethereum", DAI: "ethereum", FDUSD: "ethereum", TUSD: "ethereum", 
-  GUSD: "ethereum", PYUSD: "ethereum", USDP: "ethereum",  XSGD: "ethereum",
-  EURC: "ethereum", EURe: "gnosis", USDT: "ethereum", FRAX: "ethereum",
-  GBPT: "optimism", ARSX: "arbitrum", INRX: "polygon", TRYX: "avalanche",
+  GUSD: "ethereum", PYUSD: "ethereum", USDP: "ethereum", XSGD: "ethereum", RLUSD: "ethereum",
+  EURC: "ethereum", EURe: "gnosis", USDT: "ethereum", FRAX: "ethereum", WBTC: "ethereum",
+  GBPT: "optimism", ARSX: "arbitrum", INRX: "polygon", TRYX: "avalanche", cbBTC: "ethereum",
   NGNT: "bsc", ZARP: "polygon", BRZ: "ethereum", AUDT: "ethereum", AUDD: "ethereum",
   JPYC: "ethereum", MMXN: "ethereum", QCAD: "ethereum", XCHF: "ethereum",
+  UNI: "UNI", ETH: "ETH", LINK: "LINK", MATIC: "MATIC",
 };
 
 const redstoneFeeds: Record<string, string> = {
   USDC: "USDC", BUIDL: "USDC", USDT: "USDT", DAI: "DAI", TUSD: "TUSD", FDUSD: "FDUSD", FRAX: "FRAX",
-  PYUSD: "PYUSD", USDP: "USDP", EURC: "EUR", EURe: "EURe", GBPT: "GBP",
-  ARSX: "ARS", INRX: "INR", TRYX: "TRY", NGNT: "NGN", ZARP: "ZAR", BRZ: "BRZ",
-  AUDT: "AUD", AUDD: "AUD", JPYC: "JPY", MMXN: "MXN", QCAD: "CAD", XCHF: "CHF",
-  XSGD: "SGD", GUSD: "GUSD"
+  PYUSD: "PYUSD", USDP: "USDP", EURC: "EUR", EURe: "EURe", GBPT: "GBP", RLUSD: "RLUSD",
+  ARSX: "ARS", INRX: "INR", TRYX: "TRY", NGNT: "NGN", ZARP: "ZAR", BRZ: "BRZ", WBTC: "BTC",
+  AUDT: "AUD", AUDD: "AUD", JPYC: "JPY", MMXN: "MXN", QCAD: "CAD", XCHF: "CHF", cbBTC: "BTC",
+  XSGD: "SGD", GUSD: "GUSD", UNI: "UNI", ETH: "ETH", LINK: "LINK", MATIC: "MATIC"
 };
 
 const pythFeeds: Record<string, string> = {
   USDC: "Crypto.USDC/USD", BUIDL: "Crypto.USDC/USD", USDT: "Crypto.USDT/USD", DAI: "Crypto.DAI/USD", TUSD: "Crypto.TUSD/USD",
   FDUSD: "Crypto.FDUSD/USD", FRAX: "Crypto.FRAX/USD", PYUSD: "Crypto.PYUSD/USD", USDP: "Crypto.USDP/USD",
-  EURC: "Crypto.EUR/USD", EURe: "Crypto.EURe/USD", GBPT: "Forex.GBP/USD",
-  ARSX: "Forex.ARS/USD", INRX: "Forex.INR/USD", TRYX: "Forex.TRY/USD", NGNT: "Forex.NGN/USD",
-  ZARP: "Forex.ZAR/USD", BRZ: "Forex.BRZ/USD", AUDT: "Forex.AUD/USD", AUDD: "Forex.AUD/USD",
+  EURC: "Crypto.EUR/USD", EURe: "Crypto.EURe/USD", GBPT: "Forex.GBP/USD", RLUSD: "Crypto.RLUSD/USD",
+  ARSX: "Forex.ARS/USD", INRX: "Forex.INR/USD", TRYX: "Forex.TRY/USD", NGNT: "Forex.NGN/USD", WBTC: "Crypto.BTC/USD",
+  ZARP: "Forex.ZAR/USD", BRZ: "Forex.BRZ/USD", AUDT: "Forex.AUD/USD", AUDD: "Forex.AUD/USD", cbBTC: "Crypto.BTC/USD",
   JPYC: "Forex.JPY/USD", MMXN: "Forex.MXN/USD", QCAD: "Forex.CAD/USD", XCHF: "Forex.CHF/USD",
-  XSGD: "Forex.SGD/USD", GUSD: "Crypto.GUSD/USD"
+  XSGD: "Forex.SGD/USD", GUSD: "Crypto.GUSD/USD", UNI: "UNI", ETH: "ETH", LINK: "LINK", MATIC: "MATIC",
 };
 
 const rateGuards: Record<string, { min: number; max: number; fallback?: number }> = {
@@ -91,6 +101,7 @@ const rateGuards: Record<string, { min: number; max: number; fallback?: number }
   USDP: { min: 0.98, max: 1.02, fallback: 1.00 },
   GUSD: { min: 0.98, max: 1.02, fallback: 1.00 },
   FDUSD:{ min: 0.98, max: 1.02, fallback: 1.00 },
+  RLUSD: { min: 0.98, max: 1.02, fallback: 1.00 },
   FRAX: { min: 0.97, max: 1.03, fallback: 1.00 },
   PYUSD: { min: 0.98, max: 1.02, fallback: 1.00 },
   GBDo: { min: 1.03, max: 1.07, fallback: 1.05 },
@@ -112,10 +123,12 @@ const rateGuards: Record<string, { min: number; max: number; fallback?: number }
 };
 
 // Constants
-const PRIME_FACTOR = 1.365;
+const PRIME_FACTOR = .970;
 const UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const SMOOTHING_THRESHOLD = 0.02;
 const RATE_EXPIRY_MS = 24 * 60 * 60 * 1000;
+
+const stableCurrencies = ["USDP", "USDT", "BUIDL", "USDC", "DAI", "TUSD", "GUSD", "PYUSD", "AUDD", "AUDT", "QCAD", "MMXN", "NGNT", "EURC", "BRZ", "GBPT", "JPYC", "FRAX", "XSGD", "XCHF"];
 
 const rpcFallbacks: Record<string, string[]> = {
   ethereum: ["https://eth.llamarpc.com", "https://cloudflare-eth.com"],
@@ -416,12 +429,12 @@ function applyGuard(symbol: string, rate: number): number {
 
 function calculateGBDoRate(rates: StablecoinRate[]): number {
 
-  const usdHealthyRates = rates.filter(
-    r => r.healthy && r.currency === "USD" && r.symbol !== "GBDo"
+  const globalFiatStableRates = rates.filter(
+    r => r.healthy && stableCurrencies.includes(r.currency) && r.symbol !== "GBDo"
   );
 
-  if (usdHealthyRates.length > 0) {
-    const avg = usdHealthyRates.reduce((sum, r) => sum + r.rate, 0) / usdHealthyRates.length;
+  if (globalFiatStableRates.length > 0) {
+    const avg = globalFiatStableRates.reduce((sum, r) => sum + r.rate, 0) / globalFiatStableRates.length;
     return avg * PRIME_FACTOR;
   }
 

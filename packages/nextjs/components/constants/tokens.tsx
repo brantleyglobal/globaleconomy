@@ -92,6 +92,14 @@ export const supportedTokens: Token[] = [
     chain: "ethereum"
   },
   {
+    name: "Ripple USD",
+    symbol: "RLUSD",
+    address: "0x1Ab563507B95c0cBA6210f9a5676bC7B90d9841B",
+    decimals: 6,
+    isNative: false,
+    chain: "ethereum"
+  },
+  {
     name: "Dai Stablecoin",
     symbol: "DAI",
     address: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
@@ -175,6 +183,22 @@ export const supportedTokens: Token[] = [
     address: "0x0000000000000000000000000000000000001010",
     decimals: 18,
     chain: "polygon"
+  },
+  {
+    name: "Wrapped BTC",
+    symbol: "WBTC",
+    address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+    decimals: 8,
+    isNative: false,
+    chain: "ethereum"
+  },
+  {
+    name: "Coinbase Wrapped BTC",
+    symbol: "cbBTC",
+    address: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+    decimals: 8,
+    isNative: false,
+    chain: "ethereum"
   },
   /*
   {

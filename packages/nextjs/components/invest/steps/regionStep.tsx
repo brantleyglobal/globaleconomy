@@ -162,7 +162,7 @@ export const RegionStep: React.FC<Props> = ({
               </option>
               {supportedTokens
                 .filter(t => rpcUp || t.chain !== "global")   // Chain Status to Remove Native Transfers
-                .filter(t => !["GLB", "GBDx", "ETH", "LINK", "MATIC", "UNI", "BNB", "COPx", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(t.symbol))
+                .filter(t => !["WBTC", "cbBTC", "ETH", "LINK", "UNI", "MATIC", "BRZ", "MMXN", "AUDD", "AUDT", "NGNT", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(t.symbol))
                 .map(t => (
                   <option key={t.symbol} value={t.symbol}>
                     {t.name}
