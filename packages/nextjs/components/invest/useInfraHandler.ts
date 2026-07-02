@@ -54,10 +54,6 @@ interface UseDepositResult {
   ) => Promise<string>; 
 }
 
-interface BitcoinWallet {
-  sendTransaction: (to: string, amount: number) => Promise<string>;
-}
-
 type TxResult = {
   txHash: string;
   receipt: any | null;
@@ -75,14 +71,6 @@ function parseLocalNumber (rawNumber: string, locale: string) {
 export function useInfra(): UseDepositResult {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const btcWallet: BitcoinWallet = {
-    sendTransaction: async (to, amount) => {
-      if (!window.xfi?.bitcoin) {
-        throw new Error("XDEFI Bitcoin wallet not available");
-      }
-      return await window.xfi.bitcoin.sendTransaction(to, amount);
-    },
-  };
   
   const infra = useCallback(
     async (
@@ -107,18 +95,9 @@ export function useInfra(): UseDepositResult {
         const adjustedAmount = parseLocalNumber(amountStr, locale);
         parsedValue = parseUnits(String(adjustedAmount), 18);
 
-        let callAddress;
-        if (token.symbol === "ETH") {
-          callAddress = "0x00000000000000000000000000000000000000E0";
-        } else if (token.symbol === "BTC"){
-          callAddress = "0x00000000000000000000000000000000000000b0";
-        } else {
-          callAddress = token.address;
-        }
-
         let holdingWalletAddress;
         if (token.symbol === "BTC"){
-          holdingWalletAddress = process.env.NEXT_PUBLIC_BITCOLLECTOR_ADDRESS!;
+          holdingWalletAddress = process.env.NEXT_PUBLIC_SOLANSCOLLECTOR_ADDRESS!;
         } else {        
           holdingWalletAddress = process.env.NEXT_PUBLIC_REGIONINFRA!;
         }
@@ -144,13 +123,13 @@ export function useInfra(): UseDepositResult {
         const ts = Math.floor(Date.now() / 1000);
         const now = ts.toString();
 
-        let dTxHash;
-        let receipt2;
+        let dTxHash: string = "";
+        let receipt2: any = null;
         let chainStatus = false;
 
         if (token.symbol == "GBDo") {
           try {
-            dTxHash = await infraContract.deposit!(
+            const txResponse = await infraContract.deposit!(
               ts,
               holdingWalletAddress,
               token,
@@ -164,7 +143,8 @@ export function useInfra(): UseDepositResult {
                 gasLimit: 1_000_000
               }
             );
-            receipt2 = await dTxHash.wait();
+            receipt2 = await txResponse.wait();
+            dTxHash = txResponse.hash;
             chainStatus = true;
           } catch (err) {
             console.error("Xchange Creation failed")
@@ -172,6 +152,11 @@ export function useInfra(): UseDepositResult {
 
           console.log("after try/catch")
         } else {
+
+          if (token.chain !== "solana") {
+            await ensureGlobalChain(window.ethereum);
+          }
+
           ({ dTxHash, receipt2 } = await sendTransferOnTargetChain(
             holdingWalletAddress,
             parsedValue,
@@ -181,7 +166,6 @@ export function useInfra(): UseDepositResult {
               symbol: token.symbol,
               chain: token.chain,
             },
-            btcWallet,
             provider // pass provider here
           ));
         }

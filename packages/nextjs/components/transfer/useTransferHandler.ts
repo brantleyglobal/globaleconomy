@@ -25,10 +25,6 @@ interface TransferHandlerProps {
   setSendValue?: (val: string) => void;
 }
 
-interface BitcoinWallet {
-  sendTransaction: (to: string, amount: number) => Promise<string>;
-}
-
 type TxResult = {
   txHash: string;
   receipt: any | null;
@@ -100,15 +96,6 @@ export function useTransferHandler(config: TransferHandlerProps) {
     }
   }, []);
 
-  const btcWallet: BitcoinWallet = {
-    sendTransaction: async (to, amount) => {
-      if (!window.xfi?.bitcoin) {
-        throw new Error("XDEFI Bitcoin wallet not available");
-      }
-      return await window.xfi.bitcoin.sendTransaction(to, amount);
-    },
-  };
-
   // Combined send flow
   const send = async (recipient?: string, value?: string) => {
     setLoading(true);
@@ -154,7 +141,6 @@ export function useTransferHandler(config: TransferHandlerProps) {
           symbol: selectedToken.symbol,
           chain: selectedToken.chain,
         },
-        btcWallet,
         provider // pass provider here
       );
 

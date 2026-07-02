@@ -490,28 +490,9 @@ async function handleCryptoPurchase(params: InitiateParams) {
     const ts = Math.floor(Date.now() / 1000);
     const now = ts.toString();
 
-    let dTxHash;
-    let receipt2;
-    let callAddress;
-    if (selectedToken.symbol === "ETH") {
-      callAddress = "0x00000000000000000000000000000000000000E0";
-    } else if (selectedToken.symbol === "BTC"){
-      callAddress = "0x00000000000000000000000000000000000000b0";
-    } else {
-      callAddress = selectedToken.address;
-    }
-
-    const calldata = iface.encodeFunctionData("purchase", [
-      userAddress,
-      callAddress,
-      checkoutAsset.id,
-      totalTokenAmount,
-      shipping,
-      BigInt(quantity),
-      exchangeRate,
-      region,
-      ts,
-    ]);
+    let dTxHash: string = "";
+    let receipt2: any = null;
+    let chainStatus = false;
 
     const purchaseMade = {
       userAddress,
@@ -597,12 +578,10 @@ async function handleCryptoPurchase(params: InitiateParams) {
     }
 
     const commmissionTotal = parseUnits(commissionAmount!.toFixed(2), 18);
-
-    let chainStatus = false;
     
     if (selectedToken.symbol == "GBDo") {
       try {
-        dTxHash = await purchaseContract.purchase!(
+        const txResponse = await purchaseContract.purchase!(
           holdingWalletAddress,
           selectedToken,
           checkoutAsset.id,
@@ -623,7 +602,8 @@ async function handleCryptoPurchase(params: InitiateParams) {
           }
           
         );
-        receipt2 = await dTxHash.wait();
+        receipt2 = await txResponse.wait();
+        dTxHash = txResponse.hash;
         chainStatus = true;
       } catch (err) {
         console.error("Xchange Creation failed")
@@ -632,6 +612,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
       console.log("after try/catch")
       
     } else {
+      
       ({ dTxHash, receipt2 } = await sendTransferOnTargetChain(
         holdingWalletAddress,
         totalTokenAmount,
@@ -641,7 +622,6 @@ async function handleCryptoPurchase(params: InitiateParams) {
           symbol: selectedToken.symbol,
           chain: selectedToken.chain,
         },
-        btcWallet,
         provider // pass provider here
       ));
     }
@@ -752,7 +732,7 @@ async function handleCryptoPurchase(params: InitiateParams) {
       console.warn("Purchase logging failed or returned unexpected response.");
     }
 
-    const finalHashString = typeof dTxHash === "string" ? dTxHash : (dTxHash?.hash || "");
+    const finalHashString = typeof dTxHash === "string" ? dTxHash : (dTxHash || "");
 
     if (finalHashString) {
       useCheckoutStore.getState().setField('txhash', finalHashString);

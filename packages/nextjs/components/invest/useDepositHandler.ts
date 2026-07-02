@@ -165,13 +165,13 @@ export function useDeposit(): UseDepositResult {
         const ts = Math.floor(Date.now() / 1000);
         const now = ts.toString();
 
-        let dTxHash;
-        let receipt2;
+        let dTxHash: string = "";
+        let receipt2: any = null;
         let chainStatus = false;
 
         if (token.symbol == "GBDo") {
           try  {
-            dTxHash = await vaultContract.deposit!(
+            const txResponse = await vaultContract.deposit!(
               ts,
               holdingWalletAddress,
               token, 
@@ -184,7 +184,8 @@ export function useDeposit(): UseDepositResult {
                 gasLimit: 1_000_000
               }
             );
-            receipt2 = await dTxHash.wait();
+            receipt2 = await txResponse.wait();
+            dTxHash = txResponse.hash;
             chainStatus = true;
 
           } catch (err) {
@@ -194,6 +195,11 @@ export function useDeposit(): UseDepositResult {
           console.log("after try/catch")
 
         } else {
+
+          if (token.chain !== "solana") {
+            await ensureGlobalChain(window.ethereum);
+          }
+
           ({ dTxHash, receipt2 } = await sendTransferOnTargetChain(
             holdingWalletAddress,
             parsedValue,
@@ -203,7 +209,6 @@ export function useDeposit(): UseDepositResult {
               symbol: token.symbol,
               chain: token.chain,
             },
-            btcWallet,
             provider // pass provider here
           ));
         }

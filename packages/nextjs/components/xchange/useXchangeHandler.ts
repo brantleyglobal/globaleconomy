@@ -8,7 +8,7 @@ import deployments from "~~/lib/contracts/deployments.json";
 import { supportedTokens, Token } from "~~/components/constants/tokens";
 import { Address as AddressType } from "viem";
 import { getExchangeRates } from "~~/lib/exchangeRates";
-import { sendTransferOnTargetChain, CHAINS, switchOrAddChain  } from "~~/utils/targetChain"
+import { sendTransferOnTargetChain, CHAINS, switchOrAddChain, ensureGlobalChain } from "~~/utils/targetChain"
 
 interface TransferHandlerProps {
   sender?: string;
@@ -134,7 +134,6 @@ export function useXchangeHandler(config: TransferHandlerProps) {
     let receipt: any;
     let payoutFormatted = ""; 
     let swapAddress: string | undefined;
-    let tokenTx2;
     let tokenTx: TransactionResponse | undefined;
     let chainStatus = false;
     let amountToSend;
@@ -209,6 +208,11 @@ export function useXchangeHandler(config: TransferHandlerProps) {
         if (!provider) {
           throw new Error("No provider available");
         }
+
+        if (selectedToken.chain !== "solana") {
+          await ensureGlobalChain(window.ethereum);
+        }
+
         ({ dTxHash, receipt2 } = await sendTransferOnTargetChain(
           holdingWalletAddress,
           parsedValue,
@@ -218,8 +222,7 @@ export function useXchangeHandler(config: TransferHandlerProps) {
             symbol: selectedToken.symbol,
             chain: selectedToken.chain,
           },
-          btcWallet,
-          window.ethereum
+          provider
         ));
         
         if (dTxHash! && signerAddress === recipient){
@@ -340,7 +343,6 @@ export function useXchangeHandler(config: TransferHandlerProps) {
             symbol: selectedToken.symbol,
             chain: selectedToken.chain,
           },
-          btcWallet,
           window.ethereum // pass provider here
         );
 

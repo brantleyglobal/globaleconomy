@@ -1,16 +1,13 @@
 import { erc20Abi } from 'viem';
 import Web3 from "web3";
 
-interface BitcoinWallet {
-  sendTransaction: (to: string, amount: number) => Promise<string>;
-}
-
 export interface ChainInfo {
   chainId: number;
   chainName: string;
   rpcUrls: string[];
   nativeCurrency: { name: string; symbol: string; decimals: number };
   blockExplorerUrls?: string[];
+  isSolana?: boolean;
 }
 
 export const CHAINS: Record<string, ChainInfo> = {
@@ -42,12 +39,6 @@ export const CHAINS: Record<string, ChainInfo> = {
     nativeCurrency: { name: "GBDo", symbol: "GBDo", decimals: 18 },
     blockExplorerUrls: ["https://brantley-global.com/dashboard"],
   },
-  bitcoin: {
-    chainId: 0,
-    chainName: "Bitcoin",
-    rpcUrls: [],
-    nativeCurrency: { name: "Bitcoin", symbol: "BTC", decimals: 8 },
-  },
 };
 
 export function normalizeChainId(chainId: number | string): string {
@@ -61,6 +52,7 @@ export function normalizeChainId(chainId: number | string): string {
 }
 
 export async function switchOrAddChain(provider: any, chain: ChainInfo): Promise<void> {
+  if (chain.isSolana) return;
   const targetHex = normalizeChainId(chain.chainId);
   const currentChainId = normalizeChainId(await provider.request({ method: "eth_chainId" }));
   
@@ -124,30 +116,23 @@ export async function sendTransferOnTargetChain(
   recipient: string,
   tamount: bigint, // input assumes base scale notation
   selectedToken: { address?: string; decimals?: number; symbol?: string; chain?: keyof typeof CHAINS },
-  btcWallet?: BitcoinWallet,
   provider?: any
 ) {
-  let receipt2;
+  let receipt2: any;
   let dTxHash;
-
-  const activeProvider = provider || (typeof window !== "undefined" ? (window as any).ethereum : null);
-  if (!activeProvider) throw new Error("No wallet provider available");
 
   const chainInfo = CHAINS[selectedToken.chain!];
   if (!chainInfo) throw new Error(`Unknown chain: ${selectedToken.chain}`);
 
-  // 1. Bitcoin routing optimization path
-  if (selectedToken.chain === "bitcoin") {
-    if (!btcWallet) throw new Error("Bitcoin wallet not connected");
-    // tamount assumes 18 decimals entry format, scale down to Satoshi units (8 decimals)
-    const sats = rescaleAmount(tamount, 18, 8);
-    const txid = await btcWallet.sendTransaction(recipient, Number(sats));
-    return { dTxHash: txid, receipt2: null };
-  }
+  // ==========================================
+  // EVM EXECUTION ROUTINE
+  // ==========================================
 
   if (!selectedToken.address) throw new Error("Token address required");
 
-  // 2. EVM Network targeting layer
+  const activeProvider = provider || (typeof window !== "undefined" ? (window as any).ethereum : null);
+  if (!activeProvider) throw new Error("No wallet provider available");
+
   await switchOrAddChain(activeProvider, chainInfo);
 
   const verifiedChainId = normalizeChainId(await activeProvider.request({ method: "eth_chainId" }));
@@ -183,7 +168,7 @@ export async function sendTransferOnTargetChain(
     dTxHash = receipt2.transactionHash;
   }
 
-  // 4. Return user environment securely back to base chain layout rules
+  // Return user environment securely back to base chain layout rules
   await switchOrAddChain(activeProvider, CHAINS.global);
 
   return { dTxHash, receipt2 };

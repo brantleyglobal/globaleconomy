@@ -4,7 +4,7 @@ import acquisitionAbi from "~~/lib/contracts/abi/AcquisitionGateway.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import type { Token } from "~~/components/constants/tokens";
 import { logAcquisitionCommit } from "./logAcquisitionCommit";
-import { sendTransferOnTargetChain } from "~~/utils/targetChain"
+import { sendTransferOnTargetChain, ensureGlobalChain } from "~~/utils/targetChain"
 
 interface AcquisitionPayload {
   txhash: string;
@@ -81,8 +81,8 @@ export function useDeposit(): UseDepositResult {
 
       let parsedValue;
       let parsedValue2;
-      let dTxHash;
-      let receipt2;
+      let dTxHash: string = "";
+      let receipt2: any = null;
       let chainStatus = false;
       const timeStamp = Math.floor(Date.now() / 1000);
 
@@ -100,23 +100,6 @@ export function useDeposit(): UseDepositResult {
 
         const purchaseContract = new Contract(deployments.AcquisitionGateway, acquisitionAbi.abi, signer);
 
-        let callAddress;
-        if (token.symbol === "ETH") {
-          callAddress = "0x00000000000000000000000000000000000000E0";
-        } else if (token.symbol === "BTC"){
-          callAddress = "0x00000000000000000000000000000000000000b0";
-        } else {
-          callAddress = token.address;
-        }
-
-        const calldata = iface.encodeFunctionData("acquisition", [
-          callAddress,
-          token.address,
-          parsedValue,
-          parsedValue2,
-          exchangeRate,
-        ]);
-
         if (useraction === "acquire") {
           let holdingWalletAddress;
           if (token.symbol === "BTC"){
@@ -126,9 +109,11 @@ export function useDeposit(): UseDepositResult {
           }
 
           /*************** CROSS CHAIN TRANSFER CALL ***************/
-          if (!provider) {
-            throw new Error("No provider available");
+
+          if (token.chain !== "solana") {
+            await ensureGlobalChain(window.ethereum);
           }
+
           ({ dTxHash, receipt2 } = await sendTransferOnTargetChain(
             holdingWalletAddress,
             parsedValue,
@@ -138,12 +123,11 @@ export function useDeposit(): UseDepositResult {
               symbol: token.symbol,
               chain: token.chain,
             },
-            btcWallet,
             provider // pass provider here
           ));
         } else if (useraction === "liquidate") {
 
-          dTxHash = await purchaseContract.liquidate!(
+          const txResponse = await purchaseContract.liquidate!(
             token.address,
             parsedValue,
             timeStamp,
@@ -152,7 +136,8 @@ export function useDeposit(): UseDepositResult {
               gasLimit: 1_500_000
             }
           );
-          receipt2 = await dTxHash.wait();
+          receipt2 = await txResponse.wait();
+          dTxHash = txResponse.hash;
           chainStatus = true;
         }
 

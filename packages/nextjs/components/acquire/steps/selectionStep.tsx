@@ -35,7 +35,7 @@ export default function SelectionStep ({ userAction, setUserAction, onHelpToggle
         >
             <h4 className="text-md font-light mt-2 text-white">PURCHASE NATIVE CURRENCY</h4>
             <p className="text-xs text-white text-justify">
-              Acquire Global Dollar.
+              Acquire Global Dollar (GBDo).
             </p>
         </div>
 
