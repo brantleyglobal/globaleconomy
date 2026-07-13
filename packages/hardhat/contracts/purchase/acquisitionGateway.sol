@@ -62,9 +62,9 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
     
     address constant NATIVE_TOKEN = address(0);
 
-    address[] public stables;
+    address[] internal stables;
     address[] private admins;
-    uint256[] public purchaseTimestamps;
+    uint256[] internal purchaseTimestamps;
     uint256 public depositFeeBps;
     uint256 public processTimestamp;
     uint256 private _supply;
@@ -72,13 +72,13 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
     // Mapping for quick stablecoin whitelist check
     mapping(address => bool) private adminWhitelistMap;
     mapping(address => bool) private stablecoinWhitelistMap;
-    mapping(uint256 => PurchaseRef) public purchasesByTimestamp;
-    mapping(address => Purchase[]) public purchasesByUser;
-    mapping(bytes32 => bool) public processedHashes;
-    mapping(address => uint256) stablecoinIndex;
-    mapping(address => uint256) adminIndex;
-    mapping(uint256 => RateRange) public rateRange;
-    mapping(address => mapping(uint256 => uint256[])) purchasePayouts;
+    mapping(uint256 => PurchaseRef) internal purchasesByTimestamp;
+    mapping(address => Purchase[]) internal purchasesByUser;
+    mapping(bytes32 => bool) internal processedHashes;
+    mapping(address => uint256) private stablecoinIndex;
+    mapping(address => uint256) private adminIndex;
+    mapping(uint256 => RateRange) internal rateRange;
+    mapping(address => mapping(uint256 => uint256[])) internal purchasePayouts;
 
     event Acquisitioned(address indexed user, uint256 amountOut, uint256 amountIn);
     event PurchaseTimestamp(
@@ -314,39 +314,29 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         if(msg.sender != owner()) revert NotAuthorized();
 
         rateRange[0]  = RateRange(RATE_100, RATE_100);
-        rateRange[1]  = RateRange(RATE_102, RATE_098);
-        rateRange[3]  = RateRange(RATE_102, RATE_098);
-        rateRange[5]  = RateRange(RATE_102, RATE_098);
-        rateRange[9]  = RateRange(RATE_102, RATE_098);
-        rateRange[11] = RateRange(RATE_102, RATE_098);
-        rateRange[12] = RateRange(RATE_102, RATE_098);
-        rateRange[13] = RateRange(RATE_102, RATE_098);
-        rateRange[20] = RateRange(RATE_102, RATE_098);
-        rateRange[21] = RateRange(RATE_102, RATE_098);
-        rateRange[25] = RateRange(RATE_102, RATE_098);
+        rateRange[1]  = RateRange(RATE_098, RATE_102); 
+        rateRange[3]  = RateRange(RATE_098, RATE_102);
+        rateRange[5]  = RateRange(RATE_098, RATE_102);
+        rateRange[9]  = RateRange(RATE_098, RATE_102);
+        rateRange[11] = RateRange(RATE_098, RATE_102);
+        rateRange[12] = RateRange(RATE_098, RATE_102);
+        rateRange[13] = RateRange(RATE_098, RATE_102);
+        rateRange[20] = RateRange(RATE_098, RATE_102);
+        rateRange[21] = RateRange(RATE_098, RATE_102);
+        rateRange[25] = RateRange(RATE_098, RATE_102);
 
-        rateRange[14] = RateRange(RATE_069, RATE_065);
-
-        rateRange[2]  = RateRange(RATE_076, RATE_072);
-
-        rateRange[4]  = RateRange(RATE_112, RATE_108);
-        rateRange[19] = RateRange(RATE_112, RATE_108);
-
-        rateRange[6]  = RateRange(RATE_100, RATE_097);
-
-        rateRange[7]  = RateRange(RATE_0073, RATE_0065);
-
-        rateRange[8]  = RateRange(RATE_062, RATE_058);
-
-        rateRange[10] = RateRange(RATE_076, RATE_074);
-
-        rateRange[15] = RateRange(RATE_064, RATE_054);
-
-        rateRange[16] = RateRange(RATE_021, RATE_019);
-
-        rateRange[17] = RateRange(RATE_130, RATE_120);
-
-        rateRange[18] = RateRange(RATE_033, RATE_030);
+        rateRange[14] = RateRange(RATE_065, RATE_069);
+        rateRange[2]  = RateRange(RATE_072, RATE_076);
+        rateRange[4]  = RateRange(RATE_108, RATE_112);
+        rateRange[19] = RateRange(RATE_108, RATE_112);
+        rateRange[6]  = RateRange(RATE_097, RATE_100);
+        rateRange[7]  = RateRange(RATE_0065, RATE_0073);
+        rateRange[8]  = RateRange(RATE_058, RATE_062);
+        rateRange[10] = RateRange(RATE_074, RATE_076);
+        rateRange[15] = RateRange(RATE_054, RATE_064);
+        rateRange[16] = RateRange(RATE_019, RATE_021);
+        rateRange[17] = RateRange(RATE_120, RATE_130);
+        rateRange[18] = RateRange(RATE_030, RATE_033);
 
         rateRange[32] = RateRange(RATE_100, RATE_100);
         rateRange[33] = RateRange(RATE_100, RATE_100);
@@ -370,7 +360,7 @@ contract AcquisitionGateway is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         view
         returns (Purchase[] memory)
     {
-        if (!_isAdmin(msg.sender) || msg.sender != user) revert NotAuthorized();
+        if (!_isAdmin(msg.sender) && msg.sender != user) revert NotAuthorized();
         return purchasesByUser[user];
     }
 

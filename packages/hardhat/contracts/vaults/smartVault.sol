@@ -114,52 +114,62 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     error InvalidPoolAmount(uint256 poolMin, uint256 inputAmount);
     error NoEligibleTerms();
 
-    address public payoutToken;
+    address private payoutToken;
     address private payoutAddress; //Remove
-    address public feeRecipient;
-    address[] public stakeables;
-    address[] public stables;
+    address private feeRecipient;
+    address[] internal stakeables;
+    address[] internal stables;
     address[] private admins;
     address[] private autopay;
     address constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD; //Remove
     
     // State variable to track injected time
-    uint256 public lastUpdatedTime;
-    uint256 public lastTimeStamp;
-    uint256 public updatedStartQuarter;
+    uint256 internal lastUpdatedTime;
+    uint256 internal lastTimeStamp;
+    uint256 internal updatedStartQuarter;
     uint256 public depositFeeBps;
-    uint256 public processDepositTimestamp;
-    uint256 public processWithdrawTimestamp;
-    uint256[] public depositTimestamps;
-    uint256[] public withdrawTimestamps;
+    uint256 internal processDepositTimestamp;
+    uint256 internal processWithdrawTimestamp;
+    uint256[] internal depositTimestamps;
+    uint256[] internal withdrawTimestamps;
+    uint256[] internal activeTerms;
 
     // Mapping for quick stablecoin whitelist check
     mapping(address => bool) private adminWhitelistMap;
     mapping(address => bool) private stablecoinWhitelistMap;
     mapping(address => bool) private stakeableWhitelistMap;
     mapping(address => bool) private autopayWhitelistMap;
-    mapping(address => uint256) public multiplier;
-    mapping(uint256 => DepositRef) public depositsByTimestamp;
-    mapping(bytes32 => DepositRef) public depositsByHash;
-    mapping(address => uint256[]) public depositTimestampsByUser;
-    mapping(bytes32 => bool) public processedDeposits;
-    mapping(uint256 => Withdraw) public withdrawByTimestamp;
-    mapping(bytes32 => Withdraw) public withdrawByHash;
-    mapping(address => User[]) public withdrawalsByUser;
-    mapping(address => Deposit[]) public depositsByUser;
-    mapping(uint256 => EcoQuarterData) public ecoDataByQuarter;
-    mapping(address => uint256) stablecoinIndex;
-    mapping(address => uint256) stakeablecoinIndex;
-    mapping(address => uint256) adminIndex;
-    mapping(address => uint256) autopayIndex;
-    mapping(uint256 => RateRange) public rateRange;
-    mapping(address => mapping(uint256 => mapping(uint256 => uint256[]))) public stagePayouts;
+    
+    // Changed to private/internal to kill auto-generated getter bytecode
+    mapping(address => uint256) internal multiplier;
+    mapping(uint256 => DepositRef) internal depositsByTimestamp;
+    mapping(bytes32 => DepositRef) internal depositsByHash;
+    mapping(address => uint256[]) internal depositTimestampsByUser;
+    mapping(bytes32 => bool) internal processedDeposits;
+    mapping(uint256 => Withdraw) internal withdrawByTimestamp;
+    mapping(bytes32 => Withdraw) internal withdrawByHash;
+    mapping(address => User[]) internal withdrawalsByUser;
+    mapping(address => uint256) internal userWithdrawQueue;
+    mapping(address => uint256[]) internal userActiveTerms;
+    mapping(address => Deposit[]) internal depositsByUser;
+    mapping(uint256 => EcoQuarterData) internal ecoDataByQuarter;
+    
+    mapping(address => uint256) private stablecoinIndex;
+    mapping(address => uint256) private stakeablecoinIndex;
+    mapping(address => uint256) private adminIndex;
+    mapping(address => uint256) private autopayIndex;
+    mapping(address => mapping(uint256 => uint256)) private activeTermIndex;
+    
+    mapping(uint256 => RateRange) internal rateRange;
+    
+    // Nested mappings create massive implicit getters. Keep this internal!
+    mapping(address => mapping(uint256 => mapping(uint256 => uint256[]))) internal stagePayouts;
+    
     mapping(uint256 => mapping (uint256 => address[])) private quarterLocker;
     mapping(uint256 => mapping (uint256 => mapping(uint256 => address))) private contractTracker;
 
     event Deposited(address indexed user, uint256 amountOut, uint256 amountIn, uint256 fee, uint256 committedQuarters);
-    event UpdateFailed(address indexed addr, uint256 index, string reason); //Remove
-    event FundsWithdrawn(address indexed token, address indexed to, uint256 amount); //Remove
+    event FundsWithdrawn(address indexed token, address indexed to, uint256 amount);
     event WithdrawInRange(
         address indexed user,
         uint256 amountout,
@@ -176,15 +186,6 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         uint256 quartersCommitted,
         uint256 amountin,
         uint256 amountout
-    );
-    event UserWithdraw(
-        uint256 timestamp, //Remove
-        address indexed user,
-        uint256 quartersCommitted,
-        uint256 unlockQuarter,
-        uint256 amountout, 
-        uint256 termIndex,
-        uint256 stage
     );
     event PayoutTxHashCorrected(address user, uint256 quarter, bytes32 old, bytes32 newTxHash, address payoutSetter);
 
@@ -509,6 +510,9 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             u.userDividendAmount = holderBalance;
             u.stage = 0;
 
+            activeTermIndex[msg.sender][termIndex] = userActiveTerms[msg.sender].length;
+            userActiveTerms[msg.sender].push(termIndex);
+
             _processPayout(
                 WithdrawInit({
                     user: msg.sender,
@@ -555,27 +559,33 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
     function _processPayout(WithdrawInit memory init) internal {
         User[] storage terms = withdrawalsByUser[init.user];
-        uint256 len = terms.length;
+        uint256 len = userActiveTerms[init.user].length;
 
-        // Cache parameters to local stack variables
-        uint256 allocationSize = len > 100 ? len - 100 : 0;        
+        uint256 startIdx = userWithdrawQueue[init.user];
+        
+        // Cap the execution to 40 terms forward from the starting checkpoint
+        uint256 endIdx = startIdx + 40;
+        if (endIdx > len) {
+            endIdx = len;
+        }
 
-        // Loop corrected to safely read from 0 to (len - 1) backwards
-        for (uint256 i = len; i > allocationSize; i--) {
-            uint256 termIndex;
-            unchecked { termIndex = i - 1;}
+        // Clean, forward-counting loop
+        for (uint256 i = startIdx; i < endIdx; ) {
 
-            User storage u = terms[termIndex];
+            uint256 activeTermId = userActiveTerms[init.user][i];
+            User storage u = terms[activeTermId];
 
             // Combined Early Exit Gates
             //address divToken = u.dividendToken;
 
             if (u.user == address(0) || u.stage >= u.quartersCommitted) {
+                unchecked { i++; }
                 continue;
             }
 
             // Math execution safely bounded under explicit check
             if (init.currentQuarter <= u.startQuarter) {
+                unchecked { i++; }
                 continue;
             }
 
@@ -584,38 +594,54 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
                 stageCheck = init.currentQuarter - u.startQuarter;
             }
 
-            _handlePayout(u,
+            bool removed = _handlePayout(u,
                 WithdrawHandle({
                     payToken: init.payToken,
                     stageCheck: stageCheck,
-                    termIndex: termIndex,
+                    termIndex: activeTermId,
                     timeStamp: init.timeStamp
                 })
             );
+
+            if (removed) {
+                unchecked { endIdx--; }
+                continue;
+            }
+
+            unchecked { i++; }
         }
 
-        //emit FundsWithdrawn(init.user, msg.sender, allocationSize);
+        uint256 currentLen = userActiveTerms[init.user].length;
+        if (endIdx >= currentLen || currentLen == 0) {
+            userWithdrawQueue[init.user] = 0; // Wrap around safely to index 0
+        } else {
+            userWithdrawQueue[init.user] = endIdx;
+        }
+
     }
 
     function _handlePayout(
         User storage u,
         WithdrawHandle memory h
-    ) internal {
-        uint256 payout = 0;
-        uint256 ts = h.timeStamp;
+    ) internal returns (bool removed){
+        uint256 totalPayoutAccumulator = 0;
+        uint256 baseTs = h.timeStamp;
 
-        // Fetch external token details ONCE here instead of down in the loops
         uint256 fromTs = GlobalDollarT(u.dividendToken).contractTime();
-        uint256 monthDiff = fromTs.diffMonths(ts);
+        uint256 monthDiff = fromTs.diffMonths(baseTs);
 
-        for (uint256 i = u.stage; i < h.stageCheck; i++) {
-            
-            // Time rules evaluation using cached parameter registers
+        uint256 maxStage = h.stageCheck;
+        uint256 startingStage = u.stage;
+
+        for (uint256 i = startingStage; i < maxStage; ) {
+            // Time rules evaluation
             if (monthDiff < ((i + 1) * 3)) {
+                unchecked { i++; }
                 continue;
             }
 
             if (u.amountout[i] != 0) {
+                unchecked { i++; }
                 continue;
             }
 
@@ -623,50 +649,72 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             EcoQuarterData memory g = ecoDataByQuarter[payoutQuarter];
 
             if (g.ecoPool == 0 || g.ecoSupply == 0) {
+                unchecked { i++; }
                 continue;
             }
 
-            // Write state records efficiently
+            // Memory assignments reduce SSTORE overhead
             u.termSupplyPerStage[i] = g.ecoSupply;
             u.poolBalancePerStage[i] = g.ecoPool;
             
-            payout = _computePayout(u, payoutQuarter);
+            uint256 payout = _computePayout(u, payoutQuarter);
             u.amountout[i] = payout;
+            totalPayoutAccumulator += payout;
             
-            // Safe structural element alignment without modifying your loop counter
             if (i > 0) {
                 if ((u.payToken[i] == address(0) && h.payToken == address(0)) || u.autoPay) {
                     u.payToken[i] = u.payToken[i - 1]; 
                 }
             }
 
-            unchecked { ts += i; } 
-
-            withdrawByTimestamp[ts] = Withdraw(
-                msg.sender,
+            // Explicit, un-clashable unique lookup tracking hash generation
+            bytes32 trackingHash = keccak256(abi.encodePacked(u.user, baseTs, i));
+            
+            // Assuming fallback lookup storage tracking table updated to use mapping(bytes32 => Withdraw)
+            withdrawByHash[trackingHash] = Withdraw(
+                u.user,
                 h.termIndex,
                 i
             );
-            withdrawTimestamps.push(ts);
 
-            // Changed evaluation expression into explicit variable assignment
             bool status = (i + 1) == u.quartersCommitted;
             bool initiationStatus = (i == 0);
+
+            if (status) {
+
+                uint256 activeArrayPos = activeTermIndex[u.user][h.termIndex]; // Find its exact array index position
+                uint256 lastIndex = userActiveTerms[u.user].length - 1;        // Safe array tail index
+
+                if (activeArrayPos != lastIndex) {
+                    uint256 lastTermId = userActiveTerms[u.user][lastIndex];   // Grab element from tail
+                    
+                    userActiveTerms[u.user][activeArrayPos] = lastTermId;      // Swap into deleted spot
+                    activeTermIndex[u.user][lastTermId] = activeArrayPos;      // Remap tail element pointer
+                }
+
+                userActiveTerms[u.user].pop();                                 // Pop tail item
+                delete activeTermIndex[u.user][h.termIndex];
+
+                removed = true;
+            }
 
             _recordWithdrawal(u, h,
                 LedgerHandle({
                     stage: i,
                     termIndex: h.termIndex,
                     payout: payout,
-                    ts: ts,
+                    ts: baseTs,
                     status: status,
                     initiationStatus: initiationStatus
                 })
             );
 
             emit FundsWithdrawn(u.payToken[i], msg.sender, payout);
-
+            
+            // Increment tracking state locally
             u.stage = i;
+
+            unchecked { i++; }
         }
     }
 
@@ -879,10 +927,45 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         );
     }
 
-    function populateGlobals() public {
+    function populateRateRanges() public {
+        if(msg.sender != owner()) revert NotAuthorized();
+
+        rateRange[0]  = RateRange(RATE_100, RATE_100);
+        rateRange[1]  = RateRange(RATE_098, RATE_102); 
+        rateRange[3]  = RateRange(RATE_098, RATE_102);
+        rateRange[5]  = RateRange(RATE_098, RATE_102);
+        rateRange[9]  = RateRange(RATE_098, RATE_102);
+        rateRange[11] = RateRange(RATE_098, RATE_102);
+        rateRange[12] = RateRange(RATE_098, RATE_102);
+        rateRange[13] = RateRange(RATE_098, RATE_102);
+        rateRange[20] = RateRange(RATE_098, RATE_102);
+        rateRange[21] = RateRange(RATE_098, RATE_102);
+        rateRange[25] = RateRange(RATE_098, RATE_102);
+
+        rateRange[14] = RateRange(RATE_065, RATE_069);
+        rateRange[2]  = RateRange(RATE_072, RATE_076);
+        rateRange[4]  = RateRange(RATE_108, RATE_112);
+        rateRange[19] = RateRange(RATE_108, RATE_112);
+        rateRange[6]  = RateRange(RATE_097, RATE_100);
+        rateRange[7]  = RateRange(RATE_0065, RATE_0073);
+        rateRange[8]  = RateRange(RATE_058, RATE_062);
+        rateRange[10] = RateRange(RATE_074, RATE_076);
+        rateRange[15] = RateRange(RATE_054, RATE_064);
+        rateRange[16] = RateRange(RATE_019, RATE_021);
+        rateRange[17] = RateRange(RATE_120, RATE_130);
+        rateRange[18] = RateRange(RATE_030, RATE_033);
+
+        rateRange[32] = RateRange(RATE_100, RATE_100);
+        rateRange[33] = RateRange(RATE_100, RATE_100);
+    }
+
+    function populateStakeables(uint256 start, uint256 end) public {
         if(msg.sender != owner()) revert NotAuthorized();
         
-        for (uint256 i = 0; i < stakeables.length; i++) {
+        // Safety check to prevent out-of-bounds array reads
+        uint256 limit = end > stakeables.length ? stakeables.length : end;
+
+        for (uint256 i = start; i < limit; i++) {
             if (i <= 29) {
                 multiplier[stakeables[i]] = 110;
             } else if (i <= 62) {
@@ -897,50 +980,11 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
                 multiplier[stakeables[i]] = 150;
             } else if (i <= 272) {
                 multiplier[stakeables[i]] = 160;
+            } else {
+                // Catch-all safety net for items beyond index 272
+                multiplier[stakeables[i]] = 160; 
             }
         }
-        
-        {
-
-            rateRange[0]  = RateRange(RATE_100, RATE_100);
-            rateRange[1]  = RateRange(RATE_102, RATE_098);
-            rateRange[3]  = RateRange(RATE_102, RATE_098);
-            rateRange[5]  = RateRange(RATE_102, RATE_098);
-            rateRange[9]  = RateRange(RATE_102, RATE_098);
-            rateRange[11] = RateRange(RATE_102, RATE_098);
-            rateRange[12] = RateRange(RATE_102, RATE_098);
-            rateRange[13] = RateRange(RATE_102, RATE_098);
-            rateRange[20] = RateRange(RATE_102, RATE_098);
-            rateRange[21] = RateRange(RATE_102, RATE_098);
-            rateRange[25] = RateRange(RATE_102, RATE_098);
-
-            rateRange[14] = RateRange(RATE_069, RATE_065);
-
-            rateRange[2]  = RateRange(RATE_076, RATE_072);
-
-            rateRange[4]  = RateRange(RATE_112, RATE_108);
-            rateRange[19] = RateRange(RATE_112, RATE_108);
-
-            rateRange[6]  = RateRange(RATE_100, RATE_097);
-
-            rateRange[7]  = RateRange(RATE_0073, RATE_0065);
-
-            rateRange[8]  = RateRange(RATE_062, RATE_058);
-
-            rateRange[10] = RateRange(RATE_076, RATE_074);
-
-            rateRange[15] = RateRange(RATE_064, RATE_054);
-
-            rateRange[16] = RateRange(RATE_021, RATE_019);
-
-            rateRange[17] = RateRange(RATE_130, RATE_120);
-
-            rateRange[18] = RateRange(RATE_033, RATE_030);
-
-            rateRange[32] = RateRange(RATE_100, RATE_100);
-            rateRange[33] = RateRange(RATE_100, RATE_100);
-        }
-
     }
 
     function getQuarterData(uint256 cQ) external view returns(EcoQuarterData memory) {
@@ -973,12 +1017,12 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     }
 
     function getWithdrawalUser(address user, uint256 index) external view returns (User memory) {
-        if (!_isAdmin(msg.sender) || msg.sender != user) revert NotAuthorized();
+        if (!_isAdmin(msg.sender) && msg.sender != user) revert NotAuthorized();
         return withdrawalsByUser[user][index];
     }
 
     function getDepositUser(address user, uint256 index) external view returns (Deposit memory) {
-        if (!_isAdmin(msg.sender) || msg.sender != user) revert NotAuthorized();
+        if (!_isAdmin(msg.sender) && msg.sender != user) revert NotAuthorized();
         return depositsByUser[user][index];
     }
 
@@ -1347,6 +1391,16 @@ contract SmartVault is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         bool adn = true;
 
         _removalHelper(adminToRemove, stc, stk, adn);
+    }
+
+    /**
+     * @notice Retrieves the stake multiplier for a specific dividend token address
+     * @param dividendToken The contract address of the token being checked
+     * @return The multiplier value (e.g., 110, 120, 160)
+     */
+    function getMultiplier(address dividendToken) external view returns (uint256) {
+        if(msg.sender != owner()) revert NotAuthorized();
+        return multiplier[dividendToken];
     }
 
     uint256[50] __gap;

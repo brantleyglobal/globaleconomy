@@ -7,8 +7,11 @@ import ledgerAbi from "../artifacts/contracts/ledger/globalLedger.sol/GlobalLedg
 import vaultAbi from "../artifacts/contracts/vaults/smartVault.sol/SmartVault.json";
 import regionAbi from "../artifacts/contracts/vaults/regionInfrastructure.sol/RegionInfrastructure.json";
 import purchaseAbi from "../artifacts/contracts/purchase/assetPurchase.sol/AssetPurchase.json";
+import purchaseHubAbi from "../artifacts/contracts/purchase/purchaseHub.sol/PurchaseHub.json";
 import acquisitionAbi from "../artifacts/contracts/purchase/acquisitionGateway.sol/AcquisitionGateway.json";
-import swapregistryAbi from "../artifacts/contracts/xchange/globalSwapRegistry.sol/GlobalSwapRegistry.json"
+import swapregistryAbi from "../artifacts/contracts/xchange/globalSwapRegistry.sol/GlobalSwapRegistry.json";
+import logisticsManagerAbi from "../artifacts/contracts/logistics/logisticsManager.sol/LogisticsManager.json";
+import assemblyManagerAbi from "../artifacts/contracts/logistics/assemblyManager.sol/AssemblyManager.json";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -216,7 +219,7 @@ async function main() {
     "0x86B4dBE5D203e634a12364C0e428fa242A3FbA98", // GBPT     17
     "0x6FAff971d9248e7d398A98FdBE6a81F6d7489568", // TRYX     18
     "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c", // EURc     19
-    "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC (Base)20
+    "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC (Base) 20
     "0x7712c34205737192402172409a8F7ccef8aA2AEc", // BUIDL    21
     "0x00006100F7090010005F1bd7aE6122c3C2CF0090", // AUDT     22
     "0x05BBeD16620B352A7F889E23E3Cf427D1D379FFE", // NGNT     23
@@ -229,15 +232,10 @@ async function main() {
     "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH     30
     "0x0000000000000000000000000000000000001010", // POL      31
     copxAddress,                                  // COPx     32
-    gbdAddress,                                   // GBDO     33
-  ]
+    gbdAddress                                    // GBDO     33
+];
   
   const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
-
-  const adminAddresses = [
-    deployer.address,
-    "0xb84753ff376d8347f27ea669ad36f7e79f0c364e"
-  ]
 
   //console.log("adminAddresses:", adminAddresses);
   
@@ -267,6 +265,22 @@ async function main() {
   const AssetPurchase = await deployProxy("AssetPurchase", deployed, [
     deployer.address,
     GlobalLedger
+  ]);
+
+  const AssemblyManager = await deployProxy("AssemblyManager", deployed, [
+    deployer.address,
+  ]);
+
+  const LogisticsManager = await deployProxy("LogisticsManager", deployed, [
+    deployer.address,
+    AssemblyManager,
+    AssetPurchase,
+  ]);
+
+  const PurchaseHub = await deployProxy("PurchaseHub", deployed, [
+    deployer.address,
+    AssetPurchase,
+    LogisticsManager,
   ]);
 
   const AcquisitionGateway = await deployProxy("AcquisitionGateway", deployed, [
@@ -358,12 +372,42 @@ async function main() {
     RegionInfrastructure
   ]
 
+  const adminAddresses = [
+    deployer.address,
+    "0xb84753ff376d8347f27ea669ad36f7e79f0c364e",
+  ]
+
+  const purchaseAdminAddresses = [
+    deployer.address,
+    "0xb84753ff376d8347f27ea669ad36f7e79f0c364e",
+    PurchaseHub,
+  ]
+
+
+  const logisticsAdminAddresses = [
+    deployer.address,
+    "0xb84753ff376d8347f27ea669ad36f7e79f0c364e",
+    PurchaseHub,
+    AssemblyManager,
+  ]
+
+  const assemblyAdminAddresses = [
+    deployer.address,
+    "0xb84753ff376d8347f27ea669ad36f7e79f0c364e",
+    PurchaseHub,
+    LogisticsManager
+
+  ]
+
   const contract2 = new ethers.Contract(GlobalLedger, ledgerAbi.abi, deployer);
   const contractv = new ethers.Contract(SmartVault, vaultAbi.abi, deployer);
   const contractr = new ethers.Contract(RegionInfrastructure, regionAbi.abi, deployer);
   const contractp = new ethers.Contract(AssetPurchase, purchaseAbi.abi, deployer);
+  const contracthub = new ethers.Contract(PurchaseHub, purchaseHubAbi.abi, deployer);
   const contracta = new ethers.Contract(AcquisitionGateway, acquisitionAbi.abi, deployer);
   const contractg = new ethers.Contract(GlobalSwapRegistry, swapregistryAbi.abi, deployer);
+  const contractass = new ethers.Contract(AssemblyManager, assemblyManagerAbi.abi, deployer);
+  const contractlog = new ethers.Contract(LogisticsManager, logisticsManagerAbi.abi, deployer);
   const contractShield = new ethers.Contract(GlobalShield, shieldAbi.abi, deployer);
 
 
@@ -409,12 +453,28 @@ async function main() {
 
   const admnpadd = await contractp.addToAdminWhitelist!(adminAddresses);
 
+  const logadd = await contractp.setLogisticsManager(LogisticsManager);
+
   console.log("Attempting to Update Acqisition Addresses");
 
   // -- Purchase Address Load --- //
   const stcaadd = await contracta.addToStableWhitelist!(stablecoinAddresses);
 
-  const admnaadd = await contracta.addToAdminWhitelist!(adminAddresses);
+  const admnaadd = await contracta.addToAdminWhitelist!(purchaseAdminAddresses);
+
+  // -- Logistics Address Load --- //
+
+  const admnladd = await contractlog.addToAdminWhitelist!(logisticsAdminAddresses);
+
+  // -- Assembler Address Load --- //
+
+  const admnassmadd = await contractass.addToAdminWhitelist!(assemblyAdminAddresses);
+
+  // -- Hub Address Load --- //
+
+  const admnhubmadd = await contracthub.addToAdminWhitelist!(assemblyAdminAddresses);
+
+  // -- Registry Address Load -- //
 
   console.log("Attempting to Update Registry Addresses");
   const admngadd = await contractg.addToAdminWhitelist!(adminAddresses);
@@ -427,7 +487,7 @@ async function main() {
 
   //const stk = await contract2.removeFromStakeableWhitelist!(stakeablecoinAddresses);
 
-  /*console.log("Attempting to Update Dates");
+  console.log("Attempting to Update Dates");
 
   const sIndex1 = 0;
   const eIndex1 = 68;
@@ -453,8 +513,20 @@ async function main() {
   console.log("Attempting to Update Globals");
 
   // --- Populate Values ---
-  const txPop = await contractv.populateGlobals!({ gasLimit: 8_000_000n });
-  await txPop.wait();
+  const txPoprr = await contractv.populateRateRanges!({ gasLimit: 8_000_000n });
+  await txPoprr.wait();
+
+  const txPopst1 = await contractv.populateStakeables!(sIndex1, eIndex1, { gasLimit: 8_000_000n });
+  await txPopst1.wait();
+
+  const txPopst2 = await contractv.populateStakeables!(sIndex2, eIndex2, { gasLimit: 8_000_000n });
+  await txPopst2.wait();
+
+  const txPopst3 = await contractv.populateStakeables!(sIndex3, eIndex3, { gasLimit: 8_000_000n });
+  await txPopst3.wait();
+
+  const txPopst4 = await contractv.populateStakeables!(sIndex4, eIndex4, { gasLimit: 8_000_000n });
+  await txPopst4.wait();
 
   console.log("Attempting to check Unlock Quarter by Contract");
 
@@ -467,9 +539,9 @@ async function main() {
   console.log("Attempting to check Multiplier by Contract");
 
   for (const token of stakeablecoinAddresses) {
-    const balance = await contractv.multiplier!(token);
+    const balance = await contractv.getMultiplier!(token);
     console.log(`Multiplier ${token}: ${balance}`);
-  }*/
+  }
 
   console.log("Attempting to set Factory Address");
 

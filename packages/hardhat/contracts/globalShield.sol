@@ -48,6 +48,14 @@ contract GlobalShield is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         uint256 depositIndex;
     }
 
+    enum ReturnProcess { 
+        None, 
+        RefundPending, 
+        RepairPending, 
+        RefundComplete,
+        RepairComplete
+    }
+
     struct Purchase {
         address user;
         address affiliate;
@@ -63,10 +71,18 @@ contract GlobalShield is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         uint256 shipping;
         uint256 customizations;
         uint256 rate;
-        bool refund;
+        ReturnProcess status;
         bytes32 purchaseTxHash;
         bytes32 refundHash;
         bytes32 configs;
+    }
+
+    struct ShippingDetails {
+        string street;
+        string city;
+        string state;
+        string zip;
+        string country;
     }
 
     struct PurchaseRef {
@@ -117,40 +133,55 @@ contract GlobalShield is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
     error NotAuthorized();
     error InvalidPartyAddress();
     error SwapDoesNotExist();
+    error PurchaseDoesNotExist();
+    error InvalidStatusTransition();
 
-    address[]  public stables;
-    address[]  public stakeables;
+    // Changed public arrays to internal to drop redundant compiler index-getters
+    address[]  internal stables;
+    address[]  internal stakeables;
     address[]  private admins;
     
-    uint256[] public purchaseTimestamps;
-    uint256[] public acquisitionTimestamps;
-    uint256[] public ventureDepositTimestamps;
-    uint256[] public vaultDepositTimestamps;
-    uint256[] public swapTimestamps;
+    uint256[] internal purchaseTimestamps;
+    uint256[] internal activeReturnQueues;
+    uint256[] internal acquisitionTimestamps;
+    uint256[] internal ventureDepositTimestamps;
+    uint256[] internal vaultDepositTimestamps;
+    uint256[] internal swapTimestamps;
+
+    // Kept public because simple scalars cost negligible bytecode and are vital for status reads
     uint256 public processVentureDepositTimestamp;
     uint256 public processVaultDepositTimestamp;
     uint256 public processPurchaseTimestamp;
     uint256 public processAcquisitionTimestamp;
-    uint256 public processSwapTimestamp;
+    uint256 public processSwapTimestamp; 
 
-    // Mapping for quick stablecoin whitelist check
+    // Mappings dropped to internal/private to wipe out getter bloat
     mapping(address => bool) private adminWhitelistMap;
     mapping(address => bool) private stablecoinWhitelistMap;
     mapping(address => bool) private stakeableWhitelistMap;
-    mapping(uint256 => VentureDepositRef) public ventureDepositsByTimestamp;
-    mapping(address => VentureDeposit[]) public ventureDepositsByUser;
-    mapping(uint256 => VaultDepositRef) public vaultDepositsByTimestamp;
-    mapping(address => VaultDeposit[]) public vaultDepositsByUser;
-    mapping(uint256 => PurchaseRef) public purchasesByTimestamp;
-    mapping(address => Purchase[]) public purchasesByUser;
-    mapping(uint256 => AcquisitionRef) public acquisitionsByTimestamp;
-    mapping(address => Acquisition[]) public acquisitionsByUser;
-    mapping(uint256 => SwapRef) public swapsByTimestamp;
-    mapping(address => Swap) public swaps;
-    //mapping(address => mapping(uint256 => Affiliate)) public affiliateByUserIndex;
-    mapping(address => uint256) stablecoinIndex;
-    mapping(address => uint256) stakeablecoinIndex;
-    mapping(address => uint256) adminIndex;
+    
+    mapping(uint256 => VentureDepositRef) internal ventureDepositsByTimestamp;
+    mapping(address => VentureDeposit[]) internal ventureDepositsByUser;
+    
+    mapping(uint256 => VaultDepositRef) internal vaultDepositsByTimestamp;
+    mapping(address => VaultDeposit[]) internal vaultDepositsByUser;
+    
+    mapping(uint256 => PurchaseRef) internal purchasesByTimestamp;
+    mapping(bytes32 => ShippingDetails) internal purchaseShippingMetadata;
+    mapping(address => Purchase[]) internal purchasesByUser;
+    
+    mapping(uint256 => uint256) private activeReturnIndex;
+    mapping(uint256 => bool) internal isActiveReturn;
+    
+    mapping(uint256 => AcquisitionRef) internal acquisitionsByTimestamp;
+    mapping(address => Acquisition[]) internal acquisitionsByUser;
+    
+    mapping(uint256 => SwapRef) internal swapsByTimestamp;
+    mapping(address => Swap) internal swaps;
+    
+    mapping(address => uint256) private stablecoinIndex;
+    mapping(address => uint256) private stakeablecoinIndex;
+    mapping(address => uint256) private adminIndex;
     
     event VentureDepositInRange(
         uint256 timestamp,
@@ -175,7 +206,7 @@ contract GlobalShield is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         bytes32 depositHash
     );
 
-    event PurchaseTimestamp(
+    event PurchaseCore(
         address indexed user,
         address token,
         uint256 id,
@@ -183,16 +214,20 @@ contract GlobalShield is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         uint256 purchaseIndex,
         uint256 amount,
         uint256[] stableOut,
+        uint256 rate,
+        address affiliate,
+        bytes32 indexed depositHash
+    );
+
+    event PurchaseLogistics(
+        bytes32 indexed depositHash,
         uint256 shipping,
         uint256 region,
         uint256 customizations,
-        uint256 rate,
-        address affiliate,
-        uint256 commission,
         address purchaseSetter,
-        bytes32 depositHash,
-        bool refund,
-        bytes32 refundHash
+        ReturnProcess status,
+        bytes32 refundHash,
+        ShippingDetails shippingInfo
     );
 
     event AcquisitionTimestamp(
@@ -413,7 +448,8 @@ contract GlobalShield is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         address affiliate,
         uint256 region,
         bytes32 depositHash,
-        uint256 ts
+        uint256 ts,
+        ShippingDetails calldata shippingInfo
     ) external payable nonReentrant {
 
         // Direct push allocation storage assignment pattern win
@@ -439,7 +475,49 @@ contract GlobalShield is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
         
         purchaseTimestamps.push(ts);
 
+        purchaseShippingMetadata[depositHash] = shippingInfo;
+
         purchasesByTimestamp[ts] = PurchaseRef({ user: buyer, purchaseIndex: index });
+    }
+
+    /**
+     * @notice Synchronizes any lifestyle change for a return or repair directly into the Shield master record.
+     * @dev Accommodates all entry points (Electron, Web, or Backend automated processes)
+     * @param buyer The wallet address of the original buyer.
+     * @param originalTxHash The core purchase transaction hash acting as our unique cross-system key.
+     * @param trackingActionHash The target transaction hash (the refund payment hash or the current checkpoint block receipt).
+     * @param nextStatus The specific enum state we are advancing this record to.
+     */
+    function syncPurchaseReturnState(
+        address buyer,
+        bytes32 originalTxHash,
+        bytes32 trackingActionHash,
+        ReturnProcess nextStatus
+    ) external nonReentrant {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+
+        Purchase[] storage userPurchases = purchasesByUser[buyer];
+        uint256 len = userPurchases.length;
+        bool foundRecord = false;
+
+        for (uint256 i = 0; i < len;) {
+            if (userPurchases[i].purchaseTxHash == originalTxHash) {
+                Purchase storage p = userPurchases[i];
+                
+                // Prevent rolling backwards to 'None' once a process has been officially initiated
+                if (nextStatus == ReturnProcess.None) revert InvalidStatusTransition();
+                
+                p.status = nextStatus;
+                p.refundHash = trackingActionHash;
+                p.refundSetter = msg.sender; // Tracks the admin/worker key that signed off on this state shift
+
+                foundRecord = true;
+                break;
+            }
+            unchecked { i++; }
+        }
+
+        if (!foundRecord) revert PurchaseDoesNotExist();
     }
 
     function getPurchasesInRange(uint256 startTs, uint256 endTs, bool process) public {
@@ -471,11 +549,12 @@ contract GlobalShield is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
                 // Read pointers to storage instead of copying the whole struct to memory
                 PurchaseRef storage r = purchasesByTimestamp[ts];
                 Purchase storage w = purchasesByUser[r.user][r.purchaseIndex];
-                //Affiliate storage a = affiliateByUserIndex[w.user][w.purchaseIndex];
+
+                ShippingDetails storage s = purchaseShippingMetadata[w.purchaseTxHash];
 
                 uint256[] memory d = new uint256[](0);
                 
-                emit PurchaseTimestamp(
+                emit PurchaseCore(
                     w.user,
                     w.token,
                     w.id,
@@ -483,20 +562,74 @@ contract GlobalShield is Initializable, UUPSUpgradeable, OwnableUpgradeable, Ree
                     w.purchaseIndex,
                     w.amount,
                     d,
+                    w.rate,
+                    w.affiliate,
+                    w.purchaseTxHash
+                );
+
+                emit PurchaseLogistics(
+                    w.purchaseTxHash,
                     w.shipping,
                     w.region,
                     w.customizations,
-                    w.rate,
-                    w.affiliate,
-                    0,
                     w.purchaseSetter,
-                    w.purchaseTxHash,
-                    w.refund,
-                    w.refundHash
+                    w.status,
+                    w.refundHash,
+                    s // The struct safely passes here because the stack is mostly empty now!
                 );
             }
 
             // Use unchecked increments for the loop counter to bypass safety checks
+            unchecked { i++; }
+        }
+    }
+
+    /**
+     * @notice Iterates through outstanding or altered return/repair events in the active return queue
+     * @dev Reuses your standard unified event signature so the parsing engine needs zero modifications
+     */
+    function emitActiveReturnQueue() external {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+
+        uint256 len = activeReturnQueues.length;
+
+        for (uint256 i = 0; i < len;) {
+            uint256 ts = activeReturnQueues[i];
+            
+            // Check if the timestamp is registered as an active return record
+            if (isActiveReturn[ts]) {
+                PurchaseRef storage r = purchasesByTimestamp[ts];
+                Purchase storage w = purchasesByUser[r.user][r.purchaseIndex];
+                ShippingDetails storage s = purchaseShippingMetadata[w.purchaseTxHash];
+
+                uint256[] memory emptyArr = new uint256[](0);
+                
+                emit PurchaseCore(
+                    w.user,
+                    w.token,
+                    w.id,
+                    w.quantity,
+                    w.purchaseIndex,
+                    w.amount,
+                    emptyArr,
+                    w.rate,
+                    w.affiliate,
+                    w.purchaseTxHash
+                );
+
+                // 2. Emit the logistics and heavy struct data on a fresh stack frame
+                emit PurchaseLogistics(
+                    w.purchaseTxHash,
+                    w.shipping,
+                    w.region,
+                    w.customizations,
+                    w.purchaseSetter,
+                    w.status,
+                    w.refundHash,
+                    s // The struct safely passes here because the stack is mostly empty now!
+                );
+            }
+
             unchecked { i++; }
         }
     }

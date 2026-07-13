@@ -74,14 +74,20 @@ contract GlobalSwapRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeabl
     error InvalidRecipient();
     error HashDuplicated();
 
-    address[] public allSwaps;
+    // Changed to internal to drop redundant compiler index-getters
+    address[] internal allSwaps;
     address[] private admins;
 
     mapping(address => address[]) private userSwaps;
-    mapping(address => SwapDetails) public swapRegistry;
+    
+    // Changed to internal to kill large auto-generated struct getter bytecode
+    mapping(address => SwapDetails) internal swapRegistry;
+    
     mapping(address => bool) private adminWhitelistMap;
     mapping(address => uint256) private adminIndex;
-    mapping(bytes32 => bool) public processedDeposits;
+    
+    // Changed to internal to save bytecode on tracking flags
+    mapping(bytes32 => bool) internal processedDeposits;
 
     event SwapCreated(
         address swapAddress, 
@@ -297,6 +303,24 @@ contract GlobalSwapRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeabl
 
     function adminsIndex() external view onlyOwner returns(address[] memory) {
         return admins;
+    }
+    
+    // 1. Fetch the complete array of swaps all at once (Guarded for Admins)
+    function getAllSwaps() external view returns (address[] memory) {
+        if (msg.sender != owner() && !adminWhitelistMap[msg.sender]) revert NotAuthorized();
+        return allSwaps;
+    }
+
+    // 2. Fetch the entire SwapDetails structural state safely (Guarded for Admins)
+    function getSwapDetails(address swapAddress) external view returns (SwapDetails memory) {
+        if (msg.sender != owner() && !adminWhitelistMap[msg.sender]) revert NotAuthorized();
+        return swapRegistry[swapAddress];
+    }
+
+    // 3. Verify if a deposit hash has been cleared (Guarded for Admins)
+    function isDepositProcessed(bytes32 depositHash) external view returns (bool) {
+        if (msg.sender != owner() && !adminWhitelistMap[msg.sender]) revert NotAuthorized();
+        return processedDeposits[depositHash];
     }
 
     // --- ADMINISTRATIVE UTILITIES ---

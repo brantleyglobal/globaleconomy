@@ -163,44 +163,51 @@ contract GlobalLedger is IGlobalLedger, Initializable, UUPSUpgradeable, OwnableU
     error MintingFailed();
     error InsufficientFIFOLots();
 
+    // Scalars (Keep public if external scripts read them directly; they cost negligible bytes)
     uint256 public nextLotId;
     uint256 private globalHead;
     uint256 private globalID;
 
-    address[] public users;
-    address[] public stables;
-    address[] public stakeables;
-    address[] public ventures;
-    address[] public admins;
-    address[] public contractAddresses;
+    // Arrays converted to internal to clear out repetitive index getters
+    address[] internal users;
+    address[] internal stables;
+    address[] internal stakeables;
+    address[] internal ventures;
+    address[] private admins;
+    address[] internal contractAddresses;
     AcquisitionLot[] private globalQueue;
 
-    mapping(address => Global[]) public globalView;
-    mapping(address => User[]) public userView;
-    mapping(address => bool) public activeUsers;
-    mapping(address => bool) public activeGlobal;
+    // Heavy view arrays and flag maps converted to internal/private
+    mapping(address => Global[]) internal globalView;
+    mapping(address => User[]) internal userView;
+    mapping(address => bool) internal activeUsers;
+    mapping(address => bool) internal activeGlobal;
     mapping(address => bool) private adminWhitelistMap;
     mapping(address => bool) private contractWhitelistMap;
-    mapping(bytes32 => bool) public acquisitionHashes;
-    mapping(bytes32 => AcquisitionRef) public acquisitionsByHash;
-    mapping(uint256 => AcquisitionLot) public acquisitionLots;
-    mapping(bytes32 => PurchaseRef) public purchasesByHash;
-    mapping(uint256 => PurchaseLot) public purchaseLots;
-    mapping(uint256 => VaultLot) public vaultLots;
-    mapping(uint256 => VentureLot) public ventureLots;
-    mapping(uint256 => VaultWithdrawLot) public vaultWithdrawLots;
-    mapping(uint256 => VentureWithdrawLot) public ventureWithdrawLots;
-    mapping(uint256 => VaultPoolLot) public vaultPoolLots;
-    mapping(uint256 => VenturePoolLot) public venturePoolLots;
-    mapping(address => uint256[]) public acquisitionChapter;
+    mapping(bytes32 => bool) internal acquisitionHashes;
+    
+    // Core transaction and pool lots stripped of public visibility
+    mapping(bytes32 => AcquisitionRef) internal acquisitionsByHash;
+    mapping(uint256 => AcquisitionLot) internal acquisitionLots;
+    mapping(bytes32 => PurchaseRef) internal purchasesByHash;
+    mapping(uint256 => PurchaseLot) internal purchaseLots;
+    mapping(uint256 => VaultLot) internal vaultLots;
+    mapping(uint256 => VentureLot) internal ventureLots;
+    mapping(uint256 => VaultWithdrawLot) internal vaultWithdrawLots;
+    mapping(uint256 => VentureWithdrawLot) internal ventureWithdrawLots;
+    mapping(uint256 => VaultPoolLot) internal vaultPoolLots;
+    mapping(uint256 => VenturePoolLot) internal venturePoolLots;
+    
+    mapping(address => uint256[]) internal acquisitionChapter;
     mapping(address => bool) private stablecoinWhitelistMap;
     mapping(address => bool) private stakeableWhitelistMap;
     mapping(address => bool) private venturecoinWhitelistMap;
-    mapping(address => uint256) stablecoinIndex;
-    mapping(address => uint256) stakeablecoinIndex;
-    mapping(address => uint256) venturecoinIndex;
-    mapping(address => uint256) adminIndex;
-    mapping(address => uint256) contractIndex;
+    
+    mapping(address => uint256) private stablecoinIndex;
+    mapping(address => uint256) private stakeablecoinIndex;
+    mapping(address => uint256) private venturecoinIndex;
+    mapping(address => uint256) private adminIndex;
+    mapping(address => uint256) private contractIndex;
  
     // -------------------------
     // EVENTS
@@ -1372,6 +1379,95 @@ contract GlobalLedger is IGlobalLedger, Initializable, UUPSUpgradeable, OwnableU
     function removeFromContractWhitelist(address[] memory contractAddress) external onlyOwner {
         
         _removalHelper(contractAddress, false, false, false, true, false);
+    }
+
+    // --- Array Indices ---
+    function getUsers() external view returns (address[] memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return users;
+    }
+
+    function getStables() external view returns (address[] memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return stables;
+    }
+
+    function getStakeables() external view returns (address[] memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return stakeables;
+    }
+
+    function getVentures() external view returns (address[] memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return ventures;
+    }
+
+    // --- Complex View & User History Arrays ---
+    function getGlobalView(address user) external view returns (Global[] memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return globalView[user];
+    }
+
+    function getUserView(address user) external view returns (User[] memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return userView[user];
+    }
+
+    function getAcquisitionChapter(address user) external view returns (uint256[] memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return acquisitionChapter[user];
+    }
+
+    // --- Lot & Reference Lookups ---
+    function getAcquisitionByHash(bytes32 txHash) external view returns (AcquisitionRef memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return acquisitionsByHash[txHash];
+    }
+
+    function getAcquisitionLot(uint256 lotId) external view returns (AcquisitionLot memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return acquisitionLots[lotId];
+    }
+
+    function getPurchaseByHash(bytes32 txHash) external view returns (PurchaseRef memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return purchasesByHash[txHash];
+    }
+
+    function getPurchaseLot(uint256 lotId) external view returns (PurchaseLot memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return purchaseLots[lotId];
+    }
+
+    function getVaultLot(uint256 lotId) external view returns (VaultLot memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return vaultLots[lotId];
+    }
+
+    function getVentureLot(uint256 lotId) external view returns (VentureLot memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return ventureLots[lotId];
+    }
+
+    // --- Pool Allocation & Withdrawal Lots ---
+    function getVaultWithdrawLot(uint256 lotId) external view returns (VaultWithdrawLot memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return vaultWithdrawLots[lotId];
+    }
+
+    function getVentureWithdrawLot(uint256 lotId) external view returns (VentureWithdrawLot memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return ventureWithdrawLots[lotId];
+    }
+
+    function getVaultPoolLot(uint256 lotId) external view returns (VaultPoolLot memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return vaultPoolLots[lotId];
+    }
+
+    function getVenturePoolLot(uint256 lotId) external view returns (VenturePoolLot memory) {
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        return venturePoolLots[lotId];
     }
 
     uint256[50] __gap;

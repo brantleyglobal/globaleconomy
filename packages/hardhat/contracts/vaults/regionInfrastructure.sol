@@ -106,12 +106,12 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     error InvalidRedemptionPeriod();
     error VentureNotInitialized();
 
-    address public payoutToken;
-    address public payoutAddress;
-    address public rtoken;
+    address private payoutToken;
+    address private payoutAddress;
+    address private rtoken;
     address private feeRecipient;
-    address[]  public stables;
-    address[]  public stakeables;
+    address[]  internal stables;
+    address[]  internal stakeables;
     address[]  private admins;
     address[]  private autopay;
     address constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
@@ -119,40 +119,44 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
     bool private initiate;
     
     // Add this state variable to track injected time
-    uint256 public lastUpdatedTime;
-    uint256 public updatedStartQuarter;
+    uint256 internal lastUpdatedTime;
+    uint256 internal updatedStartQuarter;
     uint256 public depositFeeBps;
     uint256 private totalWithdrawn;
-    uint256 public processDepositTimestamp;
-    uint256 public processWithdrawTimestamp;
-    uint256[] public depositTimestamps;
-    uint256[] public withdrawTimestamps;
+    uint256 internal processDepositTimestamp;
+    uint256 internal processWithdrawTimestamp;
+    uint256[] internal depositTimestamps;
+    uint256[] internal withdrawTimestamps;
+    uint256[] internal activeTerms;
 
     // Mapping for quick stablecoin whitelist check
     mapping(address => bool) private adminWhitelistMap;
     mapping(address => bool) private stablecoinWhitelistMap;
     mapping(address => bool) private stakeableWhitelistMap;
     mapping(address => bool) private autopayWhitelistMap;
-    mapping(address => uint256) public tokenPoolBalances;
-    mapping(address => uint256) public vaultSupply;
-    mapping(address => uint256) public quartersCommitted;
-    mapping(uint256 => DepositRef) public depositsByTimestamp;
-    mapping(bytes32 => DepositRef) public depositsByHash;
-    mapping(bytes32 => bool) public processedDeposits;
-    mapping(uint256 => bool) public processedDepositsTs;
-    mapping(address => uint256[]) public depositTimestampsByUser;
-    mapping(bytes32 => Withdraw) public withdrawByHash;
-    mapping(uint256 => Withdraw) public withdrawByTimestamp;
-    mapping(address => User[]) public withdrawalsByUser;
-    mapping(address => Deposit[]) public depositsByUser;
-    mapping(uint256 => UnlockD) public poolByUnlockQuarter;
+    mapping(address => uint256) internal tokenPoolBalances;
+    mapping(address => uint256) internal vaultSupply;
+    mapping(address => uint256) internal quartersCommitted;
+    mapping(uint256 => DepositRef) internal depositsByTimestamp;
+    mapping(bytes32 => DepositRef) internal depositsByHash;
+    mapping(bytes32 => bool) internal processedDeposits;
+    mapping(uint256 => bool) internal processedDepositsTs;
+    mapping(address => uint256[]) internal depositTimestampsByUser;
+    mapping(bytes32 => Withdraw) internal withdrawByHash;
+    mapping(uint256 => Withdraw) internal withdrawByTimestamp;
+    mapping(address => User[]) internal withdrawalsByUser;
+    mapping(address => uint256) internal userWithdrawQueue;
+    mapping(address => Deposit[]) internal depositsByUser;
+    mapping(uint256 => UnlockD) internal poolByUnlockQuarter;
     mapping(address => uint256) private venturePoolRequirement;
-    mapping(address => uint256) stablecoinIndex;
-    mapping(address => uint256) stakeablecoinIndex;
-    mapping(address => uint256) adminIndex;
-    mapping(address => uint256) autopayIndex;
-    mapping(uint256 => RateRange) public rateRange;
-    mapping(address => mapping(uint256 => mapping(uint256 => uint256[]))) stagePayouts;
+    mapping(address => uint256) private stablecoinIndex;
+    mapping(address => uint256) private stakeablecoinIndex;
+    mapping(address => uint256) private adminIndex;
+    mapping(address => uint256) private autopayIndex;
+    mapping(address => uint256[]) internal userActiveTerms;
+    mapping(uint256 => RateRange) internal rateRange;
+    mapping(address => mapping(uint256 => mapping(uint256 => uint256[]))) internal stagePayouts;
+    mapping(address => mapping(uint256 => uint256)) private activeTermIndex;
 
 
     event Deposited(address indexed user, uint256 amountOut, uint256 amountIn, uint256 fee, uint256 committedQuarters);
@@ -466,6 +470,9 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
 
             }
 
+            activeTermIndex[msg.sender][termIndex] = userActiveTerms[msg.sender].length;
+            userActiveTerms[msg.sender].push(termIndex);
+
             _processPayout(
                 WithdrawInit({
                     user: msg.sender,
@@ -516,31 +523,43 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
 
     function _processPayout(WithdrawInit memory init)
         internal
-        returns (uint256)
     {
         User[] storage terms = withdrawalsByUser[init.user];
-        uint256 len = terms.length;
+        uint256 len = userActiveTerms[init.user].length;
+
+        uint256 startIdx = userWithdrawQueue[init.user];
         
         // Cache variables to stack to avoid reading 'init' fields inside the loop
         uint256 currentQuarterCached = init.currentQuarter;
         address payTokenCached = init.payToken;
         uint256 timeStampCached = init.timeStamp;
 
-        uint256 allocationSize = len > 100 ? len - 100 : 0; 
+        // Added return argument for early exit matching signature
+        if (startIdx >= len) revert NoEligibleTerms();
 
-        for (uint256 i = len; i > allocationSize; i--) {
-            User storage u = terms[i];
+        // Cap the execution to 40 terms forward from the starting checkpoint
+        uint256 endIdx = startIdx + 40;
+        if (endIdx > len) {
+            endIdx = len;
+        }
+
+        // Clean, forward-counting loop
+        for (uint256 i = startIdx; i < endIdx; ) {
+            uint256 activeTermId = userActiveTerms[init.user][i];
+            User storage u = terms[activeTermId];
 
             // Combine structural gates to save multiple SLOAD operations
             address uUser = u.user;
             uint256 uStage = u.stage;
             if (uUser == address(0) || ((uStage + 1) > u.redemptionPeriod)) {
+                unchecked { i++; }
                 continue;
             }
 
             // Early Window Exit
             uint256 uStartQuarter = u.startQuarter;
             if (currentQuarterCached < uStartQuarter) {
+                unchecked { i++; }
                 continue;
             }
 
@@ -548,34 +567,44 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
             unchecked { stageCheck = currentQuarterCached - uStartQuarter; }
 
             // Evaluate eligibility before running nested loops
-            if (stageCheck <= u.redemptionPeriod && u.amountout[stageCheck - 1] == 0) {
+            if (stageCheck <= u.redemptionPeriod && u.stage < stageCheck) {
                 
-                _handlePayout(u,
+                bool removed = _handlePayout(u,
                     WithdrawHandle({
                         payToken: payTokenCached,
                         stageCheck: stageCheck,
-                        termIndex: i,
+                        termIndex: activeTermId,
                         timeStamp: timeStampCached
                     })
                 ); 
-                
-                // Return immediately upon successful payout processing to prevent hitting the lower revert
-                return stageCheck; 
-            }
-        }
 
-        revert NoEligibleTerms();
+                if (removed) {
+                    unchecked { endIdx--; }
+                    continue;
+                }
+                
+            }
+
+            unchecked { i++; }
+        }
+        
+        uint256 currentLen = userActiveTerms[init.user].length;
+        if (endIdx >= currentLen || currentLen == 0) {
+            userWithdrawQueue[init.user] = 0; // Wrap around safely to index 0
+        } else {
+            userWithdrawQueue[init.user] = endIdx;
+        }
     }
 
     function _handlePayout(
         User storage u,
         WithdrawHandle memory v
-    ) internal {
+    ) internal returns (bool removed){
         uint256 ts = v.timeStamp;
         uint256 supply = u.termTotalSupply;
         
         // Skip entirely if zero supply to avoid running the loop execution blocks
-        if (supply == 0) return;
+        if (supply == 0) return false;
 
         // Cache initial autoPay configuration parameter to local stack
         bool autoPayCached = u.autoPay;
@@ -602,11 +631,30 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
 
             // Inline check assignment 
             bool initiationStatus = (i == 0);
+            bool status = (i + 1) == u.quartersCommitted;
+
+            if (status) {
+
+                uint256 activeArrayPos = activeTermIndex[u.user][v.termIndex]; // Find its exact array index position
+                uint256 lastIndex = userActiveTerms[u.user].length - 1;        // Safe array tail index
+
+                if (activeArrayPos != lastIndex) {
+                    uint256 lastTermId = userActiveTerms[u.user][lastIndex];   // Grab element from tail
+                    
+                    userActiveTerms[u.user][activeArrayPos] = lastTermId;      // Swap into deleted spot
+                    activeTermIndex[u.user][lastTermId] = activeArrayPos;      // Remap tail element pointer
+                }
+
+                userActiveTerms[u.user].pop();                                 // Pop tail item
+                delete activeTermIndex[u.user][v.termIndex];
+
+                removed = true;
+            }
             
             unchecked { ts++; }
 
             withdrawByTimestamp[ts] = Withdraw(
-                msg.sender,
+                u.user,
                 v.termIndex,
                 i
             );
@@ -615,7 +663,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
 
             _recordWithdrawal(u, i, v.termIndex, ts, initiationStatus);
 
-            emit UserWithdraw(ts, msg.sender, u.quartersCommitted, u.unlockQuarter, payout, v.termIndex, i);
+            emit UserWithdraw(ts, u.user, u.quartersCommitted, u.unlockQuarter, payout, v.termIndex, i);
             u.stage = i;
         }
     }
@@ -785,7 +833,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         view
         returns (User[] memory)
     {
-        if (!_isAdmin(msg.sender) || msg.sender != user) revert NotAuthorized();
+        if (!_isAdmin(msg.sender) && msg.sender != user) revert NotAuthorized();
         return withdrawalsByUser[user];
     }
 
@@ -798,7 +846,7 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         view
         returns (Deposit[] memory)
     {
-        if (!_isAdmin(msg.sender) || msg.sender != user) revert NotAuthorized();
+        if (!_isAdmin(msg.sender) && msg.sender != user) revert NotAuthorized();
         return depositsByUser[user];
     }
 
@@ -838,39 +886,29 @@ contract RegionInfrastructure is Initializable, UUPSUpgradeable, OwnableUpgradea
         if(msg.sender != owner()) revert NotAuthorized();
 
         rateRange[0]  = RateRange(RATE_100, RATE_100);
-        rateRange[1]  = RateRange(RATE_102, RATE_098);
-        rateRange[3]  = RateRange(RATE_102, RATE_098);
-        rateRange[5]  = RateRange(RATE_102, RATE_098);
-        rateRange[9]  = RateRange(RATE_102, RATE_098);
-        rateRange[11] = RateRange(RATE_102, RATE_098);
-        rateRange[12] = RateRange(RATE_102, RATE_098);
-        rateRange[13] = RateRange(RATE_102, RATE_098);
-        rateRange[20] = RateRange(RATE_102, RATE_098);
-        rateRange[21] = RateRange(RATE_102, RATE_098);
-        rateRange[25] = RateRange(RATE_102, RATE_098);
+        rateRange[1]  = RateRange(RATE_098, RATE_102); 
+        rateRange[3]  = RateRange(RATE_098, RATE_102);
+        rateRange[5]  = RateRange(RATE_098, RATE_102);
+        rateRange[9]  = RateRange(RATE_098, RATE_102);
+        rateRange[11] = RateRange(RATE_098, RATE_102);
+        rateRange[12] = RateRange(RATE_098, RATE_102);
+        rateRange[13] = RateRange(RATE_098, RATE_102);
+        rateRange[20] = RateRange(RATE_098, RATE_102);
+        rateRange[21] = RateRange(RATE_098, RATE_102);
+        rateRange[25] = RateRange(RATE_098, RATE_102);
 
-        rateRange[14] = RateRange(RATE_069, RATE_065);
-
-        rateRange[2]  = RateRange(RATE_076, RATE_072);
-
-        rateRange[4]  = RateRange(RATE_112, RATE_108);
-        rateRange[19] = RateRange(RATE_112, RATE_108);
-
-        rateRange[6]  = RateRange(RATE_100, RATE_097);
-
-        rateRange[7]  = RateRange(RATE_0073, RATE_0065);
-
-        rateRange[8]  = RateRange(RATE_062, RATE_058);
-
-        rateRange[10] = RateRange(RATE_076, RATE_074);
-
-        rateRange[15] = RateRange(RATE_064, RATE_054);
-
-        rateRange[16] = RateRange(RATE_021, RATE_019);
-
-        rateRange[17] = RateRange(RATE_130, RATE_120);
-
-        rateRange[18] = RateRange(RATE_033, RATE_030);
+        rateRange[14] = RateRange(RATE_065, RATE_069);
+        rateRange[2]  = RateRange(RATE_072, RATE_076);
+        rateRange[4]  = RateRange(RATE_108, RATE_112);
+        rateRange[19] = RateRange(RATE_108, RATE_112);
+        rateRange[6]  = RateRange(RATE_097, RATE_100);
+        rateRange[7]  = RateRange(RATE_0065, RATE_0073);
+        rateRange[8]  = RateRange(RATE_058, RATE_062);
+        rateRange[10] = RateRange(RATE_074, RATE_076);
+        rateRange[15] = RateRange(RATE_054, RATE_064);
+        rateRange[16] = RateRange(RATE_019, RATE_021);
+        rateRange[17] = RateRange(RATE_120, RATE_130);
+        rateRange[18] = RateRange(RATE_030, RATE_033);
 
         rateRange[32] = RateRange(RATE_100, RATE_100);
         rateRange[33] = RateRange(RATE_100, RATE_100);

@@ -8,11 +8,22 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../interfaces/IGlobalLedger.sol";
 
+interface ILogisticsManager {
+    function getTracking(bytes32 depositHash) external view returns (bytes32);
+}
 
 contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     IGlobalLedger public ledgerProxy;
+
+    enum ReturnProcess { 
+        None, 
+        RefundPending, 
+        RepairPending, 
+        RefundComplete,
+        RepairComplete
+    }
 
     struct Purchase {
         address user;
@@ -28,13 +39,13 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         uint256 shipping;
         uint256 customizations;
         uint256 rate;
-        bool refund;
+        ReturnProcess status;
         bytes32 purchaseTxHash;
         bytes32 refundHash;
         bytes32 configs;
     }
 
-    struct Refund {
+    struct Return {
         address user;
         uint256 purchaseIndex;
         uint256 adjustedAmount;
@@ -95,15 +106,18 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
     error RefundInProcess();
     error PayoutMade();
     error RefundWindowExpired();
+    error ActionAlreadyActive();
+    error InvalidStatusTransition();
 
 
-    uint256 public processTimestamp;
+    uint256 private processTimestamp;
     uint256 private systemTimestamp;
     uint256 public feeBasisPoints;
-    uint256 public totalWithdrawn;
+    uint256 internal totalWithdrawn;
     uint256 internal constant MAX_BPS = 10000;
-    uint256[] public purchaseTimestamps;
+    uint256[] internal purchaseTimestamps;
 
+    address public logisticsManager;
     address public feeRecipient;
     address public payoutAddress;
     address[] public stables;
@@ -115,22 +129,22 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
     mapping(address => bool) private affiliateWhitelistMap;
     // Mapping from user address => productId => quantity
     mapping(address => mapping(uint256 => mapping(uint256 => uint256))) private userAssetQuantities;
-    mapping(uint256 => mapping(uint256 => uint256)) public accumBase;
-    mapping(uint256 => PurchaseRef) public purchasesByTimestamp;
-    mapping(bytes32 => PurchaseRef) public purchasesByHash;
-    mapping(address => Purchase[]) public purchasesByUser;
-    mapping(address => mapping(uint256 => uint256)) public purchaseCredits;
-    mapping(address => mapping(uint256 => Affiliate)) public affiliateByUserIndex;
-    mapping(address => Affiliate[]) public affiliateRecords;
-    mapping(address => mapping(uint256 => bool)) public affiliateIndexSettled;
-    mapping(address => mapping(uint256 => Refund)) public refundsByUserIndex;
-    mapping(bytes32 => bool) public processedHashes;
-    mapping(uint256 => bool) public processedPurchase;
-    mapping(address => uint256) stablecoinIndex;
-    mapping(address => uint256) adminIndex;
-    mapping(address => uint256) affiliateIndex;
-    mapping(uint256 => RateRange) public rateRange;
-    mapping(address => mapping(uint256 => uint256[])) purchasePayouts;
+    mapping(uint256 => mapping(uint256 => uint256)) internal accumBase;
+    mapping(uint256 => PurchaseRef) internal purchasesByTimestamp;
+    mapping(bytes32 => PurchaseRef) internal purchasesByHash;
+    mapping(address => Purchase[]) internal purchasesByUser;
+    mapping(address => mapping(uint256 => uint256)) internal purchaseCredits;
+    mapping(address => mapping(uint256 => Affiliate)) internal affiliateByUserIndex;
+    mapping(address => Affiliate[]) internal affiliateRecords;
+    mapping(address => mapping(uint256 => bool)) internal affiliateIndexSettled;
+    mapping(address => mapping(uint256 => Return)) internal refundsByUserIndex;
+    mapping(bytes32 => bool) internal processedHashes;
+    mapping(uint256 => bool) internal processedPurchase;
+    mapping(address => uint256) private stablecoinIndex;
+    mapping(address => uint256) private adminIndex;
+    mapping(address => uint256) private affiliateIndex;
+    mapping(uint256 => RateRange) internal rateRange;
+    mapping(address => mapping(uint256 => uint256[])) internal purchasePayouts;
 
     // --- Events ---
     event AssetAdded(uint256 indexed id);
@@ -151,7 +165,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         address affiliate,
         uint256 commission,
         address purchaseSetter,
-        bool refund,
+        uint256 status,
         bytes32 refundHash
     );
     event PayoutTxHashCorrected(address user, bytes32 oldUserHash, bytes32 newUserHash, address payoutSetter);
@@ -223,6 +237,14 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
 
     function _isAffiliate(address affiliate) public view returns (bool) {
         return affiliateWhitelistMap[affiliate];
+    }
+
+    function setLogisticsManager(address _logisticsAddress) external {
+        // Ensure only authorized accounts can alter critical logistics infrastructure pointers
+        if (!_isAdmin(msg.sender)) revert NotAuthorized();
+        if (_logisticsAddress == address(0)) revert InvalidAddress();
+        
+        logisticsManager = _logisticsAddress;
     }
 
     // --- Purchase Entry ---
@@ -349,6 +371,8 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         if(purchasesByTimestamp[h.ts].user != address(0)) revert TimestampDuplicated();
         purchasesByTimestamp[h.ts] = PurchaseRef({ user: h.buyer, purchaseIndex: index });
 
+        purchasesByHash[h.depositHash] = PurchaseRef({ user: h.buyer, purchaseIndex: index });
+
         // Optimized Inline conditional structure mappings
         affiliateByUserIndex[h.buyer][index] = Affiliate({
             user: h.buyer,
@@ -360,7 +384,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
             buyerAffiliateCreditHash: bytes32(0)
         });
 
-        refundsByUserIndex[h.buyer][index] = Refund({
+        refundsByUserIndex[h.buyer][index] = Return({
             user: h.buyer,
             purchaseIndex: index,
             adjustedAmount: 0
@@ -394,59 +418,73 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         ledgerProxy.recordPurchase(purchaseData);
     }
 
-    function refund(bytes32 purchaseHash) external nonReentrant {
+    function processReturn(bytes32 purchaseHash, bool isRepair) external nonReentrant {
         // Ensure purchase track hash exists
         if(!processedHashes[purchaseHash]) revert InvalidHash();
         
         PurchaseRef storage r = purchasesByHash[purchaseHash];
         Purchase storage u = purchasesByUser[r.user][r.purchaseIndex];
-        Refund storage x = refundsByUserIndex[r.user][r.purchaseIndex];
+        Return storage x = refundsByUserIndex[r.user][r.purchaseIndex];
 
-        // Unified permission gate allowing both the true user AND admins to act
-        if(!_isAdmin(msg.sender) || msg.sender != r.user) revert NotAuthorized();
-
-        // Core Status Validation Gates
+        // Unified initial permission gate
+        if(!_isAdmin(msg.sender) && msg.sender != r.user) revert NotAuthorized();
         if(u.refundHash != bytes32(0)) revert PayoutMade();
-        if(u.refund) revert RefundInProcess();
 
-        u.refund = true;
-
-        // Enforce time strictly using the internal system clock state variable
         uint256 currentTxTime = systemTimestamp;
         uint256 purchaseTime = u.timestamp;
         uint256 purchaseAmount = u.amount;
 
-        // GUARDRAIL: Ensure the system clock makes logical sense relative to creation time
         if(currentTxTime <= purchaseTime) revert InvalidParameters();
 
-        // Swapped to additive inequalities to guarantee underflow protection
-        if (currentTxTime <= purchaseTime + 15 days) {
+        // ===================================================
+        //  PHASE 2: WAREHOUSE / LOGISTICS ADMIN FINALIZATION
+        // ===================================================
+        if (_isAdmin(msg.sender) && u.status != ReturnProcess.None) {
             
-            // --- Tier 1: 0 to 15 Days -> 90% Refund ---
-            x.adjustedAmount += (purchaseAmount * 90) / 100;
+            if (u.status == ReturnProcess.RepairPending && isRepair) {
+                u.status = ReturnProcess.RepairComplete;
+            } else if (u.status == ReturnProcess.RefundPending && !isRepair) {
+                u.status = ReturnProcess.RefundComplete;
+                // Only trigger ledger updates on successful intake of a final refund
+                _recordRefund(u, x); 
+            } else {
+                revert InvalidStatusTransition();
+            }
+            
             u.timestamp = currentTxTime;
 
-        } else if (currentTxTime <= purchaseTime + 45 days) {
+        // ===================================================
+        //  PHASE 1: INITIAL USER REQUEST INTAKE (FROM MODAL)
+        // ===================================================
+        } else if (u.status == ReturnProcess.None) {
             
-            // --- Tier 2: 15 to 45 Days -> 70% Refund ---
-            x.adjustedAmount += (purchaseAmount * 70) / 100;
-            u.timestamp = currentTxTime;
+            if (isRepair) {
+                u.status = ReturnProcess.RepairPending;
+                u.timestamp = currentTxTime; 
+            } else {
+                u.status = ReturnProcess.RefundPending;
 
-        } else if (currentTxTime <= purchaseTime + 120 days) {
+                // Enforce financial depreciation windows only on request instantiation
+                if (currentTxTime <= purchaseTime + 15 days) {
+                    x.adjustedAmount += (purchaseAmount * 90) / 100;
+                    u.timestamp = currentTxTime;
+                } else if (currentTxTime <= purchaseTime + 45 days) {
+                    x.adjustedAmount += (purchaseAmount * 70) / 100;
+                    u.timestamp = currentTxTime;
+                } else if (currentTxTime <= purchaseTime + 120 days) {
+                    x.adjustedAmount += (purchaseAmount * 50) / 100;
+                    u.timestamp = currentTxTime;
+                } else {
+                    revert RefundWindowExpired();
+                }
+            }
             
-            // --- Tier 3: 45 to 120 Days -> 50% Refund ---
-            x.adjustedAmount += (purchaseAmount * 50) / 100;
-            u.timestamp = currentTxTime;
-
         } else {
-            // Hard fallback limit rule protection
-            revert RefundWindowExpired();
+            revert ActionAlreadyActive();
         }
-        
-        _recordRefund(u, x); 
     }
 
-    function _recordRefund(Purchase storage u, Refund storage x) internal {
+    function _recordRefund(Purchase storage u, Return storage x) internal {
 
         uint256 nativeAmount = 0;
         uint256 stableAmount = 0;
@@ -578,39 +616,29 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         if(msg.sender != owner()) revert NotAuthorized();
 
         rateRange[0]  = RateRange(RATE_100, RATE_100);
-        rateRange[1]  = RateRange(RATE_102, RATE_098);
-        rateRange[3]  = RateRange(RATE_102, RATE_098);
-        rateRange[5]  = RateRange(RATE_102, RATE_098);
-        rateRange[9]  = RateRange(RATE_102, RATE_098);
-        rateRange[11] = RateRange(RATE_102, RATE_098);
-        rateRange[12] = RateRange(RATE_102, RATE_098);
-        rateRange[13] = RateRange(RATE_102, RATE_098);
-        rateRange[20] = RateRange(RATE_102, RATE_098);
-        rateRange[21] = RateRange(RATE_102, RATE_098);
-        rateRange[25] = RateRange(RATE_102, RATE_098);
+        rateRange[1]  = RateRange(RATE_098, RATE_102); 
+        rateRange[3]  = RateRange(RATE_098, RATE_102);
+        rateRange[5]  = RateRange(RATE_098, RATE_102);
+        rateRange[9]  = RateRange(RATE_098, RATE_102);
+        rateRange[11] = RateRange(RATE_098, RATE_102);
+        rateRange[12] = RateRange(RATE_098, RATE_102);
+        rateRange[13] = RateRange(RATE_098, RATE_102);
+        rateRange[20] = RateRange(RATE_098, RATE_102);
+        rateRange[21] = RateRange(RATE_098, RATE_102);
+        rateRange[25] = RateRange(RATE_098, RATE_102);
 
-        rateRange[14] = RateRange(RATE_069, RATE_065);
-
-        rateRange[2]  = RateRange(RATE_076, RATE_072);
-
-        rateRange[4]  = RateRange(RATE_112, RATE_108);
-        rateRange[19] = RateRange(RATE_112, RATE_108);
-
-        rateRange[6]  = RateRange(RATE_100, RATE_097);
-
-        rateRange[7]  = RateRange(RATE_0073, RATE_0065);
-
-        rateRange[8]  = RateRange(RATE_062, RATE_058);
-
-        rateRange[10] = RateRange(RATE_076, RATE_074);
-
-        rateRange[15] = RateRange(RATE_064, RATE_054);
-
-        rateRange[16] = RateRange(RATE_021, RATE_019);
-
-        rateRange[17] = RateRange(RATE_130, RATE_120);
-
-        rateRange[18] = RateRange(RATE_033, RATE_030);
+        rateRange[14] = RateRange(RATE_065, RATE_069);
+        rateRange[2]  = RateRange(RATE_072, RATE_076);
+        rateRange[4]  = RateRange(RATE_108, RATE_112);
+        rateRange[19] = RateRange(RATE_108, RATE_112);
+        rateRange[6]  = RateRange(RATE_097, RATE_100);
+        rateRange[7]  = RateRange(RATE_0065, RATE_0073);
+        rateRange[8]  = RateRange(RATE_058, RATE_062);
+        rateRange[10] = RateRange(RATE_074, RATE_076);
+        rateRange[15] = RateRange(RATE_054, RATE_064);
+        rateRange[16] = RateRange(RATE_019, RATE_021);
+        rateRange[17] = RateRange(RATE_120, RATE_130);
+        rateRange[18] = RateRange(RATE_030, RATE_033);
 
         rateRange[32] = RateRange(RATE_100, RATE_100);
         rateRange[33] = RateRange(RATE_100, RATE_100);
@@ -639,7 +667,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         view
         returns (Purchase[] memory)
     {
-        if (!_isAdmin(msg.sender) || msg.sender != user) revert NotAuthorized();
+        if (!_isAdmin(msg.sender) && msg.sender != user) revert NotAuthorized();
         return purchasesByUser[user];
     }
 
@@ -654,17 +682,29 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         purchaseCredits[user][purchaseIndex] += creditAmount;
     }
 
+    // Or if you pull from logisticsManager: logisticsManager.getTracking(w.purchaseTxHash)
+
     function getUserPurchasesWithCredits(address user) 
         external 
         view 
-        returns (Purchase[] memory terms, uint256[] memory credits) 
+        returns (
+            Purchase[] memory terms, 
+            uint256[] memory credits,
+            bytes32[] memory trackingNumbers
+        ) 
     {
         uint256 count = purchasesByUser[user].length;
         terms = purchasesByUser[user];
         credits = new uint256[](count);
+        trackingNumbers = new bytes32[](count);
         
         for (uint256 i = 0; i < count; i++) {
             credits[i] = purchaseCredits[user][i];
+            
+            // Fetch the atomically linked tracking footprint
+            bytes32 txHash = terms[i].purchaseTxHash;
+            // Adjust this line to match your exact tracking mapping name (e.g., from your initShipment storage)
+            trackingNumbers[i] = ILogisticsManager(logisticsManager).getTracking(txHash);
         }
     }
 
@@ -773,6 +813,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
         Purchase memory w = purchasesByUser[r.user][r.purchaseIndex];
         Affiliate memory a = affiliateByUserIndex[w.user][w.purchaseIndex];
         uint256[] memory src = purchasePayouts[r.user][r.purchaseIndex];
+        uint256 status = uint256(w.status);
 
         if (msg.sender == owner()) {
 
@@ -791,7 +832,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
                 a.affiliate,
                 a.commission,
                 w.purchaseSetter,
-                w.refund,
+                status,
                 w.refundHash
             );
 
@@ -814,7 +855,7 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
                 a.affiliate,
                 a.commission,
                 w.purchaseSetter,
-                w.refund,
+                status,
                 w.refundHash
             );
 
@@ -843,7 +884,6 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
     }
 
     function _emitPurchase(uint256 startTs, uint256 endTs) internal {
-
         // Cache array length to memory to prevent continuous storage reads (SLOAD)
         uint256 len = purchaseTimestamps.length;
 
@@ -851,34 +891,52 @@ contract AssetPurchase is Initializable, OwnableUpgradeable, UUPSUpgradeable, Re
             uint256 ts = purchaseTimestamps[i];
             
             if (ts >= startTs && ts <= endTs) {
-                // Read pointers to storage instead of copying the whole struct to memory
+                // Read pointers to storage
                 PurchaseRef storage r = purchasesByTimestamp[ts];
                 Purchase storage w = purchasesByUser[r.user][r.purchaseIndex];
                 Affiliate storage a = affiliateByUserIndex[w.user][w.purchaseIndex];
                 
-                emit PurchaseTimestamp(
-                    w.user,
-                    w.token,
-                    w.id,
-                    w.quantity,
-                    w.purchaseIndex,
-                    w.amount,
-                    purchasePayouts[r.user][r.purchaseIndex],
-                    w.shipping,
-                    w.region,
-                    w.customizations,
-                    w.rate,
-                    a.affiliate,
-                    a.commission,
-                    w.purchaseSetter,
-                    w.refund,
-                    w.refundHash
-                );
+                // Pass pointers down to a clean stack frame to execute the emission safely
+                _cleanEmit(w, a, purchasePayouts[r.user][r.purchaseIndex]);
             }
 
             // Use unchecked increments for the loop counter to bypass safety checks
             unchecked { i++; }
         }
+    }
+
+    // NEW HELPER FUNCTION: This completely resets the EVM stack frame
+    function _cleanEmit(
+        Purchase storage w, 
+        Affiliate storage a, 
+        uint256[] memory src
+    ) internal {
+        uint256 status = uint256(w.status);
+
+        emit PurchaseTimestamp(
+            w.user,
+            w.token,
+            w.id,
+            w.quantity,
+            w.purchaseIndex,
+            w.amount,
+            src,
+            w.shipping,
+            w.region,
+            w.customizations,
+            w.rate,
+            a.affiliate,
+            a.commission,
+            w.purchaseSetter,
+            status,
+            w.refundHash
+        );
+    }
+
+    function getPurchaseReference(bytes32 purchaseHash) external view returns (address user, uint256 purchaseIndex) {
+        PurchaseRef memory ref = purchasesByHash[purchaseHash];
+        if (ref.user == address(0)) revert InvalidHash();
+        return (ref.user, ref.purchaseIndex);
     }
 
     function _additionHelper(address[] memory addresses, bool stc, bool aff, bool adn) internal {

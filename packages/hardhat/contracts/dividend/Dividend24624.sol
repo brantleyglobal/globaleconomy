@@ -24,7 +24,7 @@ contract Dividend24624 is Initializable, ERC20Upgradeable, AccessControlUpgradea
     uint256 public unlockQuarter;
     uint256 public comingQuarter;
     uint256 public monthKey;
-    uint256 public absoluteMonth;
+    uint256 internal absoluteMonth;
     uint256 public contractTime;
     uint256 public committedQuarters;
     uint256 public redeemPeriod;
