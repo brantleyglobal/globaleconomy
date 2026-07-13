@@ -1,6 +1,40 @@
 {
-
   "abi": [
+    {
+      "inputs": [],
+      "name": "FeeOutofBounds",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "HashDuplicated",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidHash",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidTerm",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotAuthorized",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "PayoutFailed",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "UnapprovedToken",
+      "type": "error"
+    },
     {
       "anonymous": false,
       "inputs": [
@@ -82,9 +116,9 @@
         },
         {
           "indexed": false,
-          "internalType": "uint256[22]",
+          "internalType": "uint256[]",
           "name": "stableOut",
-          "type": "uint256[22]"
+          "type": "uint256[]"
         },
         {
           "indexed": false,
@@ -138,9 +172,9 @@
         },
         {
           "indexed": false,
-          "internalType": "uint32",
+          "internalType": "uint256",
           "name": "termIndex",
-          "type": "uint32"
+          "type": "uint256"
         },
         {
           "indexed": false,
@@ -206,15 +240,21 @@
         },
         {
           "indexed": false,
-          "internalType": "uint32",
+          "internalType": "uint256",
           "name": "termIndex",
-          "type": "uint32"
+          "type": "uint256"
         },
         {
           "indexed": false,
-          "internalType": "uint256[22]",
+          "internalType": "uint256[]",
+          "name": "stableOut",
+          "type": "uint256[]"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
           "name": "amountOut",
-          "type": "uint256[22]"
+          "type": "uint256"
         },
         {
           "indexed": false,
@@ -250,49 +290,19 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "existingHash",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "existingSetter",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "attemptedSetter",
-          "type": "address"
-        }
-      ],
-      "name": "UnexpectedPayoutTxHash",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
           "name": "implementation",
           "type": "address"
         }
       ],
       "name": "Upgraded",
       "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "_populateGlobals",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
     },
     {
       "inputs": [
@@ -322,14 +332,14 @@
           "type": "uint256"
         },
         {
+          "internalType": "uint256",
+          "name": "currentTxTime",
+          "type": "uint256"
+        },
+        {
           "internalType": "bytes32",
           "name": "depositHash",
           "type": "bytes32"
-        },
-        {
-          "internalType": "uint256",
-          "name": "timeStamp",
-          "type": "uint256"
         }
       ],
       "name": "acquisition",
@@ -340,37 +350,37 @@
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "admin",
-          "type": "address"
+          "internalType": "address[]",
+          "name": "adminToAdd",
+          "type": "address[]"
         }
       ],
-      "name": "addAdmin",
+      "name": "addToAdminWhitelist",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "stableAddress",
+          "type": "address[]"
+        }
+      ],
+      "name": "addToStableWhitelist",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
     {
       "inputs": [],
-      "name": "addToReconciliationPool",
-      "outputs": [],
-      "stateMutability": "payable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "admins",
+      "name": "adminsIndex",
       "outputs": [
         {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
+          "internalType": "address[]",
+          "name": "admin",
+          "type": "address[]"
         }
       ],
       "stateMutability": "view",
@@ -397,9 +407,9 @@
           "type": "address"
         },
         {
-          "internalType": "uint32",
+          "internalType": "uint256",
           "name": "termIndex",
-          "type": "uint32"
+          "type": "uint256"
         },
         {
           "internalType": "bytes32",
@@ -504,9 +514,9 @@
               "type": "address"
             },
             {
-              "internalType": "uint32",
+              "internalType": "uint256",
               "name": "termIndex",
-              "type": "uint32"
+              "type": "uint256"
             },
             {
               "internalType": "uint256",
@@ -514,14 +524,14 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256[22]",
+              "internalType": "uint256",
               "name": "amountout",
-              "type": "uint256[22]"
+              "type": "uint256"
             },
             {
-              "internalType": "uint256[22]",
+              "internalType": "uint256",
               "name": "exchangeRate",
-              "type": "uint256[22]"
+              "type": "uint256"
             },
             {
               "internalType": "bytes32",
@@ -565,9 +575,9 @@
           "type": "address"
         },
         {
-          "internalType": "uint32",
+          "internalType": "uint256",
           "name": "index",
-          "type": "uint32"
+          "type": "uint256"
         }
       ],
       "name": "getUserTerm",
@@ -600,9 +610,9 @@
               "type": "address"
             },
             {
-              "internalType": "uint32",
+              "internalType": "uint256",
               "name": "termIndex",
-              "type": "uint32"
+              "type": "uint256"
             },
             {
               "internalType": "uint256",
@@ -610,14 +620,14 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256[22]",
+              "internalType": "uint256",
               "name": "amountout",
-              "type": "uint256[22]"
+              "type": "uint256"
             },
             {
-              "internalType": "uint256[22]",
+              "internalType": "uint256",
               "name": "exchangeRate",
-              "type": "uint256[22]"
+              "type": "uint256"
             },
             {
               "internalType": "bytes32",
@@ -680,16 +690,6 @@
           "type": "address"
         },
         {
-          "internalType": "address[]",
-          "name": "initialStables",
-          "type": "address[]"
-        },
-        {
-          "internalType": "address[]",
-          "name": "adminList",
-          "type": "address[]"
-        },
-        {
           "internalType": "address",
           "name": "ledgerProxyAddress",
           "type": "address"
@@ -705,7 +705,7 @@
       "name": "ledgerProxy",
       "outputs": [
         {
-          "internalType": "contract GlobalLedgerProxy",
+          "internalType": "contract IGlobalLedger",
           "name": "",
           "type": "address"
         }
@@ -751,44 +751,12 @@
     },
     {
       "inputs": [],
-      "name": "processTimeStampEnd",
+      "name": "processTimestamp",
       "outputs": [
         {
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "processTimeStampStart",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "name": "processedHashes",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
         }
       ],
       "stateMutability": "view",
@@ -810,182 +778,25 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
+          "internalType": "address[]",
+          "name": "adminToRemove",
+          "type": "address[]"
         }
       ],
-      "name": "purchaseTimestamps",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
+      "name": "removeFromAdminWhitelist",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
       "inputs": [
         {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
+          "internalType": "address[]",
+          "name": "stableAddress",
+          "type": "address[]"
         }
       ],
-      "name": "purchasesByHash",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "uint32",
-          "name": "purchaseIndex",
-          "type": "uint32"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "purchasesByTimestamp",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "uint32",
-          "name": "purchaseIndex",
-          "type": "uint32"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "purchasesByUser",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "payoutSetter",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "refundSetter",
-          "type": "address"
-        },
-        {
-          "internalType": "uint32",
-          "name": "termIndex",
-          "type": "uint32"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amountin",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "purchaseTxHash",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "payoutTxHash",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "refundHash",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bool",
-          "name": "refund",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "credit",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint8",
-          "name": "",
-          "type": "uint8"
-        }
-      ],
-      "name": "rateRange",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "min",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "max",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "admin",
-          "type": "address"
-        }
-      ],
-      "name": "removeAdmin",
+      "name": "removeFromStableWhitelist",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -998,19 +809,13 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "stablecoins",
+      "inputs": [],
+      "name": "stableIndex",
       "outputs": [
         {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
+          "internalType": "address[]",
+          "name": "stable",
+          "type": "address[]"
         }
       ],
       "stateMutability": "view",

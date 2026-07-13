@@ -3,9 +3,7 @@
 import { useState, useEffect } from "react";
 import { Contract } from "ethers";
 import { useBalance } from "wagmi";
-import { Interface } from "@ethersproject/abi";
-import assetPurchaseAbi from "~~/lib/contracts/abi/AssetPurchase.json";
-import acquisitionAbi from "~~/lib/contracts/abi/AcquisitionGateway.json";
+import purchaseAbi from "~~/lib/contracts/abi/AssetPurchase.json";
 import deployments from "~~/lib/contracts/deployments.json";
 import { ensureGlobalChain } from "~~/utils/targetChain";
 
@@ -17,11 +15,10 @@ interface TokenType {
   chain?: string;
 }
 
-interface TransferHandlerProps {
+interface ActionHandlerProps {
   sender?: string;
   receipt?: string;
-  contractAddress: string;
-  chainId?: number;           // Source chain id (Besu)
+  chainId?: number;
   selectedToken?: TokenType;
   available?: bigint;
   signature?: string;
@@ -31,11 +28,6 @@ interface TransferHandlerProps {
 interface BitcoinWallet {
   sendTransaction: (to: string, amount: number) => Promise<string>;
 }
-
-type TxResult = {
-  txHash: string;
-  receipt: any | null;
-};
 
 function useSelectedTokenBalance(
   userAddress: string,
@@ -55,24 +47,13 @@ function useSelectedTokenBalance(
   };
 }
 
-function parseLocalNumber (rawNumber: string, locale: string) {
-  const amountToFormat = Intl.NumberFormat(locale).format(1.1);
-  const decimal = amountToFormat.charAt(amountToFormat.length - 2);
-
-  const normalized = rawNumber.replace(new RegExp(`[^0-9${decimal}-]`,"g"), "");
-
-  return Number(normalized);
-}
-
-export function useRefundHandler(config: TransferHandlerProps) {
+export function useRefundHandler(config: ActionHandlerProps) {
   const {
     sender = "",
     chainId = 0,
     selectedToken = {},
-    signature,
     openWalletModal,
     receipt,
-    contractAddress,
   } = config;
 
   const [loading, setLoading] = useState(false);
@@ -102,73 +83,66 @@ export function useRefundHandler(config: TransferHandlerProps) {
     }
   }, []);
 
-  const btcWallet: BitcoinWallet = {
-    sendTransaction: async (to, amount) => {
-      if (!window.xfi?.bitcoin) {
-        throw new Error("XDEFI Bitcoin wallet not available");
-      }
-      return await window.xfi.bitcoin.sendTransaction(to, amount);
-    },
-  };
-
-  // Combined send flow
-  const send = async (recipient?: string, value?: string) => {
+  /**
+   * Core Polymorphic Execution Gate
+   * @param actionType "refund" | "repair" - Passed explicitly by parent modal steps
+   */
+  const executeAction = async (actionType: "refund" | "repair") => {
     setLoading(true);
-    const processedAt = new Date(Date.now()).toISOString();
 
-    if (!sender || !chainId || !selectedToken.address) {
-      //openWalletModal?.();
-      //setLoading(false);
-      console.log("failed");
-      return;
+    if (!sender || !chainId) {
+      openWalletModal?.();
+      setLoading(false);
+      return { success: false, error: "Wallet context not connected" };
     }
 
-    if (!recipient || !value) {
+    if (!receipt) {
       setLoading(false);
-      return;
+      return { success: false, error: "Missing purchase receipt target hash" };
     }
 
     await ensureGlobalChain(window.ethereum);
 
-    try {   
-          
-      const holdingWalletAddress = sender;
-
+    try {
       if (!provider) {
         await window.ethereum?.request({ method: "eth_requestAccounts" });
-        // then setProvider again
       }
 
-      const signer = await provider.getSigner();
+      // Instantiate local browser provider context wrapper
+      const ethersProvider = new (window as any).ethers.providers.Web3Provider(provider);
+      const signer = ethersProvider.getSigner();
 
       let receipt2;
-      
-      const contract = new Contract(deployments.AssetPurchase, assetPurchaseAbi.abi, signer);
+      const contract = new Contract(deployments.AssetPurchase, purchaseAbi.abi, signer);
+
+      // Flag matching contract params: processReturn(bytes32 hash, ShippingStatus status, bool isRepair)
+      // Standardizes 'ReturnReceived' (usually enum value 1 or 2 depending on your setup)
+      const isRepairFlag = actionType === "repair";
 
       try {
-        const dTxHash = await contract?.refund!(
+        const dTxHash = await contract.processReturn(
           receipt,
+          isRepairFlag,
           {
-            gasLimit: 70_000
+            gasLimit: 120_000 // Bumped slightly to safely accommodate storage mutation branches
           }
         );
         receipt2 = await dTxHash.wait();
       } catch (err) {
-        console.error("Xchange Creation failed")
+        console.error("Contract runtime pipeline execution failed:", err);
+        throw err;
       }
 
-      console.log("after try/catch")
-
-      if (!selectedToken.address) throw new Error("Token address not specified for source chain transfer");
-      console.log("checking");
-
-      const refundPayload = {
-        refund: true,
+      // Sync backend relational tracking databases
+      const syncPayload = {
+        purchaseHash: receipt,
+        action: actionType, // "refund" or "repair"
+        isRepair: isRepairFlag,
         timestamp: new Date().toISOString(),
+        txHash: receipt2?.transactionHash || "",
       };
 
       try {
-
         const res = await fetch("https://gateway.brantley-global.com", {
           method: "POST",
           headers: {
@@ -178,45 +152,39 @@ export function useRefundHandler(config: TransferHandlerProps) {
           body: JSON.stringify({
             jsonrpc: "2.0",
             id: "purchases",
-            method: "updatePurchase",
-            params: refundPayload,
+            method: "updatePurchaseStatus",
+            params: syncPayload,
           }),
         });
 
-        const contentType = res.headers.get("Content-Type") ?? "";
-        if (res.ok && contentType.includes("application/json")) {
-          const result = await res.json();
+        if (!res.ok) {
+          console.warn("Backend indexed state notification returned bad status code.");
         }
-      } catch (nestedErr: any) {
-        console.error("Error reporting failed:", nestedErr);
+      } catch (nestedErr) {
+        console.error("Error updating centralized cloud ledger index:", nestedErr);
       }
 
-      receipt2?.(undefined);
       setLoading(false);
 
       return {
         success: true,
-        receipt2,
+        receipt2: receipt2?.transactionHash || receipt,
         status: "queued",
       };
     } catch (err: any) {
-      console.error("Transfer error:", err);
-
-        const revertReason =
-          err?.error?.data?.message ||
-          err?.data?.message ||
-          err?.reason ||
-          err?.message ||
-          "Unknown error";
-
-        console.error("Acqusition failed:", revertReason);
-
-        throw new Error(revertReason);
-
       setLoading(false);
-      return { success: false, error: err.message ?? "Unknown error" };
+      console.error("Pipeline failure:", err);
+
+      const revertReason =
+        err?.error?.data?.message ||
+        err?.data?.message ||
+        err?.reason ||
+        err?.message ||
+        "Unknown pipeline transaction failure";
+
+      return { success: false, error: revertReason };
     }
   };
 
-  return { send, loading };
+  return { executeAction, loading };
 }

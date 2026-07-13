@@ -2,6 +2,11 @@
   "abi": [
     {
       "inputs": [],
+      "name": "ActionAlreadyActive",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "FeeOutofBounds",
       "type": "error"
     },
@@ -38,6 +43,11 @@
     {
       "inputs": [],
       "name": "InvalidRate",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidStatusTransition",
       "type": "error"
     },
     {
@@ -344,9 +354,9 @@
         },
         {
           "indexed": false,
-          "internalType": "bool",
-          "name": "refund",
-          "type": "bool"
+          "internalType": "uint256",
+          "name": "status",
+          "type": "uint256"
         },
         {
           "indexed": false,
@@ -391,34 +401,29 @@
       "type": "event"
     },
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "affiliate",
+          "type": "address"
+        }
+      ],
+      "name": "_isAffiliate",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "_populateGlobals",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "accumBase",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -438,7 +443,7 @@
       "inputs": [
         {
           "internalType": "address[]",
-          "name": "stakeableAddress",
+          "name": "affiliateAddress",
           "type": "address[]"
         }
       ],
@@ -468,60 +473,6 @@
           "internalType": "address[]",
           "name": "admin",
           "type": "address[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "affiliateByUserIndex",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "affiliate",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "commissionSetter",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "purchaseIndex",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "commission",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "commissionHash",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "buyerAffiliateCreditHash",
-          "type": "bytes32"
         }
       ],
       "stateMutability": "view",
@@ -607,6 +558,62 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "affiliate",
+          "type": "address"
+        }
+      ],
+      "name": "getAffiliateHistory",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "user",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "affiliate",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "commissionSetter",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "purchaseIndex",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "commission",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "commissionHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "buyerAffiliateCreditHash",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct AssetPurchase.Affiliate[]",
+          "name": "",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "uint256",
           "name": "timestamp",
           "type": "uint256"
@@ -615,6 +622,30 @@
       "name": "getPurchase",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "purchaseHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getPurchaseReference",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "purchaseIndex",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -752,9 +783,9 @@
               "type": "uint256"
             },
             {
-              "internalType": "bool",
-              "name": "refund",
-              "type": "bool"
+              "internalType": "enum AssetPurchase.ReturnProcess",
+              "name": "status",
+              "type": "uint8"
             },
             {
               "internalType": "bytes32",
@@ -775,6 +806,122 @@
           "internalType": "struct AssetPurchase.Purchase[]",
           "name": "",
           "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "getUserPurchasesWithCredits",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "user",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "purchaseSetter",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "refundSetter",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "region",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "purchaseIndex",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "quantity",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "shipping",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "customizations",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "rate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum AssetPurchase.ReturnProcess",
+              "name": "status",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "purchaseTxHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "refundHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "configs",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct AssetPurchase.Purchase[]",
+          "name": "terms",
+          "type": "tuple[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "credits",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "bytes32[]",
+          "name": "trackingNumbers",
+          "type": "bytes32[]"
         }
       ],
       "stateMutability": "view",
@@ -863,9 +1010,9 @@
               "type": "uint256"
             },
             {
-              "internalType": "bool",
-              "name": "refund",
-              "type": "bool"
+              "internalType": "enum AssetPurchase.ReturnProcess",
+              "name": "status",
+              "type": "uint8"
             },
             {
               "internalType": "bytes32",
@@ -950,6 +1097,19 @@
     },
     {
       "inputs": [],
+      "name": "logisticsManager",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "owner",
       "outputs": [
         {
@@ -975,54 +1135,21 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "processTimestamp",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "bytes32",
-          "name": "",
+          "name": "purchaseHash",
           "type": "bytes32"
-        }
-      ],
-      "name": "processedHashes",
-      "outputs": [
+        },
         {
           "internalType": "bool",
-          "name": "",
+          "name": "isRepair",
           "type": "bool"
         }
       ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "processedPurchase",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
+      "name": "processReturn",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -1119,109 +1246,14 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "purchaseTimestamps",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "name": "purchasesByHash",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "purchaseIndex",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "purchasesByTimestamp",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "purchaseIndex",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "purchasesByUser",
-      "outputs": [
-        {
           "internalType": "address",
           "name": "user",
           "type": "address"
         },
         {
           "internalType": "address",
-          "name": "token",
+          "name": "affiliate",
           "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "purchaseSetter",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "refundSetter",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "region",
-          "type": "uint256"
         },
         {
           "internalType": "uint256",
@@ -1230,132 +1262,23 @@
         },
         {
           "internalType": "uint256",
-          "name": "quantity",
+          "name": "commission",
           "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "id",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "shipping",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "customizations",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "rate",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bool",
-          "name": "refund",
-          "type": "bool"
         },
         {
           "internalType": "bytes32",
-          "name": "purchaseTxHash",
+          "name": "commissionHash",
           "type": "bytes32"
         },
         {
           "internalType": "bytes32",
-          "name": "refundHash",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "configs",
+          "name": "buyerAffiliateCreditHash",
           "type": "bytes32"
         }
       ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "rateRange",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "min",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "max",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "purchaseHash",
-          "type": "bytes32"
-        }
-      ],
-      "name": "refund",
+      "name": "recordAffiliateCommission",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "refundsByUserIndex",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "purchaseIndex",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "adjustedAmount",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -1421,11 +1344,47 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "_logisticsAddress",
+          "type": "address"
+        }
+      ],
+      "name": "setLogisticsManager",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "newAddress",
           "type": "address"
         }
       ],
       "name": "setPayoutAddress",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "purchaseIndex",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "creditAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "setPurchaseCredit",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -1457,19 +1416,6 @@
           "internalType": "address",
           "name": "",
           "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "totalWithdrawn",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
         }
       ],
       "stateMutability": "view",

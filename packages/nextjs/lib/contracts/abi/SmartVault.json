@@ -84,17 +84,6 @@
       "type": "error"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        }
-      ],
-      "name": "SafeERC20FailedOperation",
-      "type": "error"
-    },
-    {
       "inputs": [],
       "name": "SpendNotApproved",
       "type": "error"
@@ -328,85 +317,11 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "addr",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "index",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "reason",
-          "type": "string"
-        }
-      ],
-      "name": "UpdateFailed",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
           "name": "implementation",
           "type": "address"
         }
       ],
       "name": "Upgraded",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "quartersCommitted",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "unlockQuarter",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amountout",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "termIndex",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "stage",
-          "type": "uint256"
-        }
-      ],
-      "name": "UserWithdraw",
       "type": "event"
     },
     {
@@ -547,6 +462,19 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "apAddrs",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "bool",
@@ -667,243 +595,6 @@
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "depositTimestamps",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "depositTimestampsByUser",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "name": "depositsByHash",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "depositIndex",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "depositsByTimestamp",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "depositIndex",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "depositsByUser",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amountin",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amountout",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "rate",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "dividend",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "quartersCommitted",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "startQuarter",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "key",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "depositTxHash",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "refundHash",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bool",
-          "name": "refund",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "ecoDataByQuarter",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "currentQuarter",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "ecoSupply",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "effectiveRawSupply",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "ecoPool",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "ecoRedemptions",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "poolMin",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "poolMax",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "feeRecipient",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -1034,6 +725,25 @@
       "name": "getDepositsInRange",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "dividendToken",
+          "type": "address"
+        }
+      ],
+      "name": "getMultiplier",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -1339,57 +1049,12 @@
     },
     {
       "inputs": [],
-      "name": "lastTimeStamp",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "lastUpdatedTime",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
       "name": "ledgerProxy",
       "outputs": [
         {
           "internalType": "contract IGlobalLedger",
           "name": "",
           "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "multiplier",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -1410,86 +1075,27 @@
     },
     {
       "inputs": [],
-      "name": "payoutToken",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "populateGlobals",
+      "name": "populateRateRanges",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "processDepositTimestamp",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "processWithdrawTimestamp",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "name": "processedDeposits",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "start",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "end",
           "type": "uint256"
         }
       ],
-      "name": "processedDepositsTs",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
+      "name": "populateStakeables",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -1500,30 +1106,6 @@
           "internalType": "bytes32",
           "name": "",
           "type": "bytes32"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "rateRange",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "min",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "max",
-          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -1615,59 +1197,6 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "stables",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "stagePayouts",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [],
       "name": "stakeableIndex",
       "outputs": [
@@ -1675,25 +1204,6 @@
           "internalType": "address[]",
           "name": "stakes",
           "type": "address[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "stakeables",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -1746,19 +1256,6 @@
       "name": "updateUser",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "updatedStartQuarter",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -1836,142 +1333,6 @@
       "name": "withdrawAdmin",
       "outputs": [],
       "stateMutability": "payable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "name": "withdrawByHash",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "termIndex",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "stage",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "withdrawByTimestamp",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "termIndex",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "stage",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "withdrawTimestamps",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "withdrawalsByUser",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "dividendToken",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "quartersCommitted",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "startQuarter",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "unlockQuarter",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "stage",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bool",
-          "name": "autoPay",
-          "type": "bool"
-        },
-        {
-          "internalType": "uint256",
-          "name": "userDividendAmount",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     }
   ]

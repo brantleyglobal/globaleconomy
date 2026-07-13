@@ -145,7 +145,7 @@ export const ShippingInfoStep: React.FC<{ currentStep: number; setCurrentStep: (
         </select>
         <input
           type="text"
-          placeholder="Affiliate Code"
+          placeholder="Affiliate Address"
           className="input w-full bg-black rounded-md outline-none focus:outline-none ring-none border-none text-white placeholder:text-white/50 hover:bg-secondary/5"
           value={userPromo}
           onChange={(e) => setUserPromo(e.target.value)}

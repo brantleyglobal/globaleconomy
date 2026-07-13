@@ -136,22 +136,58 @@
       "anonymous": false,
       "inputs": [
         {
-          "indexed": true,
+          "indexed": false,
           "internalType": "address",
           "name": "swapAddress",
           "type": "address"
         },
         {
-          "indexed": true,
+          "indexed": false,
           "internalType": "address",
           "name": "partyA",
           "type": "address"
         },
         {
-          "indexed": true,
+          "indexed": false,
           "internalType": "address",
           "name": "partyB",
           "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "tokenA",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amountA",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "partyADepositHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "tokenB",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amountB",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "partyBDepositHash",
+          "type": "bytes32"
         }
       ],
       "name": "SwapCreated",
@@ -231,25 +267,6 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "allSwaps",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "address",
           "name": "partyA",
           "type": "address"
@@ -295,7 +312,7 @@
           "type": "uint256"
         }
       ],
-      "name": "createNewSwap",
+      "name": "createSwap",
       "outputs": [
         {
           "internalType": "address",
@@ -337,6 +354,80 @@
           "internalType": "address",
           "name": "",
           "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getAllSwaps",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "swapAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getSwapDetails",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "swapAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "partyA",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "partyB",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "tokenA",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "tokenB",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amountA",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amountB",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum GlobalSwapRegistry.SwapStatus",
+              "name": "status",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct GlobalSwapRegistry.SwapDetails",
+          "name": "",
+          "type": "tuple"
         }
       ],
       "stateMutability": "view",
@@ -390,6 +481,25 @@
     {
       "inputs": [
         {
+          "internalType": "bytes32",
+          "name": "depositHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "isDepositProcessed",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "address",
           "name": "swapAddress",
           "type": "address"
@@ -421,25 +531,6 @@
           "internalType": "address",
           "name": "",
           "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "name": "processedDeposits",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
         }
       ],
       "stateMutability": "view",
@@ -525,60 +616,6 @@
       "name": "setShield",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "swapRegistry",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "swapAddress",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "partyA",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "partyB",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "tokenA",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "tokenB",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amountA",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amountB",
-          "type": "uint256"
-        },
-        {
-          "internalType": "enum GlobalSwapRegistry.SwapStatus",
-          "name": "status",
-          "type": "uint8"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     },
     {

@@ -11,7 +11,7 @@ import { Modal } from "~~/components/common/modal";
 import { DividendRedeemModal } from "~~/components/dividend/redemptionWidget";
 import { GlobalXchangeModal } from "~~/components/xchange/xchangeWidget";
 import { Faucet } from "~~/components/transfer/Faucet";
-import { Refund } from "~~/components/refunds/Refund";
+import { RefundRepairModal } from "~~/components/refunds/RefundRepairModal";
 import { InvestmentModal } from "~~/components/invest/investmentModal";
 import { AcquireModal } from "~~/components/acquire/acquireModal";
 import MirrorModeToggle from "~~/components/common/mirrorToggle";
@@ -262,7 +262,11 @@ export const Header = () => {
         isOpen={modalState.refund}
         onClose={() => setModalState(s => ({ ...s, refund: false }))}
       >
-        <Refund openWalletModal={() => setModalState({ ...modalState, wallet: true })} />
+        <RefundRepairModal 
+          isOpen={modalState.refund}
+          onClose={() => setModalState(s => ({ ...s, refund: false }))}
+          openWalletModal={() => setModalState({ ...modalState, wallet: true })} 
+        />
       </Modal>
 
       <Modal

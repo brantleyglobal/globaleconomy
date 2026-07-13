@@ -173,6 +173,11 @@ async function initiateStripeCheckout(params: InitiateParams) {
   };
 
   const region = mapCountryToRegion(params.shippingInfo.country);
+  const shippingAddress = params.shippingInfo.address;
+  const city = params.shippingInfo.city;
+  const state = params.shippingInfo.state;
+  const zip = params.shippingInfo.postalCode;
+  const country = params.shippingInfo.country;
   const category = determineCategory(params.quantity, params.checkoutAsset.variant);
   const shippingRate = getShippingRate(region, category);
 
@@ -182,7 +187,6 @@ async function initiateStripeCheckout(params: InitiateParams) {
     address = "",
     phone = "",
     email = "",
-    country = "",
     promo = "",
     postalCode = "",
   } = useCheckoutStore.getState().shippingInfo ?? {};
@@ -202,11 +206,6 @@ async function initiateStripeCheckout(params: InitiateParams) {
   let commissionAmount;
   let payout = "";
   if (promo != "") {
-    if (promo === "something") { 
-      affiliateAddress = "kbjdfsiib"; //affiliates Wallet Address
-    } else if ( promo === "somethingelse") {
-      affiliateAddress = "hhvdfihihbbd"; //another affiliate Walllet Address
-    }
 
     if (params.checkoutAsset.variant === "eseries"){
       commissionAmount = productAmount * .03;
@@ -283,7 +282,7 @@ async function initiateStripeCheckout(params: InitiateParams) {
     txhash: "",
     receipthash: "",
     useraddress: "",
-    affiliate: affiliateAddress,
+    affiliate: promo,
     asset: params.checkoutAsset.id,
     amount: totalAmount,
     exchangerate: "",
@@ -292,9 +291,18 @@ async function initiateStripeCheckout(params: InitiateParams) {
     quantity: params.quantity,
     configs: serializedConfig,
     paymentmethod: "stripe",
-    region, 
+    address: shippingAddress,
+    city: city,
+    state: state,
+    zip: zip,
+    country,
+    region,
+    carrier: "",
+    trackingnumber: "",
     commission: commmissionTotal,
     payout: commissionPaid,
+    refund: false,
+    refundhash: "",
     status: "pending",
     chainstatus: true,
     queuedat: new Date().toISOString(),
@@ -419,6 +427,11 @@ async function handleCryptoPurchase(params: InitiateParams) {
       );
     };
     const region = mapCountryToRegion(params.shippingInfo.country);
+    const shippingAddress = params.shippingInfo.address;
+    const city = params.shippingInfo.city;
+    const state = params.shippingInfo.state;
+    const zip = params.shippingInfo.postalCode;
+    const country = params.shippingInfo.country;
     const category = determineCategory(quantity, checkoutAsset.variant);
     const shippingRate = getShippingRate(region, category);
 
@@ -431,7 +444,6 @@ async function handleCryptoPurchase(params: InitiateParams) {
       address = "",
       phone = "",
       email = "",
-      country = "",
       promo = "",
       postalCode = "",
     } = useCheckoutStore.getState().shippingInfo ?? {};
@@ -556,15 +568,10 @@ async function handleCryptoPurchase(params: InitiateParams) {
     const purchaseContract = new Contract(deployments.AssetPurchase, assetPurchaseAbi.abi, signer);
     const customizationTotal = parseUnits(customizations, 18);
     /* Affiliate Logic */
-    let affiliateAddress = zeroAddress;
+    let affiliateAddress = promo;
     let commissionAmount = 0;
     let payout = "";
     if (promo != ""){
-      if (promo === "something") { 
-        affiliateAddress = zeroAddress; //Affiliate Wallet Address When There
-      } else if ( promo === "somethingelse") {
-        affiliateAddress = zeroAddress; //Another //Affiliate Wallet Address When There
-      }
 
       if (checkoutAsset.variant === "eseries"){
         commissionAmount = productAmount * .03;
@@ -641,6 +648,11 @@ async function handleCryptoPurchase(params: InitiateParams) {
       quantity,
       configs: bytes32Config,
       paymentmethod: tokenSymbol,
+      address: shippingAddress,
+      city,
+      state,
+      zipcode: zip,
+      country,
       region, 
       commission: commmissionTotal.toString() || "",
       payout,

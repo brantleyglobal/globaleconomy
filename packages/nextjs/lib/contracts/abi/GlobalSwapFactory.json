@@ -1,66 +1,13 @@
 {
-
   "abi": [
-    {
-      "inputs": [],
-      "name": "AccessControlBadConfirmation",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "neededRole",
-          "type": "bytes32"
-        }
-      ],
-      "name": "AccessControlUnauthorizedAccount",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "FailedDeployment",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "balance",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "needed",
-          "type": "uint256"
-        }
-      ],
-      "name": "InsufficientBalance",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "InvalidInitialization",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "NotInitializing",
-      "type": "error"
-    },
     {
       "anonymous": false,
       "inputs": [
         {
           "indexed": false,
-          "internalType": "uint64",
+          "internalType": "uint8",
           "name": "version",
-          "type": "uint64"
+          "type": "uint8"
         }
       ],
       "name": "Initialized",
@@ -369,11 +316,6 @@
           "internalType": "address",
           "name": "_owner",
           "type": "address"
-        },
-        {
-          "internalType": "address[]",
-          "name": "initialStables",
-          "type": "address[]"
         }
       ],
       "name": "initialize",
@@ -390,7 +332,7 @@
         },
         {
           "internalType": "address",
-          "name": "callerConfirmation",
+          "name": "account",
           "type": "address"
         }
       ],
