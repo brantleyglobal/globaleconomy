@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { WalletIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
+import { useAccount } from "wagmi";
 
 interface RepairStepProps {
   receipt: string;
@@ -27,7 +28,7 @@ interface RepairStepProps {
 export const RepairStep: React.FC<RepairStepProps> = ({
   receipt,
   setReceipt,
-  address,
+  address: propAddress,
   userFirstName,
   setUserFirstName,
   userLastName,
@@ -42,6 +43,10 @@ export const RepairStep: React.FC<RepairStepProps> = ({
   isProcessing,
   isValidHash
 }) => {
+
+  const { address: wagmiAddress } = useAccount();
+  const activeAddress = propAddress || wagmiAddress;
+
   const [systemSerialNumber, setSystemSerialNumber] = useState("");
   const [repairDescription, setRepairDescription] = useState("");
   const [showWalletNotice, setShowWalletNotice] = useState(false);
@@ -127,7 +132,7 @@ export const RepairStep: React.FC<RepairStepProps> = ({
         <div className="w-full sm:w-auto flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2">
           <WalletConnectButton />
           
-          {!address && (
+          {!activeAddress && (
             <div className="relative inline-block">
               <button
                 onClick={() => setShowWalletNotice(true)}
@@ -174,7 +179,7 @@ export const RepairStep: React.FC<RepairStepProps> = ({
             disabled={
               isProcessing ||
               !isValidHash ||
-              !address || // Added target criteria
+              !activeAddress || // Added target criteria
               !systemSerialNumber ||
               !repairDescription ||
               !userFirstName ||

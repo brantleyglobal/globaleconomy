@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDownIcon } from "@heroicons/react/20/solid";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { injected } from "wagmi/connectors";
 
 declare global {
   interface EthereumProvider {
@@ -30,7 +31,9 @@ type WalletConnectButtonProps = {
 };
 
 export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => {
-  const [account, setAccount] = useState<string | null>(null);
+  const { address: account, isConnected } = useAccount();
+  const { connectAsync } = useConnect();
+  const { disconnect } = useDisconnect();
   const [isWalletAvailable, setIsWalletAvailable] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -64,132 +67,39 @@ export const WalletConnectButton = ({ onConnect }: WalletConnectButtonProps) => 
 
   useEffect(() => {
     const ethereum = window.ethereum;
-    const xdefi = window.xfi;
-
-    if (!ethereum && !xdefi) {
+    if (!ethereum) {
       setIsWalletAvailable(false);
       return;
     }
-
-    // Detect Ethereum-based wallets
-    if (ethereum?.isMetaMask) {
-      setWalletName("MetaMask");
-      setIsMetaMask(true);
-      setIsMultiChainWallet(false);
-    } else if (ethereum?.isCoinbaseWallet) {
-      setWalletName("Coinbase Wallet");
-      setIsCoinbase(true);
-      setIsMultiChainWallet(false);
-    } else if (ethereum?.isBraveWallet) {
-      setWalletName("Brave Wallet");
-      setIsBrave(true);
-      setIsMultiChainWallet(false);
-    } else if (ethereum) {
-      setWalletName("Injected Wallet");
-      setIsTrust(true);
-      setIsMultiChainWallet(true); // Trust Wallet or similar
-    }
-
-    // Detect XDEFI Wallet
-    if (xdefi) {
-      setWalletName("XDEFI Wallet");
-      setIsMultiChainWallet(true);
-      setIsWalletAvailable(true);
-    }
-
-    // Get current account
-    ethereum.request({ method: "eth_accounts" }).then((accounts: string[]) => {
-      if (accounts.length > 0) {
-        setAccount(accounts[0]);
-        onConnect?.(accounts[0]);
-      }
-    });
-
-    // Listen for account changes
-    ethereum.on?.("accountsChanged", (accounts: string[]) => {
-      const newAccount = accounts.length > 0 ? accounts[0] : null;
-      setAccount(newAccount);
-      onConnect?.(newAccount);
-    });
-  }, [onConnect]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    if (ethereum.isMetaMask) setWalletName("MetaMask");
+    else if (ethereum.isCoinbaseWallet) setWalletName("Coinbase Wallet");
+    else if (ethereum.isBraveWallet) setWalletName("Brave Wallet");
   }, []);
 
+  // 3. Rewrite connect and disconnect using Wagmi
   const connectWallet = async () => {
     if (selectedChain === "ethereum") {
-      const ethereum = window.ethereum;
-      if (!ethereum) return;
-
       try {
-        const accounts = await ethereum.request({ method: "eth_requestAccounts" });
-        setAccount(accounts[0]);
-        onConnect?.(accounts[0]);
+        // This triggers Wagmi's injection connection flow
+        const result = await connectAsync({ connector: injected() });
+        const connectedAddress = result.accounts[0];
+        
+        onConnect?.(connectedAddress);
         setMenuOpen(false);
       } catch (err) {
-        console.error("Wallet connection failed:", err);
+        console.error("Wallet connection failed via Wagmi:", err);
       }
     } else if (selectedChain === "bitcoin") {
+      // Keep your custom Bitcoin logic here if Wagmi doesn't support it
       const wallet = await connectBitcoinWallet();
-      setBtcWallet(wallet);
-      setBtcAddress(wallet.address);
       onConnect?.(wallet.address);
       setMenuOpen(false);
     }
-
   };
-
-  useEffect(() => {
-    if (selectedChain === "ethereum") {
-      setBtcWallet(null);
-      setBtcAddress(null);
-    } else if (selectedChain === "bitcoin") {
-      setAccount(null);
-    }
-    console.log(window.xfi?.bitcoin);
-
-  }, [selectedChain]);
-
-  useEffect(() => {
-    const autoConnect = async () => {
-      if (selectedChain === "ethereum" && window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-          if (accounts.length > 0) {
-            setAccount(accounts[0]);
-            onConnect?.(accounts[0]);
-          }
-        } catch (err) {
-          console.error("Ethereum auto-connect failed:", err);
-        }
-      } else if (selectedChain === "bitcoin") {
-        try {
-          const wallet = await connectBitcoinWallet();
-          setBtcWallet(wallet);
-          setBtcAddress(wallet.address);
-          onConnect?.(wallet.address);
-        } catch (err) {
-          console.error("Bitcoin auto-connect failed:", err);
-        }
-      }
-    };
-
-    autoConnect();
-  }, [selectedChain]);
 
   const disconnectWallet = () => {
     if (selectedChain === "ethereum") {
-      setAccount(null);
-    } else if (selectedChain === "bitcoin") {
-      setBtcWallet(null);
-      setBtcAddress(null);
+      disconnect(); // Clears Wagmi state globally
     }
     onConnect?.(null);
     setMenuOpen(false);

@@ -7,6 +7,7 @@ import { BanknotesIcon, WalletIcon, ExclamationCircleIcon } from "@heroicons/rea
 import { WalletConnectButton } from "~~/utils/globalEco/walletConnectButton";
 import { supportedTokens } from "~~/components/constants/tokens";
 import { useRpcStatus } from "~~/hooks/globalEco/statusRpc";
+import { useAccount } from "wagmi";
 
 interface RefundStepProps {
   receipt: string;
@@ -45,8 +46,12 @@ export const RefundStep: React.FC<RefundStepProps> = ({
   onNext,
   isProcessing,
   isValidHash,
-  address,
+  address: propAddress,
 }) => {
+
+  const { address: wagmiAddress } = useAccount();
+  const activeAddress = propAddress || wagmiAddress;
+
   // Localized state vectors restored
   const [showStablecoinInfo, setShowStablecoinInfo] = useState(false);
   const [showWalletNotice, setShowWalletNotice] = useState(false);
@@ -152,7 +157,7 @@ export const RefundStep: React.FC<RefundStepProps> = ({
         <div className="w-full sm:w-auto flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2">
           <WalletConnectButton />
           
-          {!address && (
+          {!activeAddress && (
             <div className="relative inline-block">
               <button
                 onClick={() => setShowWalletNotice(true)}
@@ -188,7 +193,7 @@ export const RefundStep: React.FC<RefundStepProps> = ({
         <button
           className="btn bg-secondary/80 hover:bg-secondary btn-sm h-8 text-xs text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-40 px-6 w-full sm:w-auto uppercase tracking-wider"
           onClick={onNext}
-          disabled={!receipt || !isValidHash || !address || isProcessing || !!emailError}
+          disabled={!receipt || !isValidHash || !activeAddress || isProcessing || !!emailError}
         >
           {isProcessing ? (
             <>

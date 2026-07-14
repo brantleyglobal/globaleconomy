@@ -1,4 +1,4 @@
-<section style="font-family:Segoe UI, Arial, sans-serif; color:#ffffff; line-height:1.6; max-width:800px; margin:auto; padding:0px;">
+<section style="font-family:Segoe UI, Arial, sans-serif; color:inherit; line-height:1.6; max-width:800px; margin:auto; padding:0px;">
   <p><strong>Effective Date:</strong> January 1, 2025</p>
 
   <h2 style="margin-top:5px;">SECTION 1 – Introduction</h2>

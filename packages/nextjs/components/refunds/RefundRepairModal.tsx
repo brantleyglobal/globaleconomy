@@ -180,8 +180,8 @@ export const RefundRepairModal: React.FC<Props> = ({ isOpen, onClose, openWallet
 
   const dynamicStepLabels =
     userAction === "repair"
-      ? ["Selection", "Repair Ticket", "Dispatched Confirmation"]
-      : ["Selection", "Refund Details", "Settlement Done"];
+      ? ["Selection", "Repair Ticket", "Confirmation"]
+      : ["Selection", "Refund Details", "Confirmation"];
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="">
@@ -191,7 +191,7 @@ export const RefundRepairModal: React.FC<Props> = ({ isOpen, onClose, openWallet
           {dynamicStepLabels.map((label, index) => (
             <span
               key={label}
-              className={`flex-1 text-center font-mono ${
+              className={`flex-1 text-center ${
                 step === index ? "text-secondary font-bold" : "text-gray-500"
               }`}
             >

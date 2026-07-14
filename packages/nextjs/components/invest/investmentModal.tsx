@@ -358,12 +358,18 @@ export const InvestmentModal: React.FC<Props> = ({
                 <div className="flex-grow max-h-150 sm:max-h-95 overflow-y-auto text-xs sm:text-sm border px-4 rounded bg-black text-justify text-white space-y-8">
                   <section>
                     <h3 className="font-semibold mb-2 mt-2 text-2xl">TERMS & CONDITIONS</h3>
-                    <div dangerouslySetInnerHTML={{ __html: termsText || "<p>Loading…</p>" }} />
+                    <div
+                      className="text-white/80 dark:text-white/80 prose-neutral"
+                      dangerouslySetInnerHTML={{ __html: termsText || "<p>Loading…</p>" }}
+                    />
                   </section>
 
                   <section>
                     <h3 className="font-semibold mb-6 text-2xl">PRIVACY POLICY</h3>
-                    <div dangerouslySetInnerHTML={{ __html: policyText || "<p>Loading…</p>" }} />
+                    <div 
+                      className="text-white/80 dark:text-white/80 prose-neutral"
+                      dangerouslySetInnerHTML={{ __html: policyText || "<p>Loading…</p>" }}
+                    />
                     <label className="flex items-center gap-2 mt-4 mb-6">
                       <input
                         type="checkbox"

@@ -1,4 +1,4 @@
-<h2 style="font-size:18px; font-weight:lighter; margin-top:32px; margin-bottom:16px;">OVERVIEW</h2>
+<h2 style="font-size:18px; font-weight:lighter; color:inherit; margin-top:32px; margin-bottom:16px;">OVERVIEW</h2>
 <p>
   This website is operated by BG Company. Throughout this site, the terms “we”, “us” and “our” refer to BG Company. BG Company offers this website, including all information, tools and services available from this site to you, the user, conditioned upon your acceptance of all terms, conditions, policies and notices stated herein.
 </p>

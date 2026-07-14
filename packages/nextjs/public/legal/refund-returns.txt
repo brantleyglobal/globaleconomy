@@ -1,4 +1,4 @@
-<div style="font-family:Segoe UI, Arial, sans-serif; color:#e0e0e0; line-height:1.6; max-width:800px; margin:auto; padding:0;">
+<div style="font-family:Segoe UI, Arial, sans-serif; color:inherit; line-height:1.6; max-width:800px; margin:auto; padding:0;">
   <h2 style="margin-top:5px; font-weight: lighter; margin-bottom:16px;">SECTION 1 – Cancellations</h2>
   <p>
     Cancellations may be requested at any time prior to the shipment of your order. All cancellations are subject to the terms and conditions outlined below.
