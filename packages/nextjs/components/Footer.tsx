@@ -23,7 +23,7 @@ export const Footer = () => {
         rates.forEach(rate => rateMap.set(rate.symbol, rate));
 
         const formattedRates = supportedTokens
-          .filter(token => token.symbol !== "GBDo")
+          .filter((t) => !["WBTC", "cbBTC", "ETH", "LINK", "UNI", "MATIC", "BRZ", "MMXN", "AUDD", "AUDT", "NGNT", "COPx", "GLB", "TGUSA", "TGMX", "CREs", "CREh", "CGRi"].includes(t.symbol))
           .map(token => {
             const rateObj = rateMap.get(token.symbol);
             if (!rateObj || rateObj.rateAgainstGBDo === undefined) return undefined;
