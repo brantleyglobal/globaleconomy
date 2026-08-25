@@ -30,7 +30,7 @@ export default function AssetXchangeTab() {
         transition={{ delay: 0.3, duration: 0.6 }}
         className="text-zinc-400 text-base leading-relaxed text-justify"
       >
-        AssetXchange enables digital asset exchannging between users to include asset-backed ERC-20 tokens offered on this 
+        AssetXchange enables digital asset exchanging between users to include asset-backed ERC-20 tokens offered on this 
         platform and any ERC-20 token (requests may be made to add additional tradeable tokens). Users initiate a contract by
         defining terms and paying the platform fee of <span className="text-green-900 font-semibold">10GBDo</span>. Once the
         counterparty deposits, the swap is auto-confirmed. Refunds are available if the counterparty fails to deposit
